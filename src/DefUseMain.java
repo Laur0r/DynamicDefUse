@@ -15,7 +15,7 @@ public class DefUseMain {
 		DefUseMain obj2 = obj;
 		double y = 5;
 		double x = obj.ifTest(y);
-		System.out.println("Transactions completed");
+		//System.out.println("Transactions completed");
 	}
 
 }

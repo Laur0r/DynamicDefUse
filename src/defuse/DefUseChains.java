@@ -42,7 +42,7 @@ public class DefUseChains {
     public DefUseVariable findUse(String method, int linenumber, Object value){
         for(DefUseChain chain : defUseChains){
             DefUseVariable use = chain.getUse();
-            if(use.getLinenumber() == linenumber && use.getValue() == value && use.getMethod().equals(method)){
+            if(use.getLinenumber() == linenumber && use.getValue().equals(value) && use.getMethod().equals(method)){
                 return use;
             }
         }

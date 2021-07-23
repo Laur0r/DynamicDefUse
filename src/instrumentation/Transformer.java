@@ -91,10 +91,11 @@ public class Transformer implements ClassFileTransformer {
 					int op = in.getOpcode();
 					if (in instanceof VarInsnNode) {
 						VarInsnNode varins = (VarInsnNode) in;
-						if(op >= Opcodes.ILOAD && op < Opcodes.ISTORE){
+						if(op == Opcodes.ILOAD || op == Opcodes.LLOAD || op == Opcodes.FLOAD ||
+								op == Opcodes.DLOAD || op == Opcodes.ALOAD){
 							InsnList il = new InsnList();
 							// TODO reusing of variable indexes?
-							Type varType = Type.getType(mnode.localVariables.get(varins.var).desc);
+							Type varType = getTypeFromOpcode(op);
 							boxing(varType, varins.var, il, true);
 							//il.add(new VarInsnNode(Opcodes.ALOAD, varins.var));
 							il.add(new IntInsnNode(Opcodes.BIPUSH, varins.var));
@@ -102,10 +103,11 @@ public class Transformer implements ClassFileTransformer {
 							il.add(new LdcInsnNode(mnode.name));
 							il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "defuse/DefUseAnalyser", "visitUse", "(Ljava/lang/Object;IILjava/lang/String;)V", false));
 							insns.insert(in, il);
-						} else if(op > Opcodes.SALOAD && op < Opcodes.POP){
+						} else if(op == Opcodes.ISTORE || op == Opcodes.LSTORE || op == Opcodes.FSTORE ||
+								op == Opcodes.DSTORE || op == Opcodes.ASTORE){
 							InsnList il = new InsnList();
 							// TODO reusing of variable indexes?
-							Type varType = Type.getType(mnode.localVariables.get(varins.var).desc);
+							Type varType = getTypeFromOpcode(op);
 							boxing(varType, varins.var, il, true);
 							il.add(new IntInsnNode(Opcodes.BIPUSH, varins.var));
 							il.add(new IntInsnNode(Opcodes.BIPUSH, linenumber));
@@ -154,7 +156,11 @@ public class Transformer implements ClassFileTransformer {
 						Type[] parameterTypes = Type.getArgumentTypes(methodins.desc);
 						if(parameterTypes.length == 1){
 							InsnList il = new InsnList();
-							il.add(new InsnNode(Opcodes.DUP));
+							if(parameterTypes[0] == Type.DOUBLE_TYPE || parameterTypes[0] == Type.FLOAT_TYPE){
+								il.add(new InsnNode(Opcodes.DUP2));
+							} else {
+								il.add(new InsnNode(Opcodes.DUP));
+							}
 							boxing(parameterTypes[0], 0, il, false);
 							il.add(new IntInsnNode(Opcodes.BIPUSH, linenumber));
 							il.add(new LdcInsnNode(mnode.name));
@@ -171,8 +177,12 @@ public class Transformer implements ClassFileTransformer {
 			}
 			//writer.visitEnd();
 			//System.out.println(writer.p.getText());
-			ClassWriter writer = new ClassWriter(reader, ClassWriter.COMPUTE_FRAMES);
-			node.accept(writer);
+			ClassWriter writer = new ClassWriter(reader, ClassWriter.COMPUTE_MAXS);
+			try{
+				node.accept(writer);
+			} catch(Exception e){
+				e.printStackTrace();
+			}
 			return writer.toByteArray();
 		}
 
@@ -225,6 +235,24 @@ public class Transformer implements ClassFileTransformer {
 				il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "java/lang/Double", "valueOf", "(D)Ljava/lang/Double;", false));
 				break;
 			default: if(withLoad) il.add(new VarInsnNode(Opcodes.ALOAD, varIndex));
+		}
+	}
+
+	protected Type getTypeFromOpcode(int op){
+		switch (op){
+			case Opcodes.ILOAD:
+			case Opcodes.ISTORE:
+				return Type.INT_TYPE;
+			case Opcodes.LLOAD:
+			case Opcodes.LSTORE:
+				return Type.LONG_TYPE;
+			case Opcodes.FLOAD:
+			case Opcodes.FSTORE:
+				return Type.FLOAT_TYPE;
+			case Opcodes.DLOAD:
+			case Opcodes.DSTORE:
+				return Type.DOUBLE_TYPE;
+			default: return Type.getType("Ljava/lang/Object;");
 		}
 	}
 
