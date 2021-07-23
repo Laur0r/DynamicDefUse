@@ -90,6 +90,14 @@ public class DefUseAnalyser {
         interMethods.add(m);
     }
 
+    public static void registerInterMethod(Object[] values, int linenumber, String currentMethod, String newMethod){
+        System.out.println("interMethod");
+        for(Object obj: values){
+            InterMethodAlloc m = new InterMethodAlloc(obj, linenumber, currentMethod, newMethod);
+            interMethods.add(m);
+        }
+    }
+
     /*public static void addLinenumber(int i){
         linenumber.pop();
         linenumber.push(i);

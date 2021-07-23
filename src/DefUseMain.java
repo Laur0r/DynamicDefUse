@@ -1,8 +1,8 @@
 public class DefUseMain {
 
-	public double ifTest(double x){
+	public double ifTest(double x, int z){
 		if(x == 5){
-			x = x+1;
+			x = x+z;
 		} else {
 			x = 5;
 		}
@@ -14,7 +14,8 @@ public class DefUseMain {
 		DefUseMain obj = new DefUseMain();
 		DefUseMain obj2 = obj;
 		double y = 5;
-		double x = obj.ifTest(y);
+		int z = 1;
+		double x = obj.ifTest(y, z);
 		//System.out.println("Transactions completed");
 	}
 
