@@ -6,12 +6,14 @@ public class DefUseVariable {
     private int variableIndex;
     private Object value;
     private String method;
+    private DefUseVariable alias;
 
     public DefUseVariable(int linenumber, int variableIndex, Object value, String method){
         this.linenumber = linenumber;
         this.variableIndex = variableIndex;
         this.value = value;
         this.method = method;
+        this.alias = null;
     }
 
     public void setLinenumber(int linenumber){
@@ -37,4 +39,8 @@ public class DefUseVariable {
     }
 
     public String getMethod(){return method;}
+
+    public DefUseVariable getAlias(){return alias;}
+
+    public void setAlias(DefUseVariable alias){this.alias=alias;}
 }

@@ -13,6 +13,9 @@ public class DefUseChain {
     public String toString(){
         String output = "";
         output += "   Method "+def.getMethod()+"/"+use.getMethod()+", Def: ln=" + def.getLinenumber() + ", Use: ln=" + use.getLinenumber();
+        if(def.getAlias() != null){
+            output += ", alias: Def: ln="+def.getAlias().getLinenumber();
+        }
         return output;
     }
 

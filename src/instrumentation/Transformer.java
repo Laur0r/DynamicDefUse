@@ -9,9 +9,12 @@ import jdk.internal.org.objectweb.asm.tree.analysis.BasicInterpreter;
 import jdk.internal.org.objectweb.asm.tree.analysis.Frame;
 import jdk.internal.org.objectweb.asm.util.CheckClassAdapter;
 import jdk.internal.org.objectweb.asm.util.TraceClassVisitor;
+import sun.misc.ExtensionInstallationException;
 
 
-import java.io.PrintWriter;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.OutputStream;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
 import java.security.ProtectionDomain;
@@ -25,7 +28,7 @@ public class Transformer implements ClassFileTransformer {
 			ProtectionDomain protectionDomain, byte[] classfileBuffer) throws IllegalClassFormatException {
 
 		Thread th = Thread.currentThread();
-		if ("DefUseMain".equals(className)) {
+		if ("DefUseMain".equals(className) || ("Increment").equals(className)) {
 			/*ClassReader reader = new ClassReader(classfileBuffer);
 			ClassWriter writer = new ClassWriter(reader, ClassWriter.COMPUTE_FRAMES);
 			//TraceClassVisitor writer = new TraceClassVisitor(new PrintWriter(System.out));
@@ -42,11 +45,11 @@ public class Transformer implements ClassFileTransformer {
 			//ClassVisitor visitor = new LogMethodClassVisitor(writer, className);
 			reader.accept(node, 0);
 			for(MethodNode mnode : node.methods){
-				System.out.println(mnode.name);
 				int linenumber = 0;
 				if ("<init>".equals(mnode.name) || "<clinit>".equals(mnode.name)) {
 					continue;
 				}
+				System.out.println(mnode.name);
 				InsnList insns = mnode.instructions;
 				if (insns.size() == 0) {
 					continue;
@@ -58,8 +61,14 @@ public class Transformer implements ClassFileTransformer {
 					if (mnode.localVariables.size() < i || typeindex >= types.length) {
 						break;
 					}
-					LocalVariableNode localVariable = mnode.localVariables.get(i);
-					if (Type.getType(localVariable.desc).equals(types[typeindex])) {
+					LocalVariableNode localVariable = null;
+					for(LocalVariableNode lv: mnode.localVariables){
+						if(lv.index == i){
+							localVariable = lv;
+						}
+					}
+
+					if (localVariable != null && Type.getType(localVariable.desc).equals(types[typeindex])) {
 						// TODO long und double nehme zwei Indexes ein -> +2
 						boxing(types[typeindex], localVariable.index, methodStart, true);
 						methodStart.add(new IntInsnNode(Opcodes.BIPUSH, localVariable.index));
@@ -72,7 +81,7 @@ public class Transformer implements ClassFileTransformer {
 				Iterator<AbstractInsnNode> j = insns.iterator();
 				while (j.hasNext()) {
 					AbstractInsnNode in = j.next();
-					if(in.getPrevious() == null){
+					if(in.getPrevious() == null && firstIns == null){
 						firstIns = in;
 					}
 					int op = in.getOpcode();
@@ -161,6 +170,15 @@ public class Transformer implements ClassFileTransformer {
 			try{
 				node.accept(writer);
 			} catch(Exception e){
+				e.printStackTrace();
+			}
+			File outputfile = new File("Increment.class");
+			try{
+				OutputStream fos = new FileOutputStream(outputfile);
+				fos.write(writer.toByteArray());
+				fos.flush();
+				fos.close();
+			} catch (Exception e){
 				e.printStackTrace();
 			}
 			return writer.toByteArray();

@@ -15,29 +15,14 @@ public class DefUseAnalyser {
         interMethods = new ArrayList<>();
     }
 
-    public static void visitDef(int value, int index, int linenumber, String method){
-        System.out.println("Def at line "+linenumber+": var"+index+", value "+value+", method :"+method);
-        registerDef(value, index, linenumber, method);
-    }
-
     public static void visitDef(Object value, int index, int linenumber, String method){
         System.out.println("Def at line "+linenumber+": var"+index+", value "+value+", method :"+method);
         registerDef(value, index, linenumber, method);
     }
 
-    public static void visitUse(int value, int index, int linenumber, String method){
-        System.out.println("Use at line "+linenumber+": var"+index+", value "+value+", method :"+method);
-        registerUse(index, value, linenumber, method);
-    }
-
     public static void visitUse(Object value, int index, int linenumber, String method){
         System.out.println("Use at line "+linenumber+": var"+index+", value "+value+", method :"+method);
         registerUse(index, value, linenumber, method);
-    }
-
-    public static void visitParameter(int value, int index, String method){
-        System.out.println("Parameter of method " + method +": var"+index+", value "+value);
-        registerParameter(value, index, method);
     }
 
     public static void visitParameter(Object value, int index, String method){
@@ -65,6 +50,12 @@ public class DefUseAnalyser {
 
     protected static void registerDef(Object value, int index, int linenumber, String method){
         DefUseVariable def = new DefUseVariable(linenumber, index, value, method);
+        DefUseVariable alias = defs.hasAlias(def);
+        if(alias != null){
+            System.out.println("Is Alias!!!");
+            def.setAlias(alias);
+            alias.setAlias(def);
+        }
         defs.addDef(def);
     }
 
@@ -96,34 +87,5 @@ public class DefUseAnalyser {
             InterMethodAlloc m = new InterMethodAlloc(obj, linenumber, currentMethod, newMethod);
             interMethods.add(m);
         }
-    }
-
-    /*public static void addLinenumber(int i){
-        linenumber.pop();
-        linenumber.push(i);
-    }
-
-    public static void newLinenumber(){ linenumber.push(-1);}
-
-    public static void removeLinenumber() {linenumber.pop();}
-
-    public static void addMethod(String m, int number) {
-        DefUseMethod method = new DefUseMethod(m, number);
-        int ln = -1;
-        if(!linenumber.empty()) {
-            ln = linenumber.peek();
-        }
-        for(int i=0; i<number+1; i++){
-            System.out.println("Argument Def at line "+ln+": var"+i+", method :"+m);
-            DefUseVariable def = new DefUseVariable(ln, i, null, m);
-            defs.addDef(def);
-        }
-        methods.push(method);
-    }
-
-    public static void removeMethod(){methods.pop();}*/
-
-    public static void visitLocalVariable(String name, int index, Object value){
-        System.out.println(name);
     }
 }

@@ -43,6 +43,7 @@ public class DefUseChains {
         for(DefUseChain chain : defUseChains){
             DefUseVariable use = chain.getUse();
             if(use.getLinenumber() == linenumber && use.getValue().equals(value) && use.getMethod().equals(method)){
+                defUseChains.remove(chain);
                 return use;
             }
         }
