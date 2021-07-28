@@ -22,7 +22,7 @@ public class DefUseVariable {
 
     public int getLinenumber(){return linenumber;}
 
-    public void getVariableIndex(int variableIndex){
+    public void setVariableIndex(int variableIndex){
         this.variableIndex = variableIndex;
     }
 

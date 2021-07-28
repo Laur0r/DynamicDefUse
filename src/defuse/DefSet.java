@@ -1,24 +1,17 @@
 package defuse;
 
-import java.util.HashSet;
+import java.util.ArrayDeque;
 
 public class DefSet {
 
-    public HashSet<DefUseVariable> defs = new HashSet<>();
-
-    // TODO check getDefinitions for loops
+    public ArrayDeque<DefUseVariable> defs = new ArrayDeque<>();
 
     public DefUseVariable getLastDefinition(int index, String method){
         DefUseVariable output = null;
         for(DefUseVariable def : defs){
             if(def.getVariableIndex() == index && def.getMethod().equals(method)){
-                if(output != null) {
-                    if(def.getLinenumber() > output.getLinenumber()) {
-                        output = def;
-                    }
-                } else {
-                    output = def;
-                }
+                output = def;
+                break;
             }
         }
         return output;
@@ -37,5 +30,19 @@ public class DefSet {
         return output;
     }
 
-    public void addDef(DefUseVariable def){defs.add(def);}
+    public void addDef(DefUseVariable def){defs.addFirst(def);}
+
+    public DefUseVariable contains(Object value, int index, int ln, String method){
+        for(DefUseVariable d: defs){
+            if(d.getValue().equals(value) && d.getMethod().equals(method) && d.getVariableIndex() == index
+            && d.getLinenumber() == ln){
+                return d;
+            }
+        }
+        return null;
+    }
+
+    public void removeDef(DefUseVariable def){
+        defs.remove(def);
+    }
 }

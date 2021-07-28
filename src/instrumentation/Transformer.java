@@ -57,7 +57,7 @@ public class Transformer implements ClassFileTransformer {
 				InsnList methodStart = new InsnList();
 				Type[] types = Type.getArgumentTypes(mnode.desc);
 				int typeindex = 0;
-				for(int i =0; i< types.length+1; i++) {
+				for(int i =0; i< mnode.localVariables.size()*2; i++) {
 					if (mnode.localVariables.size() < i || typeindex >= types.length) {
 						break;
 					}
@@ -65,16 +65,20 @@ public class Transformer implements ClassFileTransformer {
 					for(LocalVariableNode lv: mnode.localVariables){
 						if(lv.index == i){
 							localVariable = lv;
+							break;
 						}
 					}
 
 					if (localVariable != null && Type.getType(localVariable.desc).equals(types[typeindex])) {
-						// TODO long und double nehme zwei Indexes ein -> +2
 						boxing(types[typeindex], localVariable.index, methodStart, true);
 						methodStart.add(new IntInsnNode(Opcodes.BIPUSH, localVariable.index));
 						methodStart.add(new LdcInsnNode(mnode.name));
 						methodStart.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "defuse/DefUseAnalyser", "visitParameter", "(Ljava/lang/Object;ILjava/lang/String;)V", false));
+						if(types[typeindex] == Type.DOUBLE_TYPE || types[typeindex] == Type.LONG_TYPE){
+							i++;
+						}
 						typeindex++;
+
 					}
 				}
 				AbstractInsnNode firstIns = null;

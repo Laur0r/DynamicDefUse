@@ -5,9 +5,9 @@ public class DefUseMain {
 		//DefUseMain obj = new DefUseMain();
 		//DefUseMain obj2 = obj;
 		Increment inc = new Increment();
-		//double y = 5;
+		long y = 5;
 		int z = 2;
-		int x = inc.testWhile(z);
+		inc.testWhile(2, 2, "hello");
 		//System.out.println("Transactions completed");
 	}
 

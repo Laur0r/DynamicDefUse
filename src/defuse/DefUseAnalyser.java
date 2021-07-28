@@ -49,7 +49,12 @@ public class DefUseAnalyser {
     }
 
     protected static void registerDef(Object value, int index, int linenumber, String method){
-        DefUseVariable def = new DefUseVariable(linenumber, index, value, method);
+        DefUseVariable def = defs.contains(value, index, linenumber, method);
+        if(def != null){
+            defs.removeDef(def);
+        } else {
+            def = new DefUseVariable(linenumber, index, value, method);
+        }
         DefUseVariable alias = defs.hasAlias(def);
         if(alias != null){
             System.out.println("Is Alias!!!");
