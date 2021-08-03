@@ -8,7 +8,7 @@ public class DefUseMain {
 		long y = 5;
 		int z = 2;
 		inc.testWhile(2, 2, "hello");
-		//System.out.println("Transactions completed");
+		System.out.println("Transactions completed");
 	}
 
 }
