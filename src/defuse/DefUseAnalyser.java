@@ -16,17 +16,17 @@ public class DefUseAnalyser {
     }
 
     public static void visitDef(Object value, int index, int linenumber, String method){
-        System.out.println("Def at line "+linenumber+": var"+index+", value "+value+", method :"+method);
+        //System.out.println("Def at line "+linenumber+": var"+index+", value "+value+", method :"+method);
         registerDef(value, index, linenumber, method);
     }
 
     public static void visitUse(Object value, int index, int linenumber, String method){
-        System.out.println("Use at line "+linenumber+": var"+index+", value "+value+", method :"+method);
+        //System.out.println("Use at line "+linenumber+": var"+index+", value "+value+", method :"+method);
         registerUse(index, value, linenumber, method);
     }
 
     public static void visitParameter(Object value, int index, String method){
-        System.out.println("Parameter of method " + method +": var"+index+", value "+value);
+        //System.out.println("Parameter of method " + method +": var"+index+", value "+value);
         registerParameter(value, index, method);
     }
 
@@ -44,7 +44,6 @@ public class DefUseAnalyser {
         if(def != null){
             DefUseChain chain = new DefUseChain(def, use);
             chains.addChain(chain);
-            System.out.println(chain.toString());
         }
     }
 
@@ -91,6 +90,15 @@ public class DefUseAnalyser {
         for(Object obj: values){
             InterMethodAlloc m = new InterMethodAlloc(obj, linenumber, currentMethod, newMethod);
             interMethods.add(m);
+        }
+    }
+
+    public static void visitMethodEnd(String method){
+        System.out.println("Ende von method "+method);
+        for(DefUseChain chain : chains.getDefUseChains()){
+            if(chain.getUse().getMethod().equals(method)){
+                System.out.println(chain.toString());
+            }
         }
     }
 }

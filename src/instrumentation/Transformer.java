@@ -81,13 +81,10 @@ public class Transformer implements ClassFileTransformer {
 
 					}
 				}
-				AbstractInsnNode firstIns = null;
+				AbstractInsnNode firstIns = insns.getFirst();
 				Iterator<AbstractInsnNode> j = insns.iterator();
 				while (j.hasNext()) {
 					AbstractInsnNode in = j.next();
-					if(in.getPrevious() == null && firstIns == null){
-						firstIns = in;
-					}
 					int op = in.getOpcode();
 					if (in instanceof VarInsnNode) {
 						VarInsnNode varins = (VarInsnNode) in;
@@ -163,6 +160,11 @@ public class Transformer implements ClassFileTransformer {
 							}
 							insns.insertBefore(methodins, il);
 						}
+					} else if(op >= Opcodes.IRETURN && op <= Opcodes.RETURN){
+						InsnList il = new InsnList();
+						il.add(new LdcInsnNode(mnode.name));
+						il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "defuse/DefUseAnalyser", "visitMethodEnd", "(Ljava/lang/String;)V", false));
+						insns.insertBefore(in, il);
 					}
 				}
 				insns.insertBefore(firstIns, methodStart);
