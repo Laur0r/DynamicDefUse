@@ -26,22 +26,22 @@ public class DefUseAnalyser {
     }
 
     public static void visitStaticFieldUse(Object value, String index, int linenumber, String method){
-        System.out.println("Use at line "+linenumber+": var"+index+", value "+value+", method :"+method);
+        //System.out.println("Use at line "+linenumber+": var"+index+", value "+value+", method :"+method);
         registerFieldUse(index, value, linenumber, method, null);
     }
 
     public static void visitStaticFieldDef(Object value, String index, int linenumber, String method){
-        System.out.println("Use at line "+linenumber+": var"+index+", value "+value+", method :"+method);
+        //System.out.println("Use at line "+linenumber+": var"+index+", value "+value+", method :"+method);
         registerFieldDef(value, index, linenumber, method, null);
     }
 
     public static void visitFieldDef(Object instance, Object value, String name, int linenumber, String method){
-        System.out.println("Field Def at line "+linenumber+": var"+name+", instance "+instance+", value "+value+", method :"+method);
+        //System.out.println("Field Def at line "+linenumber+": var"+name+", instance "+instance+", value "+value+", method :"+method);
         registerFieldDef(value, name, linenumber, method, instance);
     }
 
     public static void visitFieldUse(Object instance, Object value, String name, int linenumber, String method){
-        System.out.println("Field Use at line "+linenumber+": var"+name+", instance "+instance+", value "+value+", method :"+method);
+        //System.out.println("Field Use at line "+linenumber+": var"+name+", instance "+instance+", value "+value+", method :"+method);
         registerFieldUse(name, value, linenumber, method, instance);
     }
 
@@ -56,7 +56,11 @@ public class DefUseAnalyser {
         if(def == null && interMethods.size() != 0){
             for(InterMethodAlloc alloc : interMethods){
                 if(alloc.newMethod.equals(method) && alloc.newIndex.equals(index)){
-                    def = defs.getLastDefinition(alloc.currentIndex, alloc.currentMethod, alloc.value);
+                    if(alloc.isField) {
+                        def = defs.getLastDefinition(alloc.currentIndex, alloc.value, null);
+                    } else {
+                        def = defs.getLastDefinition(alloc.currentIndex, alloc.currentMethod, alloc.value);
+                    }
                     break;
                 }
             }
@@ -75,7 +79,11 @@ public class DefUseAnalyser {
         if(def == null && interMethods.size() != 0){
             for(InterMethodAlloc alloc : interMethods){
                 if(alloc.newMethod.equals(method) && alloc.newIndex.equals(index)){
-                    def = defs.getLastDefinition(alloc.currentIndex, alloc.currentMethod, alloc.value);
+                    if(alloc.isField) {
+                        def = defs.getLastDefinition(alloc.currentIndex, alloc.value, null);
+                    } else {
+                        def = defs.getLastDefinition(alloc.currentIndex, alloc.currentMethod, alloc.value);
+                    }
                     break;
                 }
             }
@@ -129,9 +137,10 @@ public class DefUseAnalyser {
             for(InterMethodAlloc alloc : interMethods){
                 if(alloc.newMethod.equals(method) && alloc.value.equals(value)){
                     alloc.newIndex=index;
-                    DefUseVariable use = chains.findUse(alloc.currentMethod, alloc.linenumber, value);
-                    if(use != null){
-                        alloc.currentIndex = use.getVariableIndex();
+                    String[] result = chains.findUse(alloc.currentMethod, alloc.linenumber, value);
+                    if(result != null){
+                        alloc.currentIndex = result[0];
+                        alloc.isField = Boolean.parseBoolean(result[1]);
                         return;
                     }
                 }

@@ -48,12 +48,17 @@ public class DefUseChains {
         return output;
     }
 
-    public DefUseVariable findUse(String method, int linenumber, Object value){
+    public String[] findUse(String method, int linenumber, Object value){
         for(DefUseChain chain : defUseChains){
             DefUseVariable use = chain.getUse();
             if(use.getLinenumber() == linenumber && use.getValue().equals(value) && use.getMethod().equals(method)){
+                DefUseVariable def = chain.getDef();
                 defUseChains.remove(chain);
-                return use;
+                if(def instanceof DefUseField){
+                    return new String[] {use.getVariableIndex(), "true"};
+                } else {
+                    return new String[] {use.getVariableIndex(), "false"};
+                }
             }
         }
         return null;
