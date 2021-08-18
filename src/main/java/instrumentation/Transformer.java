@@ -1,5 +1,6 @@
 package instrumentation;
 
+import com.sun.tools.classfile.Opcode;
 import defuse.ParameterCollector;
 import org.objectweb.asm.*;
 import org.objectweb.asm.tree.*;
@@ -22,16 +23,7 @@ public class Transformer implements ClassFileTransformer {
 			ProtectionDomain protectionDomain, byte[] classfileBuffer) throws IllegalClassFormatException {
 
 		Thread th = Thread.currentThread();
-		if ("DefUseMain".equals(className) || ("Increment").equals(className)) {
-			/*ClassReader reader = new ClassReader(classfileBuffer);
-			ClassWriter writer = new ClassWriter(reader, ClassWriter.COMPUTE_FRAMES);
-			//TraceClassVisitor writer = new TraceClassVisitor(new PrintWriter(System.out));
-			ClassVisitor visitor = new LogMethodClassVisitor(writer, className);
-			reader.accept(visitor, 0);
-			//writer.visitEnd();
-			//System.out.println(writer.p.getText());
-			return writer.toByteArray();
-			//return null;*/
+		if ("DefUseMain".equals(className) || ("Increment").equals(className) || ("Test").equals(className)) {
 
 			ClassReader reader = new ClassReader(classfileBuffer);
 			ClassNode node = new ClassNode();
@@ -40,14 +32,15 @@ public class Transformer implements ClassFileTransformer {
 			reader.accept(node, 0);
 			for(MethodNode mnode : node.methods){
 				int linenumber = 0;
-				if ("<init>".equals(mnode.name) || "<clinit>".equals(mnode.name)) {
+				/*if ("<init>".equals(mnode.name) || "<clinit>".equals(mnode.name)) {
 					continue;
-				}
+				}*/
 				System.out.println(mnode.name);
 				InsnList insns = mnode.instructions;
 				if (insns.size() == 0) {
 					continue;
 				}
+				mnode.maxStack += 5;
 				InsnList methodStart = new InsnList();
 				Type[] types = Type.getArgumentTypes(mnode.desc);
 				int typeindex = 0;
@@ -82,8 +75,8 @@ public class Transformer implements ClassFileTransformer {
 					int op = in.getOpcode();
 					if (in instanceof VarInsnNode) {
 						VarInsnNode varins = (VarInsnNode) in;
-						if(op == Opcodes.ILOAD || op == Opcodes.LLOAD || op == Opcodes.FLOAD ||
-								op == Opcodes.DLOAD || op == Opcodes.ALOAD){
+						if((op == Opcodes.ILOAD || op == Opcodes.LLOAD || op == Opcodes.FLOAD ||
+								op == Opcodes.DLOAD || (op == Opcodes.ALOAD && !mnode.name.equals("<init>")))){
 							InsnList il = new InsnList();
 							Type varType = getTypeFromOpcode(op);
 							boxing(varType, varins.var, il, true);
@@ -103,6 +96,59 @@ public class Transformer implements ClassFileTransformer {
 							il.add(new LdcInsnNode(mnode.name));
 							il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "defuse/DefUseAnalyser", "visitDef", "(Ljava/lang/Object;IILjava/lang/String;)V", false));
 							insns.insert(in, il);
+						}
+					} if (in instanceof FieldInsnNode) {
+						FieldInsnNode fieldins = (FieldInsnNode) in;
+						if(op == Opcodes.GETFIELD){
+							InsnList il2 = new InsnList();
+							il2.add(new InsnNode(Opcodes.DUP));
+							insns.insertBefore(in, il2);
+							InsnList il = new InsnList();
+							Type varType = Type.getType(fieldins.desc);
+							if(varType == Type.DOUBLE_TYPE || varType == Type.LONG_TYPE){
+								il.add(new InsnNode(Opcodes.DUP2_X1));
+							} else {
+								il.add(new InsnNode(Opcodes.DUP_X1));
+							}
+							boxing(varType, 0, il, false);
+							il.add(new LdcInsnNode(fieldins.owner+"."+fieldins.name));
+							il.add(new IntInsnNode(Opcodes.BIPUSH, linenumber));
+							il.add(new LdcInsnNode(mnode.name));
+							il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "defuse/DefUseAnalyser", "visitFieldUse", "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/String;ILjava/lang/String;)V", false));
+							insns.insert(in, il);
+						} else if (op == Opcodes.GETSTATIC || op == Opcodes.PUTSTATIC){
+							InsnList il = new InsnList();
+							Type varType = Type.getType(fieldins.desc);
+							if(varType == Type.DOUBLE_TYPE || varType == Type.LONG_TYPE){
+								il.add(new InsnNode(Opcodes.DUP2));
+							} else {
+								il.add(new InsnNode(Opcodes.DUP));
+							}
+							boxing(varType, 0, il, false);
+							il.add(new LdcInsnNode(fieldins.owner+"."+fieldins.name));
+							il.add(new IntInsnNode(Opcodes.BIPUSH, linenumber));
+							il.add(new LdcInsnNode(mnode.name));
+							if(op == Opcodes.GETSTATIC){
+								il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "defuse/DefUseAnalyser", "visitStaticFieldUse", "(Ljava/lang/Object;Ljava/lang/String;ILjava/lang/String;)V", false));
+								insns.insert(in, il);
+							} else {
+								il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "defuse/DefUseAnalyser", "visitStaticFieldDef", "(Ljava/lang/Object;Ljava/lang/String;ILjava/lang/String;)V", false));
+								insns.insertBefore(in, il);
+							}
+						} else if(op == Opcodes.PUTFIELD){
+							InsnList il = new InsnList();
+							Type varType = Type.getType(fieldins.desc);
+							if(varType == Type.DOUBLE_TYPE || varType == Type.LONG_TYPE){
+								//il.add(new InsnNode(Opcodes.DUP2));
+							} else {
+								il.add(new InsnNode(Opcodes.DUP2));
+							}
+							boxing(varType, 0, il, false);
+							il.add(new LdcInsnNode(fieldins.owner+"."+fieldins.name));
+							il.add(new IntInsnNode(Opcodes.BIPUSH, linenumber));
+							il.add(new LdcInsnNode(mnode.name));
+							il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "defuse/DefUseAnalyser", "visitFieldDef", "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/String;ILjava/lang/String;)V", false));
+							insns.insertBefore(in, il);
 						}
 					} else if(in instanceof LineNumberNode){
 						LineNumberNode lineins = (LineNumberNode) in;
@@ -162,7 +208,7 @@ public class Transformer implements ClassFileTransformer {
 					}
 				}
 				insns.insertBefore(firstIns, methodStart);
-				//mn.maxStack += 4;
+				//mnode.maxStack += 5;
 			}
 			//writer.visitEnd();
 			//System.out.println(writer.p.getText());
@@ -172,7 +218,7 @@ public class Transformer implements ClassFileTransformer {
 			} catch(Exception e){
 				e.printStackTrace();
 			}
-			File outputfile = new File("Increment.class");
+			File outputfile = new File(node.name+".class");
 			try{
 				OutputStream fos = new FileOutputStream(outputfile);
 				fos.write(writer.toByteArray());

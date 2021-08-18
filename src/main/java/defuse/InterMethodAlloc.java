@@ -6,8 +6,8 @@ public class InterMethodAlloc {
     public int linenumber;
     public String currentMethod;
     public String newMethod;
-    public int newIndex;
-    public int currentIndex;
+    public String newIndex;
+    public String currentIndex;
 
     public InterMethodAlloc(Object value, int linenumber, String cM, String nM){
         this.value = value;

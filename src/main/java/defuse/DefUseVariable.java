@@ -2,13 +2,13 @@ package defuse;
 
 public class DefUseVariable {
 
-    private int linenumber;
-    private int variableIndex;
-    private Object value;
-    private String method;
-    private DefUseVariable alias;
+    protected int linenumber;
+    protected String variableIndex;
+    protected Object value;
+    protected String method;
+    protected DefUseVariable alias;
 
-    public DefUseVariable(int linenumber, int variableIndex, Object value, String method){
+    public DefUseVariable(int linenumber, String variableIndex, Object value, String method){
         this.linenumber = linenumber;
         this.variableIndex = variableIndex;
         this.value = value;
@@ -22,11 +22,11 @@ public class DefUseVariable {
 
     public int getLinenumber(){return linenumber;}
 
-    public void setVariableIndex(int variableIndex){
+    public void setVariableIndex(String variableIndex){
         this.variableIndex = variableIndex;
     }
 
-    public int getVariableIndex(){return variableIndex;}
+    public String getVariableIndex(){return variableIndex;}
 
     public void setValue(Object value){
         this.value = value;
@@ -43,4 +43,9 @@ public class DefUseVariable {
     public DefUseVariable getAlias(){return alias;}
 
     public void setAlias(DefUseVariable alias){this.alias=alias;}
+
+    public boolean equals(DefUseVariable var){
+        return var.getLinenumber() == this.linenumber && var.getVariableIndex() == this.variableIndex
+                && var.getValue().equals(this.value) && var.getMethod().equals(this.method);
+    }
 }

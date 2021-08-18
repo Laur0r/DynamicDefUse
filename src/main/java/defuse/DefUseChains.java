@@ -1,12 +1,13 @@
 package defuse;
 
-import java.util.HashSet;
+import java.lang.reflect.Array;
+import java.util.ArrayList;
 
 public class DefUseChains {
 
-    private HashSet<DefUseChain> defUseChains = new HashSet<DefUseChain>();
+    private ArrayList<DefUseChain> defUseChains = new ArrayList<DefUseChain>();
 
-    public HashSet<DefUseChain> getDefUseChains() {
+    public ArrayList<DefUseChain> getDefUseChains() {
         return defUseChains;
     }
 
@@ -19,7 +20,7 @@ public class DefUseChains {
         return copy;
     }*/
 
-    public void setDefUseChains(HashSet<DefUseChain> defUseChains) {
+    public void setDefUseChains(ArrayList<DefUseChain> defUseChains) {
         this.defUseChains = defUseChains;
     }
 
@@ -29,6 +30,14 @@ public class DefUseChains {
 
     public int getChainSize() {
         return defUseChains.size();
+    }
+
+    public boolean contains(DefUseChain chain) {
+        for(DefUseChain c :defUseChains)
+            if(c.equals(chain)){
+                return true;
+            }
+        return false;
     }
 
     public String toString(){

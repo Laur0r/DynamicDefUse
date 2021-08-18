@@ -17,53 +17,114 @@ public class DefUseAnalyser {
 
     public static void visitDef(Object value, int index, int linenumber, String method){
         //System.out.println("Def at line "+linenumber+": var"+index+", value "+value+", method :"+method);
-        registerDef(value, index, linenumber, method);
+        registerDef(value, Integer.toString(index), linenumber, method);
     }
 
     public static void visitUse(Object value, int index, int linenumber, String method){
         //System.out.println("Use at line "+linenumber+": var"+index+", value "+value+", method :"+method);
-        registerUse(index, value, linenumber, method);
+        registerUse(Integer.toString(index), value, linenumber, method);
+    }
+
+    public static void visitStaticFieldUse(Object value, String index, int linenumber, String method){
+        System.out.println("Use at line "+linenumber+": var"+index+", value "+value+", method :"+method);
+        registerFieldUse(index, value, linenumber, method, null);
+    }
+
+    public static void visitStaticFieldDef(Object value, String index, int linenumber, String method){
+        System.out.println("Use at line "+linenumber+": var"+index+", value "+value+", method :"+method);
+        registerFieldDef(value, index, linenumber, method, null);
+    }
+
+    public static void visitFieldDef(Object instance, Object value, String name, int linenumber, String method){
+        System.out.println("Field Def at line "+linenumber+": var"+name+", instance "+instance+", value "+value+", method :"+method);
+        registerFieldDef(value, name, linenumber, method, instance);
+    }
+
+    public static void visitFieldUse(Object instance, Object value, String name, int linenumber, String method){
+        System.out.println("Field Use at line "+linenumber+": var"+name+", instance "+instance+", value "+value+", method :"+method);
+        registerFieldUse(name, value, linenumber, method, instance);
     }
 
     public static void visitParameter(Object value, int index, String method){
         //System.out.println("Parameter of method " + method +": var"+index+", value "+value);
-        registerParameter(value, index, method);
+        registerParameter(value, Integer.toString(index), method);
     }
 
-    protected static void registerUse(int index, Object value, int linenumber, String method){
+    protected static void registerUse(String index, Object value, int linenumber, String method){
         DefUseVariable use = new DefUseVariable(linenumber, index, value, method);
-        DefUseVariable def = defs.getLastDefinition(index, method);
+        DefUseVariable def = defs.getLastDefinition(index, method, value);
         if(def == null && interMethods.size() != 0){
             for(InterMethodAlloc alloc : interMethods){
-                if(alloc.newMethod.equals(method) && alloc.newIndex == index){
-                    def = defs.getLastDefinition(alloc.currentIndex, alloc.currentMethod);
+                if(alloc.newMethod.equals(method) && alloc.newIndex.equals(index)){
+                    def = defs.getLastDefinition(alloc.currentIndex, alloc.currentMethod, alloc.value);
                     break;
                 }
             }
         }
         if(def != null){
             DefUseChain chain = new DefUseChain(def, use);
-            chains.addChain(chain);
+            if(!chains.contains(chain)){
+                chains.addChain(chain);
+            }
         }
     }
 
-    protected static void registerDef(Object value, int index, int linenumber, String method){
+    protected static void registerFieldUse(String index, Object value, int linenumber, String method, Object fieldInstance){
+        DefUseField use = new DefUseField(linenumber, index, value, method, fieldInstance);
+        DefUseVariable def = defs.getLastDefinition(index, value, fieldInstance);
+        if(def == null && interMethods.size() != 0){
+            for(InterMethodAlloc alloc : interMethods){
+                if(alloc.newMethod.equals(method) && alloc.newIndex.equals(index)){
+                    def = defs.getLastDefinition(alloc.currentIndex, alloc.currentMethod, alloc.value);
+                    break;
+                }
+            }
+        }
+        if(def != null){
+            DefUseChain chain = new DefUseChain(def, use);
+            if(!chains.contains(chain)){
+                chains.addChain(chain);
+            }
+        }
+    }
+
+    protected static void registerDef(Object value, String index, int linenumber, String method){
         DefUseVariable def = defs.contains(value, index, linenumber, method);
         if(def != null){
             defs.removeDef(def);
         } else {
             def = new DefUseVariable(linenumber, index, value, method);
         }
-        DefUseVariable alias = defs.hasAlias(def);
-        if(alias != null){
-            System.out.println("Is Alias!!!");
-            def.setAlias(alias);
-            alias.setAlias(def);
+        if(def.getAlias() == null) {
+            DefUseVariable alias = defs.hasAlias(def);
+            if(alias != null){
+                System.out.println("Is Alias!!!");
+                def.setAlias(alias);
+                alias.setAlias(def);
+            }
         }
         defs.addDef(def);
     }
 
-    protected static void registerParameter(Object value, int index, String method){
+    protected static void registerFieldDef(Object value, String index, int linenumber, String method, Object instance){
+        DefUseVariable def = defs.contains(value, index, linenumber, instance);
+        if(def != null){
+            defs.removeDef(def);
+        } else {
+            def = new DefUseField(linenumber, index, value, method, instance);
+        }
+        if(def.getAlias() == null) {
+            DefUseVariable alias = defs.hasAlias(def);
+            if(alias != null){
+                System.out.println("Is Alias!!!");
+                def.setAlias(alias);
+                alias.setAlias(def);
+            }
+        }
+        defs.addDef(def);
+    }
+
+    protected static void registerParameter(Object value, String index, String method){
         if(interMethods.size() != 0){
             for(InterMethodAlloc alloc : interMethods){
                 if(alloc.newMethod.equals(method) && alloc.value.equals(value)){

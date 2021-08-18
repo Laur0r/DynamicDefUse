@@ -27,4 +27,8 @@ public class DefUseChain {
         return def;
     }
 
+    public boolean equals(DefUseChain chain){
+        return chain.getUse().equals(this.use) && chain.getDef().equals(this.def);
+    }
+
 }

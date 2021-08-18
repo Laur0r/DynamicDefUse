@@ -1,7 +1,16 @@
 public class Increment {
-    public double add(double x, Object z){
+
+    public int x;
+    public static int y;
+
+    public Increment(){
+        this.x = 5;
+        y = 4;
+    }
+
+    public double add(Object z){
         if(x == 5){
-            x = x+1;
+            x = x+y;
             z.toString();
         } else {
             x = 5;

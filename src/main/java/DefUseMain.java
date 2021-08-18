@@ -5,10 +5,17 @@ public class DefUseMain {
 		//DefUseMain obj = new DefUseMain();
 		//DefUseMain obj2 = obj;
 		Increment inc = new Increment();
-		double y = 5;
-		int z = 2;
-		inc.add(y, "hello");
+		Test t = new Test();
+		//Increment inc2 = new Increment();
+		//inc.x = 5;
+		//inc2.x = 6;
+		//System.out.println(inc.x);
+		inc.add(t.h);
 		//System.out.println("Transactions completed");
 	}
 
+}
+
+class Test{
+ 	public String h = "hello";
 }
