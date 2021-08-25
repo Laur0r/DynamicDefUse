@@ -9,7 +9,8 @@ public class DefSet {
     public DefUseVariable getLastDefinition(String index, String method, Object value){
         DefUseVariable output = null;
         for(DefUseVariable def : defs){
-            if(def.getVariableIndex().equals(index) && def.getValue().equals(value)  && def.getMethod().equals(method)){
+            if(def.getVariableIndex().equals(index) && def.getValue().equals(value)  && def.getMethod().equals(method)
+            && !(def instanceof DefUseField)){
                 output = def;
                 break;
             }
@@ -77,7 +78,7 @@ public class DefSet {
         defs.remove(def);
     }
 
-    public boolean isPrimitiveOrWrapper(Object obj){
+    protected boolean isPrimitiveOrWrapper(Object obj){
         Class<?> type = obj.getClass();
         return type.isPrimitive() || type == Double.class || type == Float.class || type == Long.class
                 || type == Integer.class || type == Short.class || type == Character.class

@@ -45,7 +45,7 @@ public class DefUseVariable {
     public void setAlias(DefUseVariable alias){this.alias=alias;}
 
     public boolean equals(DefUseVariable var){
-        return var.getLinenumber() == this.linenumber && var.getVariableIndex() == this.variableIndex
+        return var.getLinenumber() == this.linenumber && var.getVariableIndex().equals(this.variableIndex)
                 && var.getValue().equals(this.value) && var.getMethod().equals(this.method);
     }
 }

@@ -11,15 +11,6 @@ public class DefUseChains {
         return defUseChains;
     }
 
-    /*public HashSet<DefUseChain> copyChains() {
-        HashSet<DefUseChain> copy = new HashSet<DefUseChain>();
-        for (DefUseChain chain : defUseChains) {
-            DefUseChain defCopy = (DefUseChain) chain.clone();
-            copy.add(defCopy);
-        }
-        return copy;
-    }*/
-
     public void setDefUseChains(ArrayList<DefUseChain> defUseChains) {
         this.defUseChains = defUseChains;
     }
@@ -62,5 +53,24 @@ public class DefUseChains {
             }
         }
         return null;
+    }
+
+    public void removeAload(Object object, int linenumber, String method){
+        for(DefUseChain chain : defUseChains) {
+            DefUseVariable use = chain.getUse();
+            if (use.getLinenumber() == linenumber && use.getValue().equals(object) && use.getMethod().equals(method)) {
+                if(!isPrimitiveOrWrapper(object)){
+                    defUseChains.remove(chain);
+                    return;
+                }
+            }
+        }
+    }
+
+    protected boolean isPrimitiveOrWrapper(Object obj){
+        Class<?> type = obj.getClass();
+        return type.isPrimitive() || type == Double.class || type == Float.class || type == Long.class
+                || type == Integer.class || type == Short.class || type == Character.class
+                || type == Byte.class || type == Boolean.class || type == String.class;
     }
 }

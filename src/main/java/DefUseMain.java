@@ -1,21 +1,15 @@
 public class DefUseMain {
 
 	public static void main(String[] args) {
-		//int length = args.length;
-		//DefUseMain obj = new DefUseMain();
-		//DefUseMain obj2 = obj;
+		long startTime = System.nanoTime();
 		Increment inc = new Increment();
-		Test t = new Test();
-		//Increment inc2 = new Increment();
-		//inc.x = 5;
-		//inc2.x = 6;
-		//System.out.println(inc.x);
-		inc.add(t.h);
-		//System.out.println("Transactions completed");
+		System.out.println(inc.y);
+		int[] a = new int[]{1, 3,2};
+		a = inc.sort(a);
+		System.out.println(a[0]+" "+a[1]+" "+a[2]);
+		long endTime = System.nanoTime();
+		long totalTime = endTime - startTime;
+		System.out.println("Execution Time: "+totalTime);
 	}
 
-}
-
-class Test{
- 	public String h = "hello";
 }
