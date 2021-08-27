@@ -37,12 +37,26 @@ public class DefUseAnalyser {
 
     public static void visitFieldDef(Object instance, Object value, String name, int linenumber, String method){
         //System.out.println("Field Def at line "+linenumber+": var"+name+", instance "+instance+", value "+value+", method :"+method);
+        chains.removeAload(instance, linenumber, method);
         registerFieldDef(value, name, linenumber, method, instance);
     }
 
     public static void visitFieldUse(Object instance, Object value, String name, int linenumber, String method){
         //System.out.println("Field Use at line "+linenumber+": var"+name+", instance "+instance+", value "+value+", method :"+method);
+        chains.removeAload(instance, linenumber, method);
         registerFieldUse(name, value, linenumber, method, instance);
+    }
+
+    public static void visitArrayUse(Object array, int index, Object value, int linenumber, String method){
+        //System.out.println("Array Use at line "+linenumber+": index"+index+", array "+array+", value "+value+", method :"+method);
+        chains.removeAload(array, linenumber, method);
+        registerFieldUse(Integer.toString(index), value, linenumber, method, array);
+    }
+
+    public static void visitArrayDef(Object array, int index, Object value, int linenumber, String method){
+        //System.out.println("Array Def at line "+linenumber+": index"+index+", array "+array+", value "+value+", method :"+method);
+        chains.removeAload(array, linenumber, method);
+        registerFieldDef(value, Integer.toString(index), linenumber, method, array);
     }
 
     public static void visitParameter(Object value, int index, String method){
@@ -150,13 +164,13 @@ public class DefUseAnalyser {
     }
 
     public static void registerInterMethod(Object value, int linenumber, String currentMethod, String newMethod){
-        System.out.println("interMethod");
+        //System.out.println("interMethod");
         InterMethodAlloc m = new InterMethodAlloc(value, linenumber, currentMethod, newMethod);
         interMethods.add(m);
     }
 
     public static void registerInterMethod(Object[] values, int linenumber, String currentMethod, String newMethod){
-        System.out.println("interMethod");
+        //System.out.println("interMethod");
         for(Object obj: values){
             InterMethodAlloc m = new InterMethodAlloc(obj, linenumber, currentMethod, newMethod);
             interMethods.add(m);

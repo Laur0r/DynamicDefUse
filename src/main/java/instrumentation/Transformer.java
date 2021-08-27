@@ -23,24 +23,18 @@ public class Transformer implements ClassFileTransformer {
 			ProtectionDomain protectionDomain, byte[] classfileBuffer) throws IllegalClassFormatException {
 
 		Thread th = Thread.currentThread();
-		if ("DefUseMain".equals(className) || ("Increment").equals(className) || ("Fibonacci").equals(className)) {
+		if (className.startsWith("execution/")) {
 
 			ClassReader reader = new ClassReader(classfileBuffer);
 			ClassNode node = new ClassNode();
-			//TraceClassVisitor writer = new TraceClassVisitor(new PrintWriter(System.out));
-			//ClassVisitor visitor = new LogMethodClassVisitor(writer, className);
 			reader.accept(node, 0);
 			for(MethodNode mnode : node.methods){
 				int linenumber = 0;
-				/*if ("<init>".equals(mnode.name) || "<clinit>".equals(mnode.name)) {
-					continue;
-				}*/
-				//System.out.println(mnode.name);
 				InsnList insns = mnode.instructions;
 				if (insns.size() == 0) {
 					continue;
 				}
-				mnode.maxStack += 5;
+				// Register method Parameter for DefUse by aligning first local variables with parameter types
 				InsnList methodStart = new InsnList();
 				Type[] types = Type.getArgumentTypes(mnode.desc);
 				int typeindex = 0;
@@ -65,9 +59,9 @@ public class Transformer implements ClassFileTransformer {
 							i++;
 						}
 						typeindex++;
-
 					}
 				}
+
 				AbstractInsnNode firstIns = insns.getFirst();
 				Iterator<AbstractInsnNode> j = insns.iterator();
 				while (j.hasNext()) {
@@ -130,7 +124,7 @@ public class Transformer implements ClassFileTransformer {
 			} catch(Exception e){
 				e.printStackTrace();
 			}
-			File outputfile = new File(node.name+".class");
+			File outputfile = new File(node.name.substring(node.name.lastIndexOf("/")+1)+".class");
 			try{
 				OutputStream fos = new FileOutputStream(outputfile);
 				fos.write(writer.toByteArray());
