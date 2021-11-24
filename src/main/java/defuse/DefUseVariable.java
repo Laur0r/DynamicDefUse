@@ -3,16 +3,18 @@ package defuse;
 public class DefUseVariable {
 
     protected int linenumber;
+    protected int instruction;
     protected String variableIndex;
     protected Object value;
     protected String method;
     protected DefUseVariable alias;
 
-    public DefUseVariable(int linenumber, String variableIndex, Object value, String method){
+    public DefUseVariable(int linenumber, int instruction, String variableIndex, Object value, String method){
         this.linenumber = linenumber;
         this.variableIndex = variableIndex;
         this.value = value;
         this.method = method;
+        this.instruction = instruction;
         this.alias = null;
     }
 
@@ -21,6 +23,12 @@ public class DefUseVariable {
     }
 
     public int getLinenumber(){return linenumber;}
+
+    public void setInstruction(int ins){
+        this.instruction = ins;
+    }
+
+    public int getInstruction(){return instruction;}
 
     public void setVariableIndex(String variableIndex){
         this.variableIndex = variableIndex;
@@ -45,7 +53,13 @@ public class DefUseVariable {
     public void setAlias(DefUseVariable alias){this.alias=alias;}
 
     public boolean equals(DefUseVariable var){
-        return var.getLinenumber() == this.linenumber && var.getVariableIndex().equals(this.variableIndex)
-                && var.getValue().equals(this.value) && var.getMethod().equals(this.method);
+        if(this.value == null && var.getValue() == null){
+            return var.getLinenumber() == this.linenumber && var.getInstruction() == this.instruction &&
+                    var.getVariableIndex().equals(this.variableIndex) && var.getMethod().equals(this.method);
+        } else if(var.getValue() != null){
+            return var.getLinenumber() == this.linenumber && var.getInstruction() == this.instruction &&
+                    var.getVariableIndex().equals(this.variableIndex)
+                    && var.getValue().equals(this.value) && var.getMethod().equals(this.method);
+        } else return false;
     }
 }

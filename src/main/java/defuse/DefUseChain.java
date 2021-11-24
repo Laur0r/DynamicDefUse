@@ -12,7 +12,7 @@ public class DefUseChain {
 
     public String toString(){
         String output = "";
-        output += "   DefUse var "+use.getVariableIndex()+" value "+def.getValue() +": Def Method "+def.getMethod()+" ln=" + def.getLinenumber() +" --> Use: Method "+use.getMethod()+" ln=" + use.getLinenumber();
+        output += "   DefUse var "+use.getVariableIndex()+" value "+def.getValue() +": Def Method "+def.getMethod()+" ln=" + def.getLinenumber()+" ins="+def.getInstruction() +" --> Use: Method "+use.getMethod()+" ln=" + use.getLinenumber()+" ins="+use.getInstruction();
         if(def.getAlias() != null){
             output += ", alias: Def: ln="+def.getAlias().getLinenumber();
         }

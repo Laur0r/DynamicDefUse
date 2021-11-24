@@ -31,6 +31,18 @@ public class DefUseChains {
         return false;
     }
 
+    public boolean containsSimilar(DefUseChain chain){
+        for(DefUseChain c :defUseChains){
+            if(chain.getDef().variableIndex.equals(c.getDef().variableIndex) && chain.getDef().method.equals(c.getDef().method)
+            && chain.getDef().linenumber == c.getDef().linenumber && chain.getDef().instruction == c.getDef().instruction &&
+            chain.getUse().method.equals(c.getUse().method) && chain.getUse().linenumber == c.getUse().linenumber &&
+            chain.getUse().instruction == c.getUse().instruction){
+                return true;
+            }
+        }
+        return false;
+    }
+
     public String toString(){
         String output = "";
         for(DefUseChain chain : defUseChains){
@@ -58,12 +70,22 @@ public class DefUseChains {
     public void removeAload(Object object, int linenumber, String method){
         for(DefUseChain chain : defUseChains) {
             DefUseVariable use = chain.getUse();
-            if (use.getLinenumber() == linenumber && use.getValue().equals(object) && use.getMethod().equals(method)) {
-                if(!isPrimitiveOrWrapper(object)){
-                    defUseChains.remove(chain);
-                    return;
+            if(use.getValue() == null && object == null){
+                if (use.getLinenumber() == linenumber && use.getMethod().equals(method)) {
+                    if(!isPrimitiveOrWrapper(object)){
+                        defUseChains.remove(chain);
+                        return;
+                    }
+                }
+            } else if(use.getValue() != null){
+                if (use.getLinenumber() == linenumber && use.getValue().equals(object) && use.getMethod().equals(method)) {
+                    if(!isPrimitiveOrWrapper(object)){
+                        defUseChains.remove(chain);
+                        return;
+                    }
                 }
             }
+
         }
     }
 
