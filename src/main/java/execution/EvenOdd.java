@@ -24,26 +24,38 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
  */
 
-/* 2021-11-14 Taken and adjusted from https://github.com/sosy-lab/sv-benchmarks/blob/master/java/jayhorn-recursive/SatFibonacci01/Main.java
+/* 2021-11-14 Taken and adjusted from https://github.com/sosy-lab/sv-benchmarks/blob/master/java/jayhorn-recursive/SatEvenOdd01/Main.java
     : LT */
 
 import org.junit.Test;
 import static org.junit.Assert.*;
 
-public class Fibonacci {
-
-    public static int fibonacci(int n)  {
-        if(n == 0)
+public class EvenOdd {
+    static int isOdd(int n) {
+        if (n == 0) {
             return 0;
-        else if(n == 1)
+        } else if (n == 1) {
             return 1;
-        else
-            return fibonacci(n - 1) + fibonacci(n - 2);
+        } else {
+            return isEven(n - 1);
+        }
+    }
+
+    static int isEven(int n) {
+        if (n == 0) {
+            return 1;
+        } else if (n == 1) {
+            return 0;
+        } else {
+            return isOdd(n - 1);
+        }
     }
 
     @Test
-    public void TestFibonacci0() {
-        int n = fibonacci(5);
-        assertEquals(5, n);
+    public void testEvenOdd(){
+        int e = isEven(33);
+        assertEquals(0,e);
+        int o = isOdd(29);
+        assertEquals(1,o);
     }
 }

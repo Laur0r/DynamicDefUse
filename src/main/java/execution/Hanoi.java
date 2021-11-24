@@ -24,26 +24,54 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
  */
 
-/* 2021-11-14 Taken and adjusted from https://github.com/sosy-lab/sv-benchmarks/blob/master/java/jayhorn-recursive/SatFibonacci01/Main.java
+/* 2021-11-14 Taken and adjusted from https://github.com/sosy-lab/sv-benchmarks/blob/master/java/jayhorn-recursive/SatHanoi01/Main.java
     : LT */
 
 import org.junit.Test;
 import static org.junit.Assert.*;
 
-public class Fibonacci {
+public class Hanoi {
 
-    public static int fibonacci(int n)  {
-        if(n == 0)
-            return 0;
-        else if(n == 1)
+    public int counter; // removed static declaration
+
+    /*
+     * This function returns the optimal amount of steps,
+     * needed to solve the problem for n-disks
+     */
+    public int hanoi(int n) {
+        if (n == 1) {
             return 1;
-        else
-            return fibonacci(n - 1) + fibonacci(n - 2);
+        }
+        return 2 * (hanoi(n - 1)) + 1;
+    }
+
+    /*
+     * This applies the known algorithm, without executing it (so no arrays).
+     * But the amount of steps is counted in a global variable.
+     */
+    public void applyHanoi(int n, int from, int to, int via) {
+        if (n == 0) {
+            return;
+        }
+        // increment the number of steps
+        counter++;
+        applyHanoi(n - 1, from, via, to);
+        applyHanoi(n - 1, via, to, from);
+    }
+
+    public void setCounter(int i) {
+        this.counter = i;
+    }
+
+    public int getCounter() {
+        return this.counter;
     }
 
     @Test
-    public void TestFibonacci0() {
-        int n = fibonacci(5);
-        assertEquals(5, n);
+    public void testHanoi(){
+        counter = 0;
+        applyHanoi(5, 1, 3, 2);
+        int result = hanoi(5);
+        assertEquals(result, counter);
     }
 }

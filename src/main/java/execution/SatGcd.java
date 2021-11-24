@@ -1,5 +1,7 @@
 package execution;
 
+import org.junit.Test;
+
 /*
 The MIT License (MIT)
 
@@ -24,26 +26,28 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
  */
 
-/* 2021-11-14 Taken and adjusted from https://github.com/sosy-lab/sv-benchmarks/blob/master/java/jayhorn-recursive/SatFibonacci01/Main.java
+/* 2021-11-14 Taken and adjusted from https://github.com/sosy-lab/sv-benchmarks/blob/master/java/jayhorn-recursive/SatGcd/Main.java
     : LT */
 
-import org.junit.Test;
-import static org.junit.Assert.*;
+public class SatGcd {
 
-public class Fibonacci {
-
-    public static int fibonacci(int n)  {
-        if(n == 0)
-            return 0;
-        else if(n == 1)
-            return 1;
-        else
-            return fibonacci(n - 1) + fibonacci(n - 2);
-    }
+        // Compute the greatest common denominator using Euclid's algorithm
+        static int gcd(int y1, int y2) {
+            if (y1 <= 0 || y2 <= 0) {
+                return 0;
+            }
+            if (y1 == y2) {
+                return y1;
+            }
+            if (y1 > y2) {
+                return gcd(y1 - y2, y2);
+            }
+            return gcd(y1, y2 - y1);
+        }
 
     @Test
-    public void TestFibonacci0() {
-        int n = fibonacci(5);
-        assertEquals(5, n);
+    public void testGCD(){
+        int i = gcd(94, 530);
+        System.out.println(i);
     }
 }
