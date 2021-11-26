@@ -70,22 +70,15 @@ public class DefUseChains {
     public void removeAload(Object object, int linenumber, String method){
         for(DefUseChain chain : defUseChains) {
             DefUseVariable use = chain.getUse();
-            if(use.getValue() == null && object == null){
-                if (use.getLinenumber() == linenumber && use.getMethod().equals(method)) {
-                    if(!isPrimitiveOrWrapper(object)){
-                        defUseChains.remove(chain);
-                        return;
-                    }
-                }
-            } else if(use.getValue() != null){
-                if (use.getLinenumber() == linenumber && use.getValue().equals(object) && use.getMethod().equals(method)) {
-                    if(!isPrimitiveOrWrapper(object)){
-                        defUseChains.remove(chain);
-                        return;
-                    }
+            if (use.getLinenumber() == linenumber && use.getMethod().equals(method)){
+                if(use.getValue() == null && object == null){
+                    defUseChains.remove(chain);
+                    return;
+                } else if(use.getValue() != null && use.getValue().equals(object) && !isPrimitiveOrWrapper(object)) {
+                    defUseChains.remove(chain);
+                    return;
                 }
             }
-
         }
     }
 

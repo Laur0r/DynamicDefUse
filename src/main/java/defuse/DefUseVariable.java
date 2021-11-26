@@ -53,13 +53,9 @@ public class DefUseVariable {
     public void setAlias(DefUseVariable alias){this.alias=alias;}
 
     public boolean equals(DefUseVariable var){
-        if(this.value == null && var.getValue() == null){
-            return var.getLinenumber() == this.linenumber && var.getInstruction() == this.instruction &&
-                    var.getVariableIndex().equals(this.variableIndex) && var.getMethod().equals(this.method);
-        } else if(var.getValue() != null){
-            return var.getLinenumber() == this.linenumber && var.getInstruction() == this.instruction &&
-                    var.getVariableIndex().equals(this.variableIndex)
-                    && var.getValue().equals(this.value) && var.getMethod().equals(this.method);
+        if(var.getLinenumber() == this.linenumber && var.getInstruction() == this.instruction &&
+                var.getVariableIndex().equals(this.variableIndex) && var.getMethod().equals(this.method)){
+            return this.value == null && var.getValue() == null || var.getValue() != null && var.getValue().equals(this.value);
         } else return false;
     }
 }

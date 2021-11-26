@@ -9,15 +9,9 @@ public class DefSet {
     public DefUseVariable getLastDefinition(String index, String method, Object value){
         DefUseVariable output = null;
         for(DefUseVariable def : defs){
-            if(def.getValue() == null && value == null) {
-                if(def.getVariableIndex().equals(index) && def.getMethod().equals(method)
-                        && !(def instanceof DefUseField)){
-                    output = def;
-                    break;
-                }
-            } else if(def.getValue() != null) {
-                if(def.getVariableIndex().equals(index) && def.getValue().equals(value)  && def.getMethod().equals(method)
-                        && !(def instanceof DefUseField)){
+            if(def.getVariableIndex().equals(index) && def.getMethod().equals(method)
+                    && !(def instanceof DefUseField)){
+                if(def.getValue() == null && value == null || def.getValue() != null && def.getVariableIndex().equals(index)) {
                     output = def;
                     break;
                 }
@@ -31,19 +25,10 @@ public class DefSet {
         for(DefUseVariable def : defs){
             if(def instanceof DefUseField) {
                 DefUseField field = (DefUseField) def;
-                if(field.getValue() == null && value == null){
-                    if(field.getVariableIndex().equals(index)){
-                        if(fieldInstance == null || field.getInstance().equals(fieldInstance)){
-                            output = def;
-                            break;
-                        }
-                    }
-                } else if(field.getValue() != null) {
-                    if(field.getVariableIndex().equals(index) && field.getValue().equals(value)){
-                        if(fieldInstance == null || field.getInstance().equals(fieldInstance)){
-                            output = def;
-                            break;
-                        }
+                if(field.getVariableIndex().equals(index) && (fieldInstance == null || field.getInstance().equals(fieldInstance))){
+                    if(field.getValue() == null && value == null || field.getValue() != null && field.getValue().equals(value)){
+                        output = def;
+                        break;
                     }
                 }
             }
@@ -71,16 +56,11 @@ public class DefSet {
 
     public DefUseVariable contains(Object value, String index, int ln, int ins, String method){
         for(DefUseVariable d: defs){
-            if(d.getValue() == null){
-                if(value != null) {
-                    continue;
-                } else if(d.getMethod().equals(method) && d.getVariableIndex().equals(index)
+            if(d.getMethod().equals(method) && d.getVariableIndex().equals(index)
                             && d.getLinenumber() == ln && d.getInstruction() == ins){
-                    return d;
-                }
-            } else if(d.getValue().equals(value) && d.getMethod().equals(method) && d.getVariableIndex().equals(index)
-            && d.getLinenumber() == ln && d.getInstruction() == ins){
-                return d;
+                    if(d.getValue() == null && value == null || d.getValue() != null && d.getVariableIndex().equals(index)) {
+                        return d;
+                    }
             }
         }
         return null;
@@ -90,18 +70,9 @@ public class DefSet {
         for(DefUseVariable d: defs){
             if(d instanceof DefUseField){
                 DefUseField field = (DefUseField) d;
-                if(field.getValue() == null) {
-                    if (value != null) {
-                        continue;
-                    } else if(d.getVariableIndex().equals(index)
-                                && d.getLinenumber() == ln && d.getInstruction() == ins) {
-                            if (instance == null || field.getInstance().equals(instance)) {
-                                return d;
-                            }
-                    }
-                } else if(field.getValue().equals(value) && d.getVariableIndex().equals(index)
-                        && d.getLinenumber() == ln && d.getInstruction() == ins){
-                    if(instance == null || field.getInstance().equals(instance)){
+                if(d.getVariableIndex().equals(index) && d.getLinenumber() == ln && d.getInstruction() == ins &&
+                        (instance == null || field.getInstance().equals(instance)) ) {
+                    if(field.getValue() == null && value == null || field.getValue() != null && field.getValue().equals(value)){
                         return d;
                     }
                 }
