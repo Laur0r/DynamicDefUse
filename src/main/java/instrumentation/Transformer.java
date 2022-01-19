@@ -1,8 +1,10 @@
 package instrumentation;
 
-import com.sun.tools.classfile.Opcode;
+import org.objectweb.asm.Opcodes;
 import defuse.ParameterCollector;
-import org.objectweb.asm.*;
+import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
 
 
@@ -13,17 +15,17 @@ import java.io.OutputStream;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
 import java.security.ProtectionDomain;
-import java.util.ArrayList;
 import java.util.Iterator;
 
 public class Transformer implements ClassFileTransformer {
 
+	private String dir;
+
 	@Override
 	public byte[] transform(ClassLoader loader, String className, Class<?> classBeingRedefined,
 			ProtectionDomain protectionDomain, byte[] classfileBuffer) throws IllegalClassFormatException {
-
 		Thread th = Thread.currentThread();
-		if (className.startsWith("execution/")) {
+		if (className.startsWith(dir)) {
 
 			ClassReader reader = new ClassReader(classfileBuffer);
 			ClassNode node = new ClassNode();
@@ -469,5 +471,9 @@ public class Transformer implements ClassFileTransformer {
 			return il;
 		}
 		return null;
+	}
+
+	public void setDir(String dir){
+		this.dir = dir;
 	}
 }
