@@ -1,8 +1,6 @@
 package dacite;
 
-import execution.DefUseMain;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.maven.Maven;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.DependencyResolutionRequiredException;
 import org.apache.maven.plugin.AbstractMojo;
@@ -14,13 +12,9 @@ import org.apache.maven.project.MavenProject;
 
 import java.lang.ProcessBuilder.Redirect;
 import java.lang.management.ManagementFactory;
-import java.net.URL;
-import java.net.URLClassLoader;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Properties;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 @Mojo(name="defuse")
 public class DefUseMojo extends AbstractMojo{
@@ -33,6 +27,12 @@ public class DefUseMojo extends AbstractMojo{
 
     @Parameter( readonly = true, defaultValue = "${plugin.artifacts}" )
     private List<Artifact> pluginDependencies;
+
+    @Parameter( property = "defuse.analysisDir")
+    private String analysisDir;
+
+    @Parameter( property = "defuse.analysisJunittest")
+    private String analysisJunittest;
 
     public void execute() throws MojoExecutionException {
         ProcessHandle.Info currentProcessInfo = ProcessHandle.current().info();
@@ -49,14 +49,15 @@ public class DefUseMojo extends AbstractMojo{
             e.printStackTrace();
         }
 
-        newProcessCommandLine.add("-javaagent:target/dynamic-defuse-1.0-SNAPSHOT.jar=execution/");
+        newProcessCommandLine.add("-javaagent:target/dynamic-defuse-1.0-SNAPSHOT.jar="+analysisDir+"/");
         newProcessCommandLine.add("-classpath");
-        for(Artifact a:pluginDependencies){
+        for(Artifact a: pluginDependencies){
             classpath = classpath + a.getFile().getAbsolutePath() + ":";
         }
         StringUtils.chop(classpath);
         newProcessCommandLine.add(classpath);
         newProcessCommandLine.add(DefUseMain.class.getName());
+        newProcessCommandLine.add(analysisDir + "."+analysisJunittest);
 
         ProcessBuilder newProcessBuilder = new ProcessBuilder(newProcessCommandLine).redirectOutput(Redirect.INHERIT)
                 .redirectError(Redirect.INHERIT);
@@ -77,10 +78,6 @@ public class DefUseMojo extends AbstractMojo{
         System.out.println("test path");
         System.out.println(p.getProperty("java.class.path"));
         ClassLoader cl = ClassLoader.getSystemClassLoader();
-        /*URL[] urls = ((URLClassLoader)cl).getURLs();
-        for(URL url: urls){
-            System.out.println(url.getFile());
-        }*/
 
         newProcessCommandLine.add("-javaagent:target/dynamic-defuse-1.0-SNAPSHOT.jar=execution/");
         newProcessCommandLine.add("-classpath");
