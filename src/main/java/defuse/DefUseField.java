@@ -1,13 +1,23 @@
 package defuse;
 
+import jakarta.xml.bind.annotation.XmlElement;
+import jakarta.xml.bind.annotation.XmlTransient;
+
 public class DefUseField extends DefUseVariable{
 
+    @XmlTransient
     protected Object instance;
 
-    public DefUseField(int linenumber, int instruction, String variableIndex, Object value, String method, Object instance){
-        super(linenumber, instruction, variableIndex, value, method);
+    protected String instanceName;
+
+    public DefUseField(int linenumber, int instruction, int variableIndex, Object value, String method, String varname, Object instance, String instanceName){
+        super(linenumber, instruction, variableIndex, value, method, varname);
         this.instance = instance;
+        this.instanceName = instanceName;
     }
 
     public Object getInstance() {return this.instance;}
+    @XmlElement
+    public String getInstanceName() {return this.instanceName;}
+    public void setInstanceName(String name) {instanceName = name;}
 }

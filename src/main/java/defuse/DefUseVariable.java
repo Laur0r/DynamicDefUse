@@ -1,60 +1,69 @@
 package defuse;
 
-public class DefUseVariable {
+import jakarta.xml.bind.annotation.XmlElement;
+import jakarta.xml.bind.annotation.XmlTransient;
 
+public class DefUseVariable {
     protected int linenumber;
     protected int instruction;
-    protected String variableIndex;
+    protected String variableName;
+    protected int variableIndex;
+    @XmlTransient
     protected Object value;
     protected String method;
     protected DefUseVariable alias;
 
-    public DefUseVariable(int linenumber, int instruction, String variableIndex, Object value, String method){
+    public DefUseVariable(int linenumber, int instruction, int variableIndex, Object value, String method, String variableName){
         this.linenumber = linenumber;
         this.variableIndex = variableIndex;
         this.value = value;
         this.method = method;
         this.instruction = instruction;
+        this.variableName = variableName;
         this.alias = null;
     }
 
     public void setLinenumber(int linenumber){
         this.linenumber = linenumber;
     }
-
+    @XmlElement
     public int getLinenumber(){return linenumber;}
 
     public void setInstruction(int ins){
         this.instruction = ins;
     }
-
+    @XmlElement
     public int getInstruction(){return instruction;}
 
-    public void setVariableIndex(String variableIndex){
+    public void setVariableName(String variableName){
+        this.variableName = variableName;
+    }
+    public String getVariableName(){return variableName;}
+
+    public void setVariableIndex(int variableIndex){
         this.variableIndex = variableIndex;
     }
-
-    public String getVariableIndex(){return variableIndex;}
+    @XmlElement
+    public int getVariableIndex(){return variableIndex;}
 
     public void setValue(Object value){
         this.value = value;
     }
-
+    @XmlTransient
     public Object getValue(){return value;}
 
     public void setMethod(String method){
         this.method = method;
     }
-
+    @XmlElement
     public String getMethod(){return method;}
 
     public DefUseVariable getAlias(){return alias;}
-
     public void setAlias(DefUseVariable alias){this.alias=alias;}
 
     public boolean equals(DefUseVariable var){
         if(var.getLinenumber() == this.linenumber && var.getInstruction() == this.instruction &&
-                var.getVariableIndex().equals(this.variableIndex) && var.getMethod().equals(this.method)){
+                var.getVariableIndex() == this.variableIndex && var.getVariableName().equals(this.variableName) && var.getMethod().equals(this.method)){
             return this.value == null && var.getValue() == null || var.getValue() != null && var.getValue().equals(this.value);
         } else return false;
     }

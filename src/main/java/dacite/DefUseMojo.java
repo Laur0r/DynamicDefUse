@@ -1,5 +1,6 @@
 package dacite;
 
+import defuse.DefUseAnalyser;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.DependencyResolutionRequiredException;
@@ -64,7 +65,9 @@ public class DefUseMojo extends AbstractMojo{
         try{
             Process newProcess = newProcessBuilder.start();
             System.out.format("%s: process %s started%n", "TestMojo", newProcessBuilder.command());
+            DefUseAnalyser.check();
             System.out.format("process exited with status %s%n", newProcess.waitFor());
+            DefUseAnalyser.check();
         } catch (Exception e){
             System.out.println(e.getMessage());
         }

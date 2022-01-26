@@ -6,8 +6,10 @@ public class InterMethodAlloc {
     public int linenumber;
     public String currentMethod;
     public String newMethod;
-    public String newIndex;
-    public String currentIndex;
+    public int newIndex;
+    public String newName;
+    public int currentIndex;
+    public String currentName;
     public boolean isField;
 
     public InterMethodAlloc(Object value, int linenumber, String cM, String nM){
