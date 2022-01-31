@@ -118,7 +118,7 @@ public class DefUseAnalyser {
         }
         if(def != null){
             DefUseChain chain = new DefUseChain(def, use);
-            if(!chains.contains(chain)){
+            if(!chains.containsSimilar(chain)){
                 chains.addChain(chain);
             }
         }

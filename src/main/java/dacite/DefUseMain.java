@@ -1,6 +1,8 @@
 package dacite;
 
 import defuse.DefUseAnalyser;
+import defuse.DefUseChain;
+import defuse.DefUseVariable;
 import execution.BooleanCounter;
 import execution.BooleanCounterTest;
 import jakarta.xml.bind.JAXBContext;
@@ -13,9 +15,20 @@ import org.junit.Test;
 import org.junit.internal.TextListener;
 import org.junit.runner.JUnitCore;
 import defuse.DefUseChains;
+import org.w3c.dom.Document;
+import org.xml.sax.InputSource;
 
-import java.io.File;
+import java.io.*;
 import java.util.Properties;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.stream.XMLOutputFactory;
+import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.XMLStreamWriter;
+import javax.xml.transform.*;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
 
 public class DefUseMain {
 
@@ -38,30 +51,73 @@ public class DefUseMain {
 		System.out.println(totalTime);
 		System.out.println("run through main method");
 		DefUseAnalyser.check();
-		JAXBContext jaxbContext = null;
+		// write xml file
+		XMLOutputFactory xof = XMLOutputFactory.newInstance();
+		XMLStreamWriter xsw = null;
 		try {
+			xsw = xof.createXMLStreamWriter(new BufferedOutputStream(new FileOutputStream("file.xml")));
+			xsw.writeStartDocument();
+			xsw.writeStartElement("DefUseChains");
 
-			// Normal JAXB RI
-			//jaxbContext = JAXBContext.newInstance(Fruit.class);
-
-			// EclipseLink MOXy needs jaxb.properties at the same package with Fruit.class
-			// Alternative, I prefer define this via eclipse JAXBContextFactory manually.
-			jaxbContext = JAXBContext.newInstance(defuse.DefUseChains.class);
-
-			Marshaller jaxbMarshaller = jaxbContext.createMarshaller();
-
-			// output pretty printed
-			jaxbMarshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
-
-			// output to a xml file
-			jaxbMarshaller.marshal(DefUseAnalyser.chains, new File("defuse.xml"));
-
-			// output to console
-			// jaxbMarshaller.marshal(o, System.out);
-
-		} catch (JAXBException e) {
-			e.printStackTrace();
+			for (DefUseChain chain : DefUseAnalyser.chains.getDefUseChains()) {
+				xsw.writeStartElement("DefUseChain");
+				xsw.writeStartElement("def");
+				parseDefUseVariable(xsw, chain.getDef());
+				xsw.writeEndElement();
+				xsw.writeStartElement("use");
+				parseDefUseVariable(xsw, chain.getUse());
+				xsw.writeEndElement();
+				xsw.writeEndElement();
+			}
+			xsw.writeEndElement();
+			xsw.writeEndDocument();
+			xsw.flush();
+			xsw.close();
+			format("file.xml");
+		}
+		catch (Exception e) {
+			System.err.println("Unable to write the file: " + e.getMessage());
 		}
 
+	}
+
+	private static void parseDefUseVariable(XMLStreamWriter xsw, DefUseVariable var){
+		try {
+			xsw.writeStartElement("linenumber");
+			xsw.writeCharacters(String.valueOf(var.getLinenumber()));
+			xsw.writeEndElement();
+			xsw.writeStartElement("method");
+			xsw.writeCharacters(String.valueOf(var.getMethod()));
+			xsw.writeEndElement();
+			xsw.writeStartElement("variableIndex");
+			xsw.writeCharacters(String.valueOf(var.getVariableIndex()));
+			xsw.writeEndElement();
+			xsw.writeStartElement("variableName");
+			xsw.writeCharacters(String.valueOf(var.getVariableName()));
+			xsw.writeEndElement();
+		} catch (XMLStreamException e) {
+			e.printStackTrace();
+		}
+	}
+
+	private static void format(String file) {
+		DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+		DocumentBuilder builder = null;
+		try {
+			builder = factory.newDocumentBuilder();
+			Document document = builder.parse(new InputSource(new InputStreamReader(new FileInputStream(file))));
+
+	// Gets a new transformer instance
+			Transformer xformer = TransformerFactory.newInstance().newTransformer();
+	// Sets XML formatting
+			xformer.setOutputProperty(OutputKeys.METHOD, "xml");
+	// Sets indent
+			xformer.setOutputProperty(OutputKeys.INDENT, "yes");
+			Source source = new DOMSource(document);
+			Result result = new StreamResult(new File(file));
+			xformer.transform(source, result);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 	}
 }

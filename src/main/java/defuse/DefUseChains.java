@@ -39,9 +39,10 @@ public class DefUseChains {
     public boolean containsSimilar(DefUseChain chain){
         for(DefUseChain c :defUseChains){
             if(chain.getDef().variableIndex == c.getDef().variableIndex && chain.getDef().method.equals(c.getDef().method)
-            && chain.getDef().linenumber == c.getDef().linenumber && chain.getDef().instruction == c.getDef().instruction &&
-            chain.getUse().method.equals(c.getUse().method) && chain.getUse().linenumber == c.getUse().linenumber &&
-            chain.getUse().instruction == c.getUse().instruction){
+                    && chain.getDef().linenumber == c.getDef().linenumber && chain.getDef().instruction == c.getDef().instruction
+                    && chain.getDef().getVariableName().equals(c.getDef().getVariableName()) && chain.getUse().method.equals(c.getUse().method)
+                    && chain.getUse().linenumber == c.getUse().linenumber && chain.getUse().instruction == c.getUse().instruction
+                    && chain.getUse().getVariableName().equals(c.getUse().getVariableName())){
                 return true;
             }
         }
