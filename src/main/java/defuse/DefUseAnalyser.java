@@ -1,18 +1,19 @@
 package defuse;
 
-import java.util.ArrayList;
-import java.util.Stack;
+import java.util.*;
 
 public class DefUseAnalyser {
 
     public static DefUseChains chains;
     protected static DefSet defs;
     protected static ArrayList<InterMethodAlloc> interMethods;
+    protected static Map<Object,AliasAlloc> aliases;
 
     static{
         chains = new DefUseChains();
         defs = new DefSet();
         interMethods = new ArrayList<>();
+        aliases = new HashMap<Object, AliasAlloc>();
     }
 
     public static void visitDef(Object value, int index, int linenumber, int instruction, String method, String varname){
@@ -33,6 +34,15 @@ public class DefUseAnalyser {
         //System.out.println("Use at line "+linenumber+": var"+index+", value "+value+", method :"+method);
         DefUseVariable use = new DefUseVariable(linenumber, instruction, index, value, method, varname);
         DefUseVariable def = defs.getLastDefinition(index, method, value);
+        if(def != null && def.isAlias()){
+            AliasAlloc alloc = aliases.get(def.getValue());
+            for(int i = 0; i<alloc.varNames.size(); i++){
+                DefUseVariable alias = defs.getAliasDef(alloc.varIndexes.get(i), alloc.varNames.get(i), value);
+                if(alias.getLinenumber() > def.getLinenumber()){
+                    def = alias;
+                }
+            }
+        }
         registerUse(def, use, index,varname, method);
     }
 
@@ -72,6 +82,15 @@ public class DefUseAnalyser {
         String instanceName = chains.removeAload(instance, linenumber, method);
         DefUseField use = new DefUseField(linenumber, instruction, -1, value, method, name, instance, instanceName);
         DefUseVariable def = defs.getLastDefinitionFields(-1, name, value, instance);
+        if(def != null && def.isAlias()){
+            AliasAlloc alloc = aliases.get(def.getValue());
+            for(int i = 0; i<alloc.varNames.size(); i++){
+                DefUseVariable alias = defs.getAliasDef(-1, name, value);
+                if(alias.getLinenumber() > def.getLinenumber()){
+                    def = alias;
+                }
+            }
+        }
         registerUse(def, use, -1, name, method);
     }
 
@@ -125,14 +144,19 @@ public class DefUseAnalyser {
     }
 
     protected static void registerDef(DefUseVariable def){
-        if(def.getAlias() == null) {
-            DefUseVariable alias = defs.hasAlias(def);
-            if(alias != null){
-                System.out.println("Is Alias!!!");
-                def.setAlias(alias);
-                alias.setAlias(def);
+            AliasAlloc alloc = aliases.get(def.getValue());
+            if(alloc == null) {
+                DefUseVariable alias = defs.hasAlias(def);
+                if(alias != null){
+                    System.out.println("Is Alias!!!");
+                    alloc = new AliasAlloc(def.getVariableName(), alias.getVariableName(), def.getVariableIndex(), alias.getVariableIndex());
+                    aliases.put(def.getValue(), alloc);
+                    def.setAlias(true);
+                    alias.setAlias(true);
+                }
+            } else {
+                alloc.addAlias(def.getVariableName(), def.getVariableIndex());
             }
-        }
         defs.addDef(def);
     }
 

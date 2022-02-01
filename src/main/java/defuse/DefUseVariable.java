@@ -11,7 +11,7 @@ public class DefUseVariable {
     @XmlTransient
     protected Object value;
     protected String method;
-    protected DefUseVariable alias;
+    protected boolean alias;
 
     public DefUseVariable(int linenumber, int instruction, int variableIndex, Object value, String method, String variableName){
         this.linenumber = linenumber;
@@ -20,7 +20,7 @@ public class DefUseVariable {
         this.method = method;
         this.instruction = instruction;
         this.variableName = variableName;
-        this.alias = null;
+        this.alias = false;
     }
 
     public void setLinenumber(int linenumber){
@@ -58,8 +58,8 @@ public class DefUseVariable {
     @XmlElement
     public String getMethod(){return method;}
 
-    public DefUseVariable getAlias(){return alias;}
-    public void setAlias(DefUseVariable alias){this.alias=alias;}
+    public boolean isAlias(){return alias;}
+    public void setAlias(Boolean alias){this.alias=alias;}
 
     public boolean equals(DefUseVariable var){
         if(var.getLinenumber() == this.linenumber && var.getInstruction() == this.instruction &&

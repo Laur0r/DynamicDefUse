@@ -11,7 +11,7 @@ public class DefSet {
         for(DefUseVariable def : defs){
             if(def.getVariableIndex() == index && def.getMethod().equals(method)
                     && !(def instanceof DefUseField)){
-                if(def.getValue() == null && value == null || def.getValue() != null && def.getVariableIndex() == index) {
+                if(def.getValue() == null && value == null || def.getValue() != null && def.getValue().equals(value)) {
                     output = def;
                     break;
                 }
@@ -37,14 +37,27 @@ public class DefSet {
         return output;
     }
 
+    public DefUseVariable getAliasDef(int index, String varname, Object value){
+        DefUseVariable output = null;
+        for(DefUseVariable def : defs){
+            if(def.getVariableIndex() == index && def.getVariableName().equals(varname)){
+                if(def.getValue() == null && value == null || def.getValue() != null && def.getValue().equals(value)) {
+                    output = def;
+                    break;
+                }
+            }
+        }
+        return output;
+    }
+
     public DefUseVariable hasAlias(DefUseVariable newDef){
         DefUseVariable output = null;
         for(DefUseVariable def : defs){
             if(def.getValue() == null){
                 continue;
             }
-            if(def.getValue().equals(newDef.getValue()) && def.getMethod().equals(newDef.getMethod())
-                    && !(def.getVariableIndex() == newDef.getVariableIndex()) && !isPrimitiveOrWrapper(def.getValue())){
+            if(def.getValue().equals(newDef.getValue()) && !(def.getVariableIndex() == newDef.getVariableIndex())
+                    && !isPrimitiveOrWrapper(def.getValue())){
                 if(output == null || def.getLinenumber() > output.getLinenumber()){
                     output = def;
                 }

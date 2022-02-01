@@ -1,8 +1,6 @@
 package dacite;
 
-import defuse.DefUseAnalyser;
-import defuse.DefUseChain;
-import defuse.DefUseVariable;
+import defuse.*;
 import execution.BooleanCounter;
 import execution.BooleanCounterTest;
 import jakarta.xml.bind.JAXBContext;
@@ -14,7 +12,6 @@ import org.objectweb.asm.ClassReader;
 import org.junit.Test;
 import org.junit.internal.TextListener;
 import org.junit.runner.JUnitCore;
-import defuse.DefUseChains;
 import org.w3c.dom.Document;
 import org.xml.sax.InputSource;
 
@@ -95,6 +92,11 @@ public class DefUseMain {
 			xsw.writeStartElement("variableName");
 			xsw.writeCharacters(String.valueOf(var.getVariableName()));
 			xsw.writeEndElement();
+			if(var instanceof DefUseField){
+				xsw.writeStartElement("objectName");
+				xsw.writeCharacters(String.valueOf(((DefUseField)var).getInstanceName()));
+				xsw.writeEndElement();
+			}
 		} catch (XMLStreamException e) {
 			e.printStackTrace();
 		}
