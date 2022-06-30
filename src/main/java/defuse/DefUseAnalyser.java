@@ -124,16 +124,7 @@ public class DefUseAnalyser {
 
     protected static void registerUse(DefUseVariable def, DefUseVariable use, int index, String name, String method){
         if(def == null && interMethods.size() != 0){
-            for(InterMethodAlloc alloc : interMethods){
-                if(alloc.newMethod.equals(method) && alloc.newName != null && alloc.newIndex == index && alloc.newName.equals(name)){
-                    if(alloc.isField) {
-                        def = defs.getLastDefinitionFields(alloc.currentIndex, alloc.currentName, alloc.value, null);
-                    } else {
-                        def = defs.getLastDefinition(alloc.currentIndex, alloc.currentMethod, alloc.value);
-                    }
-                    break;
-                }
-            }
+            def = getAllocDef(method, index, name);
         }
         if(def != null){
             DefUseChain chain = new DefUseChain(def, use);
@@ -218,6 +209,26 @@ public class DefUseAnalyser {
         for(DefUseChain chain : output.getDefUseChains()){
             System.out.println(chain.toString());
         }
+    }
+
+    protected static DefUseVariable getAllocDef(String method, int index, String name){
+        DefUseVariable def;
+        for(InterMethodAlloc alloc : interMethods){
+            if(alloc.newMethod.equals(method) && alloc.newName != null && alloc.newIndex == index && alloc.newName.equals(name)){
+                if(alloc.isField) {
+                    def = defs.getLastDefinitionFields(alloc.currentIndex, alloc.currentName, alloc.value, null);
+                } else {
+                    def = defs.getLastDefinition(alloc.currentIndex, alloc.currentMethod, alloc.value);
+                }
+                if(def == null){
+                    def = getAllocDef(alloc.currentMethod, alloc.currentIndex, alloc.currentName);
+                    return def;
+                } else {
+                    return def;
+                }
+            }
+        }
+        return null;
     }
 
     public static void check(){
