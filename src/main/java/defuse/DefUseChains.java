@@ -57,12 +57,13 @@ public class DefUseChains {
         return output;
     }
 
-    public DefUseVariable findUse(String method, int linenumber, Object value){
+    public DefUseVariable findUse(String method, int linenumber, Object value, boolean removed){
         for(DefUseChain chain : defUseChains){
             DefUseVariable use = chain.getUse();
             if(use.getLinenumber() == linenumber && use.getValue().equals(value) && use.getMethod().equals(method)){
-                DefUseVariable def = chain.getDef();
-                defUseChains.remove(chain);
+                if(!removed){
+                    defUseChains.remove(chain);
+                }
                 return use;
             }
         }

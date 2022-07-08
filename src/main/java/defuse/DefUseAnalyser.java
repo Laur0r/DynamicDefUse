@@ -6,13 +6,13 @@ public class DefUseAnalyser {
 
     public static DefUseChains chains;
     protected static DefSet defs;
-    protected static ArrayList<InterMethodAlloc> interMethods;
+    protected static InterMethodAllocDequeue interMethods;
     protected static Map<Object,AliasAlloc> aliases;
 
     static{
         chains = new DefUseChains();
         defs = new DefSet();
-        interMethods = new ArrayList<>();
+        interMethods = new InterMethodAllocDequeue();
         aliases = new HashMap<Object, AliasAlloc>();
     }
 
@@ -153,13 +153,16 @@ public class DefUseAnalyser {
 
     protected static void registerParameter(Object value, int index, int ln, String method, String varname){
         if(interMethods.size() != 0){
-            for(InterMethodAlloc alloc : interMethods){
+            for(InterMethodAlloc alloc : interMethods.interMethodAllocs){
                 if(alloc.newMethod.equals(method)) {
                     if(alloc.value == null && value == null || alloc.value != null && alloc.value.equals(value)){
                         alloc.newIndex = index;
                         alloc.newName = varname;
-                        DefUseVariable result = chains.findUse(alloc.currentMethod, alloc.linenumber, value);
+                        DefUseVariable result = chains.findUse(alloc.currentMethod, alloc.linenumber, value, alloc.isRemoved);
                         if(result != null) {
+                            if(!alloc.isRemoved){
+                                alloc.isRemoved = true;
+                            }
                             alloc.currentIndex = result.getVariableIndex();
                             alloc.currentName = result.getVariableName();
                             if(result instanceof DefUseField){
@@ -185,14 +188,18 @@ public class DefUseAnalyser {
     public static void registerInterMethod(Object value, int linenumber, String currentMethod, String newMethod){
         //System.out.println("interMethod");
         InterMethodAlloc m = new InterMethodAlloc(value, linenumber, currentMethod, newMethod);
-        interMethods.add(m);
+        InterMethodAlloc a = interMethods.contains(m);
+        if(a == null) {
+            interMethods.addAlloc(m);
+        } else {
+            interMethods.moveToFirst(m);
+        }
     }
 
     public static void registerInterMethod(Object[] values, int linenumber, String currentMethod, String newMethod){
         //System.out.println("interMethod");
         for(Object obj: values){
-            InterMethodAlloc m = new InterMethodAlloc(obj, linenumber, currentMethod, newMethod);
-            interMethods.add(m);
+            registerInterMethod(obj, linenumber,currentMethod, newMethod);
         }
     }
 
@@ -213,7 +220,7 @@ public class DefUseAnalyser {
 
     protected static DefUseVariable getAllocDef(String method, int index, String name){
         DefUseVariable def;
-        for(InterMethodAlloc alloc : interMethods){
+        for(InterMethodAlloc alloc : interMethods.interMethodAllocs){
             if(alloc.newMethod.equals(method) && alloc.newName != null && alloc.newIndex == index && alloc.newName.equals(name)){
                 if(alloc.isField) {
                     def = defs.getLastDefinitionFields(alloc.currentIndex, alloc.currentName, alloc.value, null);
@@ -221,8 +228,10 @@ public class DefUseAnalyser {
                     def = defs.getLastDefinition(alloc.currentIndex, alloc.currentMethod, alloc.value);
                 }
                 if(def == null){
-                    def = getAllocDef(alloc.currentMethod, alloc.currentIndex, alloc.currentName);
-                    return def;
+                    if(!alloc.currentMethod.equals(method)){
+                        def = getAllocDef(alloc.currentMethod, alloc.currentIndex, alloc.currentName);
+                        return def;
+                    }
                 } else {
                     return def;
                 }

@@ -11,6 +11,7 @@ public class InterMethodAlloc {
     public int currentIndex;
     public String currentName;
     public boolean isField;
+    public boolean isRemoved;
 
     public InterMethodAlloc(Object value, int linenumber, String cM, String nM){
         this.value = value;

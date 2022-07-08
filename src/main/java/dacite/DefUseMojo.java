@@ -64,10 +64,8 @@ public class DefUseMojo extends AbstractMojo{
                 .redirectError(Redirect.INHERIT);
         try{
             Process newProcess = newProcessBuilder.start();
-            System.out.format("%s: process %s started%n", "TestMojo", newProcessBuilder.command());
-            DefUseAnalyser.check();
+            //System.out.format("%s: process %s started%n", "TestMojo", newProcessBuilder.command());
             System.out.format("process exited with status %s%n", newProcess.waitFor());
-            DefUseAnalyser.check();
         } catch (Exception e){
             System.out.println(e.getMessage());
         }
