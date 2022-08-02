@@ -50,7 +50,7 @@ public class DefUseMojo extends AbstractMojo{
             e.printStackTrace();
         }
 
-        newProcessCommandLine.add("-javaagent:target/dynamic-defuse-1.0-SNAPSHOT.jar="+analysisDir+"/");
+        newProcessCommandLine.add("-javaagent:target/dynamic-defuse-1.0-SNAPSHOT-jar-with-dependencies.jar="+analysisDir+"/");
         newProcessCommandLine.add("-classpath");
         for(Artifact a: pluginDependencies){
             classpath = classpath + a.getFile().getAbsolutePath() + ":";
@@ -76,14 +76,12 @@ public class DefUseMojo extends AbstractMojo{
         List<String> newProcessCommandLine = new LinkedList<>();
         newProcessCommandLine.add(currentProcessInfo.command().get());
         Properties p = System.getProperties();
-        System.out.println("test path");
-        System.out.println(p.getProperty("java.class.path"));
-        ClassLoader cl = ClassLoader.getSystemClassLoader();
 
-        newProcessCommandLine.add("-javaagent:target/dynamic-defuse-1.0-SNAPSHOT.jar=execution/");
+        newProcessCommandLine.add("-javaagent:target/dynamic-defuse-1.0-SNAPSHOT-jar-with-dependencies.jar=execution/");
         newProcessCommandLine.add("-classpath");
         newProcessCommandLine.add(ManagementFactory.getRuntimeMXBean().getClassPath());
         newProcessCommandLine.add(DefUseMain.class.getName());
+        newProcessCommandLine.add("execution.Sort");
 
         ProcessBuilder newProcessBuilder = new ProcessBuilder(newProcessCommandLine).redirectOutput(Redirect.INHERIT)
                 .redirectError(Redirect.INHERIT);

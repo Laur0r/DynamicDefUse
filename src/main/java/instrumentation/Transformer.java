@@ -20,13 +20,14 @@ import java.util.Iterator;
 public class Transformer implements ClassFileTransformer {
 
 	private String dir;
+	private String classname;
 
 	@Override
 	public byte[] transform(ClassLoader loader, String className, Class<?> classBeingRedefined,
 			ProtectionDomain protectionDomain, byte[] classfileBuffer) throws IllegalClassFormatException {
 		Thread th = Thread.currentThread();
 		if (className.startsWith(dir)) {
-
+			classname = className;
 			ClassReader reader = new ClassReader(classfileBuffer);
 			ClassNode node = new ClassNode();
 			reader.accept(node, 0);
@@ -72,7 +73,7 @@ public class Transformer implements ClassFileTransformer {
 						index++;
 					} else if (in instanceof FieldInsnNode) {
 						FieldInsnNode fieldins = (FieldInsnNode) in;
-						InsnList[] ilarray = instrumentFieldInsn(fieldins, mnode.name, op, linenumber, index);
+						InsnList[] ilarray = instrumentFieldInsn(fieldins, classname+"."+mnode.name, op, linenumber, index);
 						if(ilarray[0] != null) {
 							insns.insertBefore(in, ilarray[0]);
 						}
@@ -94,7 +95,7 @@ public class Transformer implements ClassFileTransformer {
 						il.add(new IntInsnNode(Opcodes.BIPUSH, incIns.var));
 						il.add(new IntInsnNode(Opcodes.BIPUSH, linenumber));
 						il.add(new IntInsnNode(Opcodes.BIPUSH, index));
-						il.add(new LdcInsnNode(mnode.name));
+						il.add(new LdcInsnNode(classname+"."+mnode.name));
 						il.add(new LdcInsnNode(varname));
 						il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "defuse/DefUseAnalyser", "visitUse", "(Ljava/lang/Object;IIILjava/lang/String;Ljava/lang/String;)V", false));
 						insns.insertBefore(in, il);
@@ -102,7 +103,7 @@ public class Transformer implements ClassFileTransformer {
 						il.add(new IntInsnNode(Opcodes.BIPUSH, incIns.var));
 						il.add(new IntInsnNode(Opcodes.BIPUSH, linenumber));
 						il.add(new IntInsnNode(Opcodes.BIPUSH, index));
-						il.add(new LdcInsnNode(mnode.name));
+						il.add(new LdcInsnNode(classname+"."+mnode.name));
 						il.add(new LdcInsnNode(varname));
 						il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "defuse/DefUseAnalyser", "visitDef", "(Ljava/lang/Object;IIILjava/lang/String;Ljava/lang/String;)V", false));
 						insns.insert(in, il);
@@ -141,7 +142,7 @@ public class Transformer implements ClassFileTransformer {
 						boxing(types[typeindex], localVariable.index, methodStart, true);
 						methodStart.add(new IntInsnNode(Opcodes.BIPUSH, localVariable.index));
 						methodStart.add(new IntInsnNode(Opcodes.BIPUSH, firstLinenumber));
-						methodStart.add(new LdcInsnNode(mnode.name));
+						methodStart.add(new LdcInsnNode(classname+"."+mnode.name));
 						methodStart.add(new LdcInsnNode(localVariable.name));
 						methodStart.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "defuse/DefUseAnalyser", "visitParameter", "(Ljava/lang/Object;IILjava/lang/String;Ljava/lang/String;)V", false));
 						if(types[typeindex] == Type.DOUBLE_TYPE || types[typeindex] == Type.LONG_TYPE){
@@ -265,6 +266,7 @@ public class Transformer implements ClassFileTransformer {
 				op == Opcodes.DLOAD || (op == Opcodes.ALOAD && !methodName.equals("<init>")) ||
 				op == Opcodes.ISTORE || op == Opcodes.LSTORE || op == Opcodes.FSTORE ||
 				op == Opcodes.DSTORE || op == Opcodes.ASTORE)) {
+			methodName = classname+"."+methodName;
 			InsnList il = new InsnList();
 			Type varType = getTypeFromOpcode(op);
 			boxing(varType, varins.var, il, true);
@@ -311,7 +313,7 @@ public class Transformer implements ClassFileTransformer {
 			boxing(varType, 0, il, false);
 			il.add(new IntInsnNode(Opcodes.BIPUSH, linenumber));
 			il.add(new IntInsnNode(Opcodes.BIPUSH, instruction));
-			il.add(new LdcInsnNode(mnode.name));
+			il.add(new LdcInsnNode(classname +"."+mnode.name));
 			il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "defuse/DefUseAnalyser", "visitArrayUse", "(Ljava/lang/Object;ILjava/lang/Object;IILjava/lang/String;)V", false));
 			output[1] = il;
 		} else if(op == Opcodes.IASTORE || op == Opcodes.LASTORE || op == Opcodes.FASTORE ||
@@ -341,7 +343,7 @@ public class Transformer implements ClassFileTransformer {
 			boxing(varType1, index, il, true);
 			il.add(new IntInsnNode(Opcodes.BIPUSH, linenumber));
 			il.add(new IntInsnNode(Opcodes.BIPUSH, instruction));
-			il.add(new LdcInsnNode(mnode.name));
+			il.add(new LdcInsnNode(classname+"."+mnode.name));
 			il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "defuse/DefUseAnalyser", "visitArrayDef", "(Ljava/lang/Object;ILjava/lang/Object;IILjava/lang/String;)V", false));
 			// retrieving parameters for original store instruction
 			il.add(new VarInsnNode(Opcodes.ALOAD, indexEnd));
@@ -353,7 +355,7 @@ public class Transformer implements ClassFileTransformer {
 		} else if(op >= Opcodes.IRETURN && op <= Opcodes.RETURN){
 			// marking end of method for printing DefUseChains
 			InsnList il = new InsnList();
-			il.add(new LdcInsnNode(mnode.name));
+			il.add(new LdcInsnNode(classname+"."+mnode.name));
 			il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "defuse/DefUseAnalyser", "visitMethodEnd", "(Ljava/lang/String;)V", false));
 			output[0] = il;
 		}
@@ -456,7 +458,7 @@ public class Transformer implements ClassFileTransformer {
 			}
 			boxing(parameterTypes[0], 0, il, false);
 			il.add(new IntInsnNode(Opcodes.BIPUSH, linenumber));
-			il.add(new LdcInsnNode(mnode.name));
+			il.add(new LdcInsnNode(classname+"."+mnode.name));
 			il.add(new LdcInsnNode(methodins.name));
 			il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "defuse/DefUseAnalyser", "registerInterMethod", "(Ljava/lang/Object;ILjava/lang/String;Ljava/lang/String;)V", false));
 			return il;
@@ -480,7 +482,7 @@ public class Transformer implements ClassFileTransformer {
 			}
 			il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "defuse/ParameterCollector", "getParameters", "()[Ljava/lang/Object;", false));
 			il.add(new IntInsnNode(Opcodes.BIPUSH, linenumber));
-			il.add(new LdcInsnNode(mnode.name));
+			il.add(new LdcInsnNode(classname+"."+mnode.name));
 			il.add(new LdcInsnNode(methodins.name));
 			il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "defuse/DefUseAnalyser", "registerInterMethod", "([Ljava/lang/Object;ILjava/lang/String;Ljava/lang/String;)V", false));
 			// retrieving values for original method invocation instruction
