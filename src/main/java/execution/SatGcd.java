@@ -48,6 +48,5 @@ public class SatGcd {
     @Test
     public void testGCD(){
         int i = gcd(94, 530);
-        System.out.println(i);
     }
 }
