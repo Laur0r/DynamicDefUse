@@ -1,4 +1,4 @@
-package defuse;
+package dacite.core.defuse;
 
 public class ParameterCollector {
     private static Object[] parameter;

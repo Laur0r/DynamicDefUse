@@ -1,0 +1,50 @@
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+}
+
+group 'dacite'
+version '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.ow2.asm:asm:7.0'
+    implementation 'org.ow2.asm:asm-util:7.0'
+    implementation 'junit:junit:4.13.2'
+    implementation 'jakarta.xml.bind:jakarta.xml.bind-api:3.0.0'
+    implementation 'com.sun.xml.bind:jaxb-impl:3.0.0'
+}
+
+publishing {
+    repositories {
+        maven {
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/dacite-defuse/dacite-core")
+            credentials {
+                username = System.getenv("GITHUB_ACTOR")
+                password = System.getenv("GITHUB_TOKEN")
+            }
+        }
+    }
+
+    publications {
+        gpr(MavenPublication) {
+            from components.java
+        }
+    }
+}
+
+jar {
+    manifest {
+        attributes "Premain-Class": "dacite.core.instrumentation.Agent"
+        attributes "Main-Class": "dacite.core.DefUseMain"
+        attributes "Class-Path": configurations.runtimeClasspath.collect { it.name }.join(" ")
+    }
+}
+
+test {
+    useJUnitPlatform()
+}
