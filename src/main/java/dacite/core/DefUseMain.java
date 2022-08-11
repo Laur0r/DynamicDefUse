@@ -1,17 +1,17 @@
 package dacite.core;
 
+import org.glassfish.jaxb.runtime.v2.runtime.output.XmlOutput;
 import org.junit.runner.JUnitCore;
+import org.w3c.dom.Attr;
 import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 import org.xml.sax.InputSource;
 
-import java.io.BufferedOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.InputStreamReader;
+import java.io.*;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.stream.XMLEventWriter;
 import javax.xml.stream.XMLOutputFactory;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
@@ -117,8 +117,9 @@ public class DefUseMain {
 	// Sets indent
 			xformer.setOutputProperty(OutputKeys.INDENT, "yes");
 			Source source = new DOMSource(document);
-			Result result = new StreamResult(new File(file));
-			xformer.transform(source, result);
+			StringWriter writer = new StringWriter();
+			xformer.transform(source, new StreamResult(writer));
+			System.out.println(writer.getBuffer().toString());
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

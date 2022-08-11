@@ -36,7 +36,6 @@ public class Transformer implements ClassFileTransformer {
 			ProtectionDomain protectionDomain, byte[] classfileBuffer) throws IllegalClassFormatException {
 		Thread th = Thread.currentThread();
 		if (className.startsWith(dir)) {
-			System.out.println("Transforming class");
 			classname = className;
 			ClassReader reader = new ClassReader(classfileBuffer);
 			ClassNode node = new ClassNode();
@@ -362,12 +361,6 @@ public class Transformer implements ClassFileTransformer {
 			il.add(new VarInsnNode(Opcodes.ILOAD, indexEnd));
 			indexEnd--;
 			il.add(new VarInsnNode(varType1.getOpcode(Opcodes.ILOAD), indexEnd));
-			output[0] = il;
-		} else if(op >= Opcodes.IRETURN && op <= Opcodes.RETURN){
-			// marking end of method for printing DefUseChains
-			InsnList il = new InsnList();
-			il.add(new LdcInsnNode(classname+"."+mnode.name));
-			il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/defuse/DefUseAnalyser", "visitMethodEnd", "(Ljava/lang/String;)V", false));
 			output[0] = il;
 		}
 		return output;

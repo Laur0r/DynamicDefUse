@@ -204,21 +204,6 @@ public class DefUseAnalyser {
         }
     }
 
-    public static void visitMethodEnd(String method){
-        System.out.println("Ende von method "+method);
-        DefUseChains output = new DefUseChains();
-        for(DefUseChain chain : chains.getDefUseChains()){
-            if(chain.getUse().getMethod().equals(method)){
-                if(!output.containsSimilar(chain)){
-                    output.addChain(chain);
-                }
-            }
-        }
-        for(DefUseChain chain : output.getDefUseChains()){
-            System.out.println(chain.toString());
-        }
-    }
-
     protected static DefUseVariable getAllocDef(String method, int index, String name){
         DefUseVariable def;
         for(InterMethodAlloc alloc : interMethods.interMethodAllocs){
