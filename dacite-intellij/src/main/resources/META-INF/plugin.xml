@@ -1,0 +1,28 @@
+<idea-plugin>
+    <id>dacite.dacite-intellij</id>
+    <name>Dacite</name>
+    <vendor email="support@yourcompany.com" url="http://www.yourcompany.com">YourCompany</vendor>
+
+    <description><![CDATA[
+        DAta-flow Coverage for Imperative TEsting.
+    ]]></description>
+
+    <!-- please see https://plugins.jetbrains.com/docs/intellij/plugin-compatibility.html
+         on how to target different products -->
+    <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.java</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <notificationGroup id="dacite" displayType="STICKY_BALLOON"/>
+        <postStartupActivity implementation="dacite.intellij.LanguageServerStartupActivity"/>
+        <runLineMarkerContributor language="JAVA"
+                                  implementationClass="dacite.intellij.DaciteRunLineMarkerContributor"/>
+    </extensions>
+
+    <actions>
+        <!-- Add your actions here -->
+      <action id="dacite.intellij.actions.DaciteAnalyzeAction" class="dacite.intellij.actions.DaciteAnalyzeAction"
+              text="Run Dacite Analysis" description="Dynamic analysis of def-use chains" icon="AllIcons.Actions.StartMemoryProfile">
+      </action>
+    </actions>
+</idea-plugin>
