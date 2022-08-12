@@ -8,6 +8,7 @@ import org.w3c.dom.Element;
 import org.xml.sax.InputSource;
 
 import java.io.*;
+import java.util.ArrayList;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -88,7 +89,7 @@ public class DefUseMain {
 			xsw.writeCharacters(String.valueOf(var.getMethod()));
 			xsw.writeEndElement();
 			xsw.writeStartElement("variableIndex");
-			xsw.writeCharacters(String.valueOf(var.getVariableIndex()));
+			xsw.writeCharacters(String.valueOf(var.getInstruction()));
 			xsw.writeEndElement();
 			xsw.writeStartElement("variableName");
 			xsw.writeCharacters(String.valueOf(var.getVariableName()));
@@ -113,9 +114,9 @@ public class DefUseMain {
 	// Gets a new transformer instance
 			Transformer xformer = TransformerFactory.newInstance().newTransformer();
 	// Sets XML formatting
-			xformer.setOutputProperty(OutputKeys.METHOD, "xml");
+			//xformer.setOutputProperty(OutputKeys.METHOD, "xml");
 	// Sets indent
-			xformer.setOutputProperty(OutputKeys.INDENT, "yes");
+			//xformer.setOutputProperty(OutputKeys.INDENT, "yes");
 			Source source = new DOMSource(document);
 			StringWriter writer = new StringWriter();
 			xformer.transform(source, new StreamResult(writer));
@@ -124,4 +125,6 @@ public class DefUseMain {
 			e.printStackTrace();
 		}
 	}
+
+
 }

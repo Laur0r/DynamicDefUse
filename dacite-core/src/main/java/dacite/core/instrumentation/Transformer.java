@@ -123,6 +123,7 @@ public class Transformer implements ClassFileTransformer {
 						if(firstLinenumber == 0){
 							firstLinenumber = linenumber-1;
 						}
+						index = 0;
 					} else if(in instanceof MethodInsnNode) {
 						MethodInsnNode methodins = (MethodInsnNode) in;
 						InsnList il = instrumentMethodInsn(methodins, mnode, linenumber);
@@ -463,7 +464,7 @@ public class Transformer implements ClassFileTransformer {
 			boxing(parameterTypes[0], 0, il, false);
 			il.add(new IntInsnNode(Opcodes.BIPUSH, linenumber));
 			il.add(new LdcInsnNode(classname+"."+mnode.name));
-			il.add(new LdcInsnNode(methodins.name));
+			il.add(new LdcInsnNode(methodins.owner+"."+methodins.name));
 			il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/defuse/DefUseAnalyser", "registerInterMethod", "(Ljava/lang/Object;ILjava/lang/String;Ljava/lang/String;)V", false));
 			return il;
 		} else if(parameterTypes.length != 0){
@@ -487,7 +488,7 @@ public class Transformer implements ClassFileTransformer {
 			il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/defuse/ParameterCollector", "getParameters", "()[Ljava/lang/Object;", false));
 			il.add(new IntInsnNode(Opcodes.BIPUSH, linenumber));
 			il.add(new LdcInsnNode(classname+"."+mnode.name));
-			il.add(new LdcInsnNode(methodins.name));
+			il.add(new LdcInsnNode(methodins.owner+"."+methodins.name));
 			il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/defuse/DefUseAnalyser", "registerInterMethod", "([Ljava/lang/Object;ILjava/lang/String;Ljava/lang/String;)V", false));
 			// retrieving values for original method invocation instruction
 			for(Type type: parameterTypes){
