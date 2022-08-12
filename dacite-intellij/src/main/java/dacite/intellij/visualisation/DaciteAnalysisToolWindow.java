@@ -15,7 +15,7 @@ import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.openapi.wm.ToolWindow;
 import com.intellij.ui.JBColor;
 import com.intellij.ui.components.JBScrollPane;
-import dacite.intellij.DefUseData.DefUseData;
+import dacite.intellij.defUseData.DefUseData;
 import groovy.lang.Tuple;
 
 import javax.swing.*;

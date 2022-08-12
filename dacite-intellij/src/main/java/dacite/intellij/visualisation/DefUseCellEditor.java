@@ -3,7 +3,7 @@ package dacite.intellij.visualisation;
 import com.intellij.ui.components.JBScrollPane;
 import com.intellij.ui.components.JBViewport;
 import com.intellij.ui.table.JBTable;
-import dacite.intellij.DefUseData.DefUseData;
+import dacite.intellij.defUseData.DefUseData;
 
 import javax.swing.*;
 import javax.swing.event.CellEditorListener;

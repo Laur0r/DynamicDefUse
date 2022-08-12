@@ -1,4 +1,4 @@
-package dacite.intellij.DefUseData;
+package dacite.intellij.defUseData;
 
 public class DefUseClass {
     private DefUseMethod[] methods;

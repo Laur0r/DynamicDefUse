@@ -3,13 +3,11 @@ package dacite.intellij.visualisation;
 import com.intellij.icons.AllIcons;
 import com.intellij.ui.components.JBScrollPane;
 import com.intellij.ui.table.JBTable;
-import dacite.intellij.DefUseData.DefUseData;
+import dacite.intellij.defUseData.DefUseData;
 
 import javax.swing.*;
-import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeCellRenderer;
 import java.awt.*;
-import java.lang.reflect.Method;
 
 class DefUseCellRenderer extends DefaultTreeCellRenderer {
     DefUseTableModel model = new DefUseTableModel();

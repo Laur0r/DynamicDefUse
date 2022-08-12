@@ -1,7 +1,5 @@
 package dacite.intellij.visualisation;
 
-import dacite.intellij.DefUseData.DefUseData;
-
 import javax.swing.tree.DefaultMutableTreeNode;
 
 public class MethodNode extends DefaultMutableTreeNode {

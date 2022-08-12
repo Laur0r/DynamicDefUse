@@ -1,6 +1,6 @@
 package dacite.intellij.visualisation;
 
-import dacite.intellij.DefUseData.DefUseData;
+import dacite.intellij.defUseData.DefUseData;
 
 import javax.swing.tree.DefaultMutableTreeNode;
 
