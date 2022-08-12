@@ -8,9 +8,16 @@ import com.intellij.openapi.module.ModuleManager;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.roots.OrderEnumerator;
 import com.intellij.openapi.vfs.VirtualFile;
+import dacite.intellij.defUseData.*;
 import org.jetbrains.annotations.NotNull;
 
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.Unmarshaller;
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.InputStreamReader;
+import java.io.StringReader;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
@@ -41,11 +48,27 @@ public class DaciteAnalysisLauncher {
         newProcessCommandLine.add(fullClasspath);
         newProcessCommandLine.add("dacite.core.DefUseMain");
         newProcessCommandLine.add(filename);
-        ProcessBuilder newProcessBuilder = (new ProcessBuilder(newProcessCommandLine)).redirectOutput(ProcessBuilder.Redirect.INHERIT).redirectError(ProcessBuilder.Redirect.INHERIT);
+        ProcessBuilder newProcessBuilder = (new ProcessBuilder(newProcessCommandLine)).redirectError(ProcessBuilder.Redirect.INHERIT);
         try {
             Process newProcess = newProcessBuilder.start();
             System.out.format("%s: process %s started%n", "executed command", newProcessBuilder.command());
             System.out.format("process exited with status %s%n", newProcess.waitFor());
+            BufferedReader stdInput = new BufferedReader(new InputStreamReader(newProcess.getInputStream()));
+            String s = null;
+            while((s = stdInput.readLine()) != null) {
+                if (s.contains("<?xml")) {
+                    JAXBContext jaxbContext = JAXBContext.newInstance(DefUseChains.class);
+                    Unmarshaller jaxbUnmarshaller = jaxbContext.createUnmarshaller();
+                    DefUseChains chains = (DefUseChains) jaxbUnmarshaller.unmarshal(new StringReader(s));
+                    ArrayList<DefUseClass> list = transformDefUse(chains);
+                    for (DefUseClass cl : list) {
+                        System.out.println(cl.toString());
+                    }
+                    break;
+                } else {
+                    System.out.println(s);
+                }
+            }
         } catch (Exception var5) {
             System.out.println(var5.getMessage());
         }
@@ -69,5 +92,64 @@ public class DaciteAnalysisLauncher {
             cp += File.pathSeparator + entry;
         }
         return cp;
+    }
+
+    public static ArrayList<DefUseClass> transformDefUse(DefUseChains chains){
+        if(chains == null || chains.getChains().size() == 0){
+            return null;
+        }
+        System.out.println(chains.getChains().size());
+        ArrayList<DefUseClass> output = new ArrayList<DefUseClass>();
+        for(DefUseChain chain:chains.getChains()){
+            DefUseVariable use = chain.getUse();
+            DefUseVariable def = chain.getDef();
+            String useMethodPath = chain.getUse().getMethod();
+            String defMethodPath = chain.getUse().getMethod();
+            String useClassName = useMethodPath.substring(0, useMethodPath.lastIndexOf("."));
+            String defClassName = defMethodPath.substring(0, defMethodPath.lastIndexOf("."));
+            String methodName = useMethodPath.substring(useMethodPath.lastIndexOf(".")+1);
+            DefUseClass defUseClass = new DefUseClass(useClassName);
+            if(output.contains(defUseClass)){
+                DefUseClass instance = output.get(output.indexOf(defUseClass));
+                DefUseMethod m = new DefUseMethod(methodName);
+                String useLocation = "Line "+use.getLinenumber();
+                String defLocation = defClassName+" line "+def.getLinenumber();
+                if(defClassName.equals(useClassName)){
+                    defLocation = "Line "+def.getLinenumber();
+                }
+                String varName = use.getVariableName();
+                if(!def.getVariableName().equals(varName)){
+                    varName = def.getVariableName() + "/"+varName;
+                }
+                DefUseData data = new DefUseData(varName, defLocation, useLocation);
+                data.setIndex(use.getVariableIndex());
+                if(instance.getMethods().contains(m)){
+                    DefUseMethod mInstance = instance.getMethods().get(instance.getMethods().indexOf(m));
+                    mInstance.addData(data);
+                } else {
+                    DefUseMethod meth = new DefUseMethod(methodName);
+                    meth.addData(data);
+                    instance.addMethod(meth);
+                }
+            } else {
+                DefUseMethod method = new DefUseMethod(methodName);
+                String useLocation = "Line "+use.getLinenumber();
+                String defLocation = defClassName+" line "+def.getLinenumber();
+                if(defClassName.equals(useClassName)){
+                    defLocation = "Line "+def.getLinenumber();
+                }
+                String varName = use.getVariableName();
+                if(!def.getVariableName().equals(varName)){
+                    varName = def.getVariableName() + "/"+varName;
+                }
+                DefUseData data = new DefUseData(varName, defLocation, useLocation);
+                data.setIndex(use.getVariableIndex());
+                method.addData(data);
+                defUseClass.addMethod(method);
+                output.add(defUseClass);
+            }
+        }
+        return output;
+
     }
 }

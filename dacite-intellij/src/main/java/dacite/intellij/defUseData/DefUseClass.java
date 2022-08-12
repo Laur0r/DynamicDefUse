@@ -1,20 +1,45 @@
 package dacite.intellij.defUseData;
 
+import java.util.ArrayList;
+
 public class DefUseClass {
-    private DefUseMethod[] methods;
+    private String name;
+    private ArrayList<DefUseMethod> methods;
 
-    public DefUseClass(){
-
+    public DefUseClass(String name){
+        this.name = name;
+        methods = new ArrayList<>();
     }
-    public void setMethods(DefUseMethod[] methods){
+    public void setMethods(ArrayList<DefUseMethod>  methods){
         this.methods = methods;
     }
-    public DefUseMethod[] getMethods(){
+    public ArrayList<DefUseMethod>  getMethods(){
         return this.methods;
     }
-    public void addMethod(DefUseMethod method, int index){
-        if(index < this.methods.length){
-            methods[index] = method;
+    public void addMethod(DefUseMethod method){
+        methods.add(method);
+    }
+
+    @Override
+    public boolean equals(Object obj){
+        if(obj == null){
+            return false;
+        }
+        if (obj.getClass() != this.getClass()) {
+            return false;
+        } else {
+            DefUseClass cl = (DefUseClass) obj;
+            return cl.name.equals(this.name);
         }
     }
+
+    public String toString(){
+        String output = name + ": ";
+        for(DefUseMethod m: methods){
+            output += m.toString();
+        }
+        return output;
+    }
 }
+
+

@@ -4,6 +4,7 @@ public class DefUseData {
     private String name;
     private String defLocation;
     private String useLocation;
+    private int index;
     private boolean checked;
 
     public DefUseData(String name, String defLocation, String useLocation){
@@ -18,6 +19,14 @@ public class DefUseData {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public int getIndex() {
+        return index;
+    }
+
+    public void setIndex(int index) {
+        this.index = index;
     }
 
     public String getDefLocation() {
@@ -42,5 +51,10 @@ public class DefUseData {
 
     public void setChecked(boolean checked) {
         this.checked = checked;
+    }
+
+    public String toString(){
+        String output = "\n"+name + ", " + defLocation + ", " + useLocation+" "+index+"; ";
+        return output;
     }
 }
