@@ -57,4 +57,18 @@ public class DefUseData {
         String output = "\n"+name + ", " + defLocation + ", " + useLocation+" "+index+"; ";
         return output;
     }
+
+    @Override
+    public boolean equals(Object obj){
+        if(obj == null){
+            return false;
+        }
+        if (obj.getClass() != this.getClass()) {
+            return false;
+        } else {
+            DefUseData data = (DefUseData) obj;
+            return data.name.equals(this.name) && data.defLocation.equals(this.defLocation) &&
+                    data.useLocation.equals(this.useLocation);
+        }
+    }
 }

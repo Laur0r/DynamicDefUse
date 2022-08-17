@@ -20,6 +20,7 @@ public class DefUseMethod {
     public void addData(DefUseData defuse){
         data.add(defuse);
     }
+    public String getName(){return name;}
 
     @Override
     public boolean equals(Object obj){

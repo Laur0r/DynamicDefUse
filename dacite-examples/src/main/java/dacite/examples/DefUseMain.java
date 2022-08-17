@@ -22,5 +22,6 @@ public class DefUseMain {
     launcher.execute(request);
 
     TestExecutionSummary summary = listener.getSummary();
+    System.out.println(summary);
   }
 }

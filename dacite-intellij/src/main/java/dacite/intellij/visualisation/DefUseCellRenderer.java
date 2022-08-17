@@ -27,6 +27,9 @@ class DefUseCellRenderer extends DefaultTreeCellRenderer {
         Component returnValue = null;
         if ((value != null) && (value instanceof DefUseNode)) {
             DefUseData[] e = ((DefUseNode) value).getUserObject();
+            while(table.getRowCount() > e.length){
+                ((DefUseTableModel) table.getModel()).removeRow(table.getRowCount()-1);
+            }
             for(int i=0; i<e.length;i++){
                 if(table.getRowCount()>i) {
                     table.getModel().setValueAt(e[i].getName(),i,0);
@@ -45,6 +48,7 @@ class DefUseCellRenderer extends DefaultTreeCellRenderer {
             table.setEnabled(true);
             JBScrollPane pane = new JBScrollPane(table);
             pane.setEnabled(true);
+            pane.setSize(pane.getPreferredSize());
             returnValue = pane;
         } else if(value instanceof MethodNode){
             defaultRenderer.setClosedIcon(AllIcons.Nodes.Method);

@@ -33,6 +33,10 @@ public class DefUseTableModel extends AbstractTableModel {
         fireTableRowsInserted(data.size(), data.size());
     }
 
+    public void removeRow(int index){
+        data.remove(index);
+    }
+
     public RowData getRow(int row) {
         return data.get(row);
     }

@@ -1,5 +1,6 @@
 package dacite.intellij;
 
+import com.intellij.icons.AllIcons;
 import com.intellij.ide.plugins.IdeaPluginDescriptor;
 import com.intellij.ide.plugins.PluginManagerCore;
 import com.intellij.openapi.extensions.PluginId;
@@ -8,7 +9,12 @@ import com.intellij.openapi.module.ModuleManager;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.roots.OrderEnumerator;
 import com.intellij.openapi.vfs.VirtualFile;
+import com.intellij.openapi.wm.RegisterToolWindowTask;
+import com.intellij.openapi.wm.ToolWindow;
+import com.intellij.openapi.wm.ToolWindowAnchor;
+import com.intellij.openapi.wm.ToolWindowManager;
 import dacite.intellij.defUseData.*;
+import dacite.intellij.visualisation.DaciteToolWindowFactory;
 import org.jetbrains.annotations.NotNull;
 
 import javax.xml.bind.JAXBContext;
@@ -63,6 +69,19 @@ public class DaciteAnalysisLauncher {
                     ArrayList<DefUseClass> list = transformDefUse(chains);
                     for (DefUseClass cl : list) {
                         System.out.println(cl.toString());
+                    }
+                    ToolWindowManager toolWindowManager = ToolWindowManager.getInstance(project);
+                    ToolWindow toolWindow = toolWindowManager.getToolWindow("DaciteAnalysisToolWindow");
+                    DaciteToolWindowFactory factory = new DaciteToolWindowFactory(list);
+
+                    // One time registration of the tool window (does not add any content).
+                    if (toolWindow == null) {
+                        System.out.println("tool window not registered yet");
+                        RegisterToolWindowTask task = new RegisterToolWindowTask("DaciteAnalysisToolWindow", ToolWindowAnchor.RIGHT, null, false,true,true,true,factory, AllIcons.General.Modified,null );// null, null, null);
+                        toolWindow = toolWindowManager.registerToolWindow(task);
+                        toolWindow.show();
+                    } else {
+                        factory.createToolWindowContent(project,toolWindow);
                     }
                     break;
                 } else {

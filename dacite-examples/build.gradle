@@ -4,7 +4,7 @@ plugins {
 }
 
 application {
-    applicationDefaultJvmArgs = ["-javaagent:../dacite-core/build/libs/dacite-core-${project.version}.jar=dacite/examples/"]
+    applicationDefaultJvmArgs = ["-javaagent:../dacite-core/build/libs/dacite-core-${project.version}.jar=dacite/examples/benchmarks"]
     mainClass = 'dacite.examples.DefUseMain'
 }
 

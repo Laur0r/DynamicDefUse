@@ -35,17 +35,6 @@ public class DaciteAnalyzeAction extends AnAction {
             filename = packagename +"."+jfile.getName();
             filename = filename.substring(0,filename.lastIndexOf("."));
         }
-        ToolWindowManager toolWindowManager = ToolWindowManager.getInstance(project);
-        ToolWindow toolWindow = toolWindowManager.getToolWindow("DaciteAnalysisToolWindow");
-        DaciteToolWindowFactory factory = new DaciteToolWindowFactory();
-
-        // One time registration of the tool window (does not add any content).
-        if (toolWindow == null) {
-            System.out.println("tool window not registered yet");
-            RegisterToolWindowTask task = new RegisterToolWindowTask("DaciteAnalysisToolWindow", ToolWindowAnchor.RIGHT, null, false,true,true,true,factory,AllIcons.General.Modified,null );// null, null, null);
-            toolWindow = toolWindowManager.registerToolWindow(task);
-            toolWindow.show();
-        }
         DaciteAnalysisLauncher.launch(project, packagename,filename);
 
         // Using the event, implement an action. For example, create and show a dialog.

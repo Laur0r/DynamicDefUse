@@ -55,8 +55,6 @@ class DefUseCellEditor extends AbstractCellEditor implements TreeCellEditor {
                         }
                     }
                 });
-                System.out.println(tree.getMaximumSize());
-                System.out.println(l.getMaximumSize());
         }
         return l;
     }

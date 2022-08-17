@@ -19,6 +19,7 @@ public class DefUseClass {
     public void addMethod(DefUseMethod method){
         methods.add(method);
     }
+    public String getName(){return name;}
 
     @Override
     public boolean equals(Object obj){

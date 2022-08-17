@@ -6,10 +6,19 @@ import com.intellij.openapi.wm.ToolWindow;
 import com.intellij.openapi.wm.ToolWindowFactory;
 import com.intellij.ui.content.Content;
 import com.intellij.ui.content.ContentFactory;
+import dacite.intellij.defUseData.DefUseClass;
 import org.jetbrains.annotations.NotNull;
+
+import java.util.ArrayList;
 
 public class DaciteToolWindowFactory implements ToolWindowFactory {
 
+    private ArrayList<DefUseClass> data;
+
+    public DaciteToolWindowFactory(ArrayList<DefUseClass> data){
+        super();
+        this.data = data;
+    }
     /**
      * Create the tool window content.
      *
@@ -17,9 +26,7 @@ public class DaciteToolWindowFactory implements ToolWindowFactory {
      * @param toolWindow current tool window
      */
     public void createToolWindowContent(@NotNull Project project, @NotNull ToolWindow toolWindow) {
-        System.out.println("in factory");
-        DaciteAnalysisToolWindow daciteAnalysisToolWindow = new DaciteAnalysisToolWindow(toolWindow);
-        System.out.println(daciteAnalysisToolWindow.getContent());
+        DaciteAnalysisToolWindow daciteAnalysisToolWindow = new DaciteAnalysisToolWindow(toolWindow, data);
         ContentFactory contentFactory = ContentFactory.getInstance();
         Content content = contentFactory.createContent(daciteAnalysisToolWindow.getContent(), "", false);
         daciteAnalysisToolWindow.setProject(project);
