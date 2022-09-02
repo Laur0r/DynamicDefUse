@@ -123,18 +123,23 @@ public class DaciteAnalysisLauncher {
             DefUseVariable use = chain.getUse();
             DefUseVariable def = chain.getDef();
             String useMethodPath = chain.getUse().getMethod();
-            String defMethodPath = chain.getUse().getMethod();
+            String defMethodPath = chain.getDef().getMethod();
             String useClassName = useMethodPath.substring(0, useMethodPath.lastIndexOf("."));
             String defClassName = defMethodPath.substring(0, defMethodPath.lastIndexOf("."));
-            String methodName = useMethodPath.substring(useMethodPath.lastIndexOf(".")+1);
+            String useMethodName = useMethodPath.substring(useMethodPath.lastIndexOf(".")+1);
+            String defMethodName = defMethodPath.substring(defMethodPath.lastIndexOf(".")+1);
             DefUseClass defUseClass = new DefUseClass(useClassName);
             if(output.contains(defUseClass)){
                 DefUseClass instance = output.get(output.indexOf(defUseClass));
-                DefUseMethod m = new DefUseMethod(methodName);
+                DefUseMethod m = new DefUseMethod(useMethodName);
                 String useLocation = "Line "+use.getLinenumber();
-                String defLocation = defClassName+" line "+def.getLinenumber();
+                String defLocation = defMethodPath+" line "+def.getLinenumber();
                 if(defClassName.equals(useClassName)){
-                    defLocation = "Line "+def.getLinenumber();
+                    if(defMethodName.equals(useMethodName)){
+                        defLocation = "Line "+def.getLinenumber();
+                    } else {
+                        defLocation = defMethodName +" line "+def.getLinenumber();
+                    }
                 }
                 String varName = use.getVariableName();
                 if(!def.getVariableName().equals(varName)){
@@ -146,16 +151,20 @@ public class DaciteAnalysisLauncher {
                     DefUseMethod mInstance = instance.getMethods().get(instance.getMethods().indexOf(m));
                     mInstance.addData(data);
                 } else {
-                    DefUseMethod meth = new DefUseMethod(methodName);
+                    DefUseMethod meth = new DefUseMethod(useMethodName);
                     meth.addData(data);
                     instance.addMethod(meth);
                 }
             } else {
-                DefUseMethod method = new DefUseMethod(methodName);
+                DefUseMethod method = new DefUseMethod(useMethodName);
                 String useLocation = "Line "+use.getLinenumber();
                 String defLocation = defClassName+" line "+def.getLinenumber();
                 if(defClassName.equals(useClassName)){
-                    defLocation = "Line "+def.getLinenumber();
+                    if(defMethodName.equals(useMethodName)){
+                        defLocation = "Line "+def.getLinenumber();
+                    } else {
+                        defLocation = defMethodName +" line "+def.getLinenumber();
+                    }
                 }
                 String varName = use.getVariableName();
                 if(!def.getVariableName().equals(varName)){

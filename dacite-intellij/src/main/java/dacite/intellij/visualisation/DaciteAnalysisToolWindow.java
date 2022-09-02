@@ -13,6 +13,10 @@ import com.intellij.openapi.util.TextRange;
 import com.intellij.openapi.vfs.LocalFileSystem;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.openapi.wm.ToolWindow;
+import com.intellij.psi.PsiDocumentManager;
+import com.intellij.psi.PsiElement;
+import com.intellij.psi.PsiFile;
+import com.intellij.psi.PsiManager;
 import com.intellij.ui.JBColor;
 import com.intellij.ui.components.JBScrollPane;
 import dacite.intellij.defUseData.DefUseClass;
@@ -62,9 +66,9 @@ public class DaciteAnalysisToolWindow {
                 String use = data.getUseLocation();
                 DefaultMutableTreeNode root = (DefaultMutableTreeNode) tree.getModel().getRoot();
                 DefaultMutableTreeNode node = findNode(root, data);
-                /*if(node == null){ TODO
-                    throw new Exception("Could not find checked entry in tree");
-                }*/
+                if(node == null){
+                    throw new RuntimeException("Could not find checked entry in tree");
+                }
                 ClassNode classNode = (ClassNode) node.getParent().getParent();
                 String className = classNode.getUserObject();
                 int useline = Integer.parseInt(use.substring(use.lastIndexOf(" ")+1))-1;
@@ -76,26 +80,27 @@ public class DaciteAnalysisToolWindow {
                     FileEditorManager manager = FileEditorManager.getInstance(project);
                     Editor textEditor = manager.getSelectedTextEditor();
                     RangeHighlighter[] highlighters = textEditor.getMarkupModel().getAllHighlighters();
-                    int count = 0;
+                    boolean useRemoved = false;
+                    boolean defRemoved = false;
                     for (RangeHighlighter high : highlighters) {
-                        if (count == 2) {
+                        if (useRemoved && defRemoved) {
                             break;
                         }
                         Tuple<Integer> defOffsets = getOffSets(textEditor, defline, varName);
                         int startOffsetDef = defOffsets.get(0);
                         int endOffsetDef = defOffsets.get(1);
-                        if (high.getStartOffset() == startOffsetDef && high.getEndOffset() == endOffsetDef) {
+                        if (high.getStartOffset() == startOffsetDef && high.getEndOffset() == endOffsetDef && !defRemoved) {
                             System.out.println("remove def Highlights");
                             textEditor.getMarkupModel().removeHighlighter(high);
-                            count++;
+                            defRemoved = true;
                             continue;
                         }
                         Tuple<Integer> useOffsets = getOffSets(textEditor, useline, varName);
                         int startOffsetUse = useOffsets.get(0);
                         int endOffsetUse = useOffsets.get(1);
-                        if (high.getStartOffset() == startOffsetUse && high.getEndOffset() == endOffsetUse) {
+                        if (high.getStartOffset() == startOffsetUse && high.getEndOffset() == endOffsetUse && !useRemoved) {
                             textEditor.getMarkupModel().removeHighlighter(high);
-                            count++;
+                            useRemoved = true;
                         }
                     }
                 }
@@ -130,6 +135,8 @@ public class DaciteAnalysisToolWindow {
             LogicalPosition position = new LogicalPosition(defLine,0);
             textEditor.getCaretModel().moveToLogicalPosition(position);
             Tuple<Integer> defOffsets = getOffSets(textEditor, defLine, varName);
+            PsiFile psi = PsiManager.getInstance(project).findFile(vf);
+            PsiElement element = psi.findElementAt(textEditor.getDocument().getLineStartOffset(defLine));
             int startOffsetDef = defOffsets.get(0);
             int endOffsetDef = defOffsets.get(1);
             textEditor.getMarkupModel().addRangeHighlighter(startOffsetDef, endOffsetDef, 9999, new TextAttributes(null, JBColor.CYAN, null, null, Font.PLAIN), HighlighterTargetArea.EXACT_RANGE);
@@ -172,11 +179,14 @@ public class DaciteAnalysisToolWindow {
             DefaultMutableTreeNode childNode = (DefaultMutableTreeNode) node.getChildAt(i);
             if (childNode.getChildCount() > 0) {
                 output = findNode(childNode, data);
+                if(output !=null){
+                    return output;
+                }
             } else if(childNode instanceof DefUseNode){
                 DefUseData[] d = ((DefUseNode) childNode).getUserObject();
                 if(Arrays.asList(d).contains(data)){
                     output = childNode;
-                    break;
+                    return output;
                 }
             }
         }

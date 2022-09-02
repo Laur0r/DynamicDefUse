@@ -47,8 +47,15 @@ class DefUseCellRenderer extends DefaultTreeCellRenderer {
             }
             table.setEnabled(true);
             JBScrollPane pane = new JBScrollPane(table);
+            pane.setWheelScrollingEnabled(false);
+            pane.setOverlappingScrollBar(false);
+            pane.setAutoscrolls(false);
+            table.setPreferredSize(new Dimension(table.getPreferredSize().width, table.getRowHeight()*(table.getModel().getRowCount()+1)+2));
+            pane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER);
+            //pane.setLayout(new BorderLayout());
             pane.setEnabled(true);
-            pane.setSize(pane.getPreferredSize());
+            pane.setSize(table.getPreferredSize());
+            pane.setPreferredSize(table.getPreferredSize());
             returnValue = pane;
         } else if(value instanceof MethodNode){
             defaultRenderer.setClosedIcon(AllIcons.Nodes.Method);

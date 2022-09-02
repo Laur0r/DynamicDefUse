@@ -38,7 +38,7 @@ class DefUseCellEditor extends AbstractCellEditor implements TreeCellEditor {
                 data = ((DefUseNode) value).getUserObject();
                 c = l;
                 JBScrollPane pane = ((JBScrollPane)l);
-                JBViewport port = ((JBViewport)pane.getComponent(0));
+                JBViewport port =  (JBViewport) pane.getViewport();
                 table = (JBTable) port.getComponent(0);
                 table.addComponentListener(new ComponentListener() {
                          public void componentResized(ComponentEvent e) {somethingChanged();                                               }
@@ -89,11 +89,11 @@ class DefUseCellEditor extends AbstractCellEditor implements TreeCellEditor {
 
     @Override
     public boolean stopCellEditing() {
-        System.out.println("stop editing");
+        //System.out.println("stop editing");
         int row = table.getSelectedRow();
         int col = table.getSelectedColumn();
         Object value = table.getValueAt(row, col);
-        if(value instanceof Boolean){
+        if(value instanceof Boolean && data.length == table.getRowCount()){
             data[row].setChecked((boolean) value);
         }
         DefUseData defUse = data[table.getSelectedRow()];
@@ -127,7 +127,7 @@ class DefUseCellEditor extends AbstractCellEditor implements TreeCellEditor {
             public void run() {
                 // TODO: skip if size is not changing
                 //((JBScrollPane) c).setLayout(new BorderLayout());
-                c.setSize(c.getPreferredSize());
+                //c.setSize(c.getPreferredSize());
                 c.setSize(tree.getWidth()-58,c.getHeight());
                 tree.invalidateNodeBounds();
                 tree.repaint();
