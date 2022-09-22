@@ -1,7 +1,7 @@
 <idea-plugin>
     <id>dacite.dacite-intellij</id>
     <name>Dacite</name>
-    <vendor email="support@yourcompany.com" url="http://www.yourcompany.com">YourCompany</vendor>
+    <vendor url="https://github.com/dacite-defuse">Dacite: DAta-flow Coverage for Imperative TEsting</vendor>
 
     <description><![CDATA[
         DAta-flow Coverage for Imperative TEsting.
