@@ -53,9 +53,9 @@ class DefUseCellRenderer extends DefaultTreeCellRenderer {
             table.setPreferredSize(new Dimension(table.getPreferredSize().width, table.getRowHeight()*(table.getModel().getRowCount()+1)+2));
             pane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER);
             //pane.setLayout(new BorderLayout());
-            pane.setEnabled(true);
-            pane.setSize(table.getPreferredSize());
-            pane.setPreferredSize(table.getPreferredSize());
+            //pane.setEnabled(true);
+            //pane.setSize(table.getPreferredSize());
+            //pane.setPreferredSize(table.getPreferredSize());
             returnValue = pane;
         } else if(value instanceof MethodNode){
             defaultRenderer.setClosedIcon(AllIcons.Nodes.Method);
@@ -68,6 +68,12 @@ class DefUseCellRenderer extends DefaultTreeCellRenderer {
             defaultRenderer.setClosedIcon(AllIcons.Nodes.Class);
             defaultRenderer.setOpenIcon(AllIcons.Nodes.Class);
             defaultRenderer.setLeafIcon(AllIcons.Nodes.Class);
+            returnValue = defaultRenderer.getTreeCellRendererComponent(tree, value, selected, expanded,
+                    leaf, row, hasFocus);
+        } else if(value instanceof VariableNode){
+            defaultRenderer.setClosedIcon(AllIcons.Nodes.Variable);
+            defaultRenderer.setOpenIcon(AllIcons.Nodes.Variable);
+            defaultRenderer.setLeafIcon(AllIcons.Nodes.Variable);
             returnValue = defaultRenderer.getTreeCellRendererComponent(tree, value, selected, expanded,
                     leaf, row, hasFocus);
         }

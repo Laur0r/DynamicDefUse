@@ -2,23 +2,23 @@ package dacite.intellij.defUseData;
 
 import java.util.ArrayList;
 
-public class DefUseMethod {
+public class DefUseVar {
     private String name;
-    private ArrayList<DefUseVar> variables;
+    private ArrayList<DefUseData> data;
 
-    public DefUseMethod(String name){
+    public DefUseVar(String name){
         this.name = name;
-        variables = new ArrayList<>();
+        data = new ArrayList<>();
     }
 
-    public void setVariables(ArrayList<DefUseVar>  var){
-        this.variables = var;
+    public void setData(ArrayList<DefUseData>  data){
+        this.data = data;
     }
-    public ArrayList<DefUseVar> getVariables(){
-        return this.variables;
+    public ArrayList<DefUseData>  getData(){
+        return this.data;
     }
-    public void addVariable(DefUseVar defuse){
-        variables.add(defuse);
+    public void addData(DefUseData defuse){
+        data.add(defuse);
     }
     public String getName(){return name;}
 
@@ -30,14 +30,14 @@ public class DefUseMethod {
         if (obj.getClass() != this.getClass()) {
             return false;
         } else {
-            DefUseMethod method = (DefUseMethod) obj;
+            DefUseVar method = (DefUseVar) obj;
             return method.name.equals(this.name);
         }
     }
 
     public String toString(){
         String output = "\n" +name + ": ";
-        for(DefUseVar d: variables){
+        for(DefUseData d: data){
             output += d.toString();
         }
         return output;

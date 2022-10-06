@@ -1,4 +1,6 @@
-package dacite.intellij.defUseData;
+package dacite.intellij.defUseData.transformation;
+
+import dacite.intellij.defUseData.transformation.DefUseChain;
 
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;

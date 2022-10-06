@@ -13,7 +13,6 @@ import com.intellij.openapi.util.TextRange;
 import com.intellij.openapi.vfs.LocalFileSystem;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.openapi.wm.ToolWindow;
-import com.intellij.psi.PsiDocumentManager;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiManager;
@@ -22,6 +21,7 @@ import com.intellij.ui.components.JBScrollPane;
 import dacite.intellij.defUseData.DefUseClass;
 import dacite.intellij.defUseData.DefUseData;
 import dacite.intellij.defUseData.DefUseMethod;
+import dacite.intellij.defUseData.DefUseVar;
 import groovy.lang.Tuple;
 
 import javax.swing.*;
@@ -218,9 +218,13 @@ public class DaciteAnalysisToolWindow {
             ClassNode cnode = new ClassNode(dfClass.getName());
             for(DefUseMethod dfMethod:dfClass.getMethods()){
                 MethodNode mnode = new MethodNode(dfMethod.getName());
-                DefUseData[] data = dfMethod.getData().toArray(new DefUseData[0]);
-                DefUseNode dnode = new DefUseNode(data);
-                mnode.add(dnode);
+                for(DefUseVar dfVariable : dfMethod.getVariables()){
+                    VariableNode vnode = new VariableNode(dfVariable.getName());
+                    DefUseData[] data = dfVariable.getData().toArray(new DefUseData[0]);
+                    DefUseNode dnode = new DefUseNode(data);
+                    vnode.add(dnode);
+                    mnode.add(vnode);
+                }
                 cnode.add(mnode);
             }
             top.add(cnode);
