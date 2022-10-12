@@ -137,7 +137,7 @@ public class DaciteAnalysisLauncher {
             DefUseClass defUseClass = new DefUseClass(defClassName);
             DefUseMethod m = new DefUseMethod(defMethodName);
             DefUseVar var = new DefUseVar(def.getVariableName());
-            String useLocation = useMethodPath +"line "+use.getLinenumber();
+            String useLocation = useMethodPath +" line "+use.getLinenumber();
             String defLocation = "Line "+def.getLinenumber();
             if(defClassName.equals(useClassName)){
                 if(defMethodName.equals(useMethodName)){

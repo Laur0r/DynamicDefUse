@@ -6,6 +6,8 @@ public class VariableNode extends DefaultMutableTreeNode {
     /**
      * @param resource
      */
+
+    private int numberChains;
     public VariableNode(String resource) {
         super(resource);
     }
@@ -21,5 +23,10 @@ public class VariableNode extends DefaultMutableTreeNode {
     public String getUserObject() {
         return (String) super.getUserObject();
     }
+
+    public void setNumberChains(int number) {numberChains = number;}
+
+    public int getNumberChains() {return numberChains;}
+    public void addNumberChains(int add){numberChains+=add;}
 
 }

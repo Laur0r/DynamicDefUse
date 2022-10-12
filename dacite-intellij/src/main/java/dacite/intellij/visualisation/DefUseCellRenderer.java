@@ -1,6 +1,7 @@
 package dacite.intellij.visualisation;
 
 import com.intellij.icons.AllIcons;
+import com.intellij.ui.JBColor;
 import com.intellij.ui.components.JBScrollPane;
 import com.intellij.ui.table.JBTable;
 import dacite.intellij.defUseData.DefUseData;
@@ -13,6 +14,9 @@ class DefUseCellRenderer extends DefaultTreeCellRenderer {
     DefUseTableModel model = new DefUseTableModel();
     JBTable table = new JBTable(model);
 
+    JLabel name = new JLabel();
+    JLabel number = new JLabel();
+
     DefaultTreeCellRenderer defaultRenderer = new DefaultTreeCellRenderer();
 
     public DefUseCellRenderer() {
@@ -20,6 +24,7 @@ class DefUseCellRenderer extends DefaultTreeCellRenderer {
         table.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
         defaultRenderer.setClosedIcon(AllIcons.FileTypes.JavaClass);
         defaultRenderer.setOpenIcon(AllIcons.FileTypes.JavaClass);
+        this.number.setForeground(JBColor.GRAY);
     }
 
     public Component getTreeCellRendererComponent(JTree tree, Object value, boolean selected,
@@ -52,30 +57,50 @@ class DefUseCellRenderer extends DefaultTreeCellRenderer {
             pane.setAutoscrolls(false);
             table.setPreferredSize(new Dimension(table.getPreferredSize().width, table.getRowHeight()*(table.getModel().getRowCount()+1)+2));
             pane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER);
-            //pane.setLayout(new BorderLayout());
-            //pane.setEnabled(true);
-            //pane.setSize(table.getPreferredSize());
-            //pane.setPreferredSize(table.getPreferredSize());
+            pane.setEnabled(true);
+            pane.setSize(table.getPreferredSize());
+            pane.setPreferredSize(table.getPreferredSize());
             returnValue = pane;
         } else if(value instanceof MethodNode){
-            defaultRenderer.setClosedIcon(AllIcons.Nodes.Method);
-            defaultRenderer.setOpenIcon(AllIcons.Nodes.Method);
-            defaultRenderer.setLeafIcon(AllIcons.Nodes.Method);
-            returnValue = defaultRenderer.getTreeCellRendererComponent(tree, value, selected, expanded,
-                    leaf, row, hasFocus);
+            String name = ((MethodNode) value).getUserObject();
+            String number = ((MethodNode) value).getNumberChains() + " chains";
+            this.name.setText(name);
+            this.name.setIcon(AllIcons.Nodes.Method);
+            this.number.setText(number);
+            JPanel labelPanel = new JPanel();
+            labelPanel.setLayout(new BoxLayout(labelPanel, BoxLayout.X_AXIS));
+            labelPanel.add(this.name);
+            labelPanel.add(Box.createHorizontalStrut(10)); //creates space between the JLabels
+            labelPanel.add(this.number);
+
+            returnValue = labelPanel;
 
         } else if(value instanceof ClassNode){
-            defaultRenderer.setClosedIcon(AllIcons.Nodes.Class);
-            defaultRenderer.setOpenIcon(AllIcons.Nodes.Class);
-            defaultRenderer.setLeafIcon(AllIcons.Nodes.Class);
-            returnValue = defaultRenderer.getTreeCellRendererComponent(tree, value, selected, expanded,
-                    leaf, row, hasFocus);
+            String name = ((ClassNode) value).getUserObject();
+            String number = ((ClassNode) value).getNumberChains() + " chains";
+            this.name.setText(name);
+            this.name.setIcon(AllIcons.Nodes.Class);
+            this.number.setText(number);
+            JPanel labelPanel = new JPanel();
+            labelPanel.setLayout(new BoxLayout(labelPanel, BoxLayout.X_AXIS));
+            labelPanel.add(this.name);
+            labelPanel.add(Box.createHorizontalStrut(10)); //creates space between the JLabels
+            labelPanel.add(this.number);
+
+            returnValue = labelPanel;
         } else if(value instanceof VariableNode){
-            defaultRenderer.setClosedIcon(AllIcons.Nodes.Variable);
-            defaultRenderer.setOpenIcon(AllIcons.Nodes.Variable);
-            defaultRenderer.setLeafIcon(AllIcons.Nodes.Variable);
-            returnValue = defaultRenderer.getTreeCellRendererComponent(tree, value, selected, expanded,
-                    leaf, row, hasFocus);
+            String name = ((VariableNode) value).getUserObject();
+            String number = ((VariableNode) value).getNumberChains() + " chains";
+            this.name.setText(name);
+            this.name.setIcon(AllIcons.Nodes.Variable);
+            this.number.setText(number);
+            JPanel labelPanel = new JPanel();
+            labelPanel.setLayout(new BoxLayout(labelPanel, BoxLayout.X_AXIS));
+            labelPanel.add(this.name);
+            labelPanel.add(Box.createHorizontalStrut(10)); //creates space between the JLabels
+            labelPanel.add(this.number);
+
+            returnValue = labelPanel;
         }
         if (returnValue == null) {
             returnValue = defaultRenderer.getTreeCellRendererComponent(tree, value, selected, expanded,

@@ -221,11 +221,14 @@ public class DaciteAnalysisToolWindow {
                 for(DefUseVar dfVariable : dfMethod.getVariables()){
                     VariableNode vnode = new VariableNode(dfVariable.getName());
                     DefUseData[] data = dfVariable.getData().toArray(new DefUseData[0]);
+                    vnode.setNumberChains(data.length);
                     DefUseNode dnode = new DefUseNode(data);
                     vnode.add(dnode);
                     mnode.add(vnode);
+                    mnode.addNumberChains(data.length);
                 }
                 cnode.add(mnode);
+                cnode.addNumberChains(mnode.getNumberChains());
             }
             top.add(cnode);
         }
