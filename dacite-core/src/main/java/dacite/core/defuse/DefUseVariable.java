@@ -67,4 +67,9 @@ public class DefUseVariable {
             return this.value == null && var.getValue() == null || var.getValue() != null && var.getValue().equals(this.value);
         } else return false;
     }
+
+    @Override
+    public String toString(){
+        return "name: " + variableName + ", ln: "+linenumber + ", method: "+ method;
+    }
 }

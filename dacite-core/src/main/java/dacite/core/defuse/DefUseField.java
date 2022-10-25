@@ -20,4 +20,9 @@ public class DefUseField extends DefUseVariable{
     @XmlElement
     public String getInstanceName() {return this.instanceName;}
     public void setInstanceName(String name) {instanceName = name;}
+
+    @Override
+    public String toString(){
+        return super.toString() + ", instance: " + instanceName;
+    }
 }

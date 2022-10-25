@@ -26,6 +26,8 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.InputStreamReader;
 import java.io.StringReader;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -62,16 +64,18 @@ public class DaciteAnalysisLauncher {
             Process newProcess = newProcessBuilder.start();
             System.out.format("%s: process %s started%n", "executed command", newProcessBuilder.command());
             System.out.format("process exited with status %s%n", newProcess.waitFor());
-            BufferedReader stdInput = new BufferedReader(new InputStreamReader(newProcess.getInputStream()));
-            String s = null;
+            //BufferedReader stdInput = new BufferedReader(new InputStreamReader(newProcess.getInputStream()));
+            /*String s = null;
+            //System.out.println(stdInput.lines().count());
             while((s = stdInput.readLine()) != null) {
-                if (s.contains("<?xml")) {
+                if (s.contains("<?xml")) {*/
                     JAXBContext jaxbContext = JAXBContext.newInstance(DefUseChains.class);
                     Unmarshaller jaxbUnmarshaller = jaxbContext.createUnmarshaller();
-                    DefUseChains chains = (DefUseChains) jaxbUnmarshaller.unmarshal(new StringReader(s));
+                    String test = Files.readString(Paths.get("file.xml"));
+                    DefUseChains chains = (DefUseChains) jaxbUnmarshaller.unmarshal(new StringReader(test));// (DefUseChains) jaxbUnmarshaller.unmarshal(new StringReader(s));//
                     ArrayList<DefUseClass> list = transformDefUse(chains);
                     for (DefUseClass cl : list) {
-                        System.out.println(cl.toString());
+                        //System.out.println(cl.toString());
                     }
                     ToolWindowManager toolWindowManager = ToolWindowManager.getInstance(project);
                     ToolWindow toolWindow = toolWindowManager.getToolWindow("DaciteAnalysisToolWindow");
@@ -86,11 +90,11 @@ public class DaciteAnalysisLauncher {
                     } else {
                         factory.createToolWindowContent(project,toolWindow);
                     }
-                    break;
+                    /*break;
                 } else {
                     System.out.println(s);
                 }
-            }
+            }*/
         } catch (Exception var5) {
             System.out.println(var5.getMessage());
         }
@@ -120,7 +124,6 @@ public class DaciteAnalysisLauncher {
         if(chains == null || chains.getChains().size() == 0){
             return null;
         }
-        System.out.println(chains.getChains().size());
         ArrayList<DefUseClass> output = new ArrayList<DefUseClass>();
         // Go through all recognized DefUseChains
         for(DefUseChain chain:chains.getChains()){

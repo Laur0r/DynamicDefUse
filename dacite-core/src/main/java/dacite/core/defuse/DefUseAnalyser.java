@@ -2,8 +2,11 @@ package dacite.core.defuse;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.logging.Logger;
 
 public class DefUseAnalyser {
+
+    static Logger logger = Logger.getLogger(Logger.GLOBAL_LOGGER_NAME);
 
     public static DefUseChains chains;
     protected static DefSet defs;
@@ -131,6 +134,9 @@ public class DefUseAnalyser {
             DefUseChain chain = new DefUseChain(def, use);
             if(!chains.containsSimilar(chain)){
                 chains.addChain(chain);
+                /*logger.info(chain.toString());
+                logger.info("defs size: "+defs.defs.size() + ", alloc size: "+ interMethods.interMethodAllocs.size()+
+                        ", chains size: "+ chains.getDefUseChains().size());*/
             }
         }
     }
@@ -140,7 +146,6 @@ public class DefUseAnalyser {
             if(alloc == null) {
                 DefUseVariable alias = defs.hasAlias(def);
                 if(alias != null){
-                    System.out.println("Is Alias!!!");
                     alloc = new AliasAlloc(def.getVariableName(), alias.getVariableName(), def.getVariableIndex(), alias.getVariableIndex());
                     aliases.put(def.getValue(), alloc);
                     def.setAlias(true);
@@ -150,6 +155,7 @@ public class DefUseAnalyser {
                 alloc.addAlias(def.getVariableName(), def.getVariableIndex());
             }
         defs.addDef(def);
+            //logger.info(def.toString());
     }
 
     protected static void registerParameter(Object value, int index, int ln, String method, String varname){
@@ -227,6 +233,6 @@ public class DefUseAnalyser {
     }
 
     public static void check(){
-        System.out.println("Size: "+chains.getChainSize());
+        logger.info("Size: "+chains.getChainSize());
     }
 }

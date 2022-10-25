@@ -33,6 +33,9 @@ public class DaciteAnalyzeAction extends AnAction {
             PsiJavaFile jfile = (PsiJavaFile) file;
             packagename =jfile.getPackageName();
             filename = packagename +"."+jfile.getName();
+            if(packagename.contains(".")){
+                packagename = packagename.replace(".","/");
+            }
             filename = filename.substring(0,filename.lastIndexOf("."));
         }
         DaciteAnalysisLauncher.launch(project, packagename,filename);

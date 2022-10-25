@@ -9,6 +9,7 @@ import org.xml.sax.InputSource;
 
 import java.io.*;
 import java.util.ArrayList;
+import java.util.logging.Logger;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -31,6 +32,8 @@ import dacite.core.defuse.DefUseVariable;
 
 public class DefUseMain {
 
+	static Logger logger = Logger.getLogger(Logger.GLOBAL_LOGGER_NAME);
+
 	public static void main(String[] args) throws Exception {
 		if(args.length > 1){
 			throw new IllegalArgumentException("More than one argument for main method detected");
@@ -47,8 +50,8 @@ public class DefUseMain {
 		}
 		long endTime   = System.nanoTime();
 		long totalTime = (endTime - startTime) /1000000;
-		System.out.println(totalTime);
-		System.out.println("run through main method");
+		logger.info(String.valueOf(totalTime));
+		logger.info("run through main method");
 		DefUseAnalyser.check();
 		// write xml file
 		XMLOutputFactory xof = XMLOutputFactory.newInstance();
@@ -72,10 +75,10 @@ public class DefUseMain {
 			xsw.writeEndDocument();
 			xsw.flush();
 			xsw.close();
-			format("file.xml");
+			//format("file.xml");
 		}
 		catch (Exception e) {
-			System.err.println("Unable to write the file: " + e.getMessage());
+			logger.info("Unable to write the file: " + e.getMessage());
 		}
 
 	}
@@ -105,6 +108,7 @@ public class DefUseMain {
 	}
 
 	private static void format(String file) {
+		logger.info("hat String gebaut");
 		DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
 		DocumentBuilder builder = null;
 		try {
@@ -120,8 +124,10 @@ public class DefUseMain {
 			Source source = new DOMSource(document);
 			StringWriter writer = new StringWriter();
 			xformer.transform(source, new StreamResult(writer));
+			logger.info("sollte Ergebnis geprintet haben");
 			System.out.println(writer.getBuffer().toString());
 		} catch (Exception e) {
+			logger.info(e.getMessage());
 			e.printStackTrace();
 		}
 	}
