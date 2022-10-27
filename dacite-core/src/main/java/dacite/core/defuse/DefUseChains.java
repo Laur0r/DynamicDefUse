@@ -59,7 +59,8 @@ public class DefUseChains {
     public DefUseVariable findUse(String method, int linenumber, Object value, boolean removed){
         for(DefUseChain chain : defUseChains){
             DefUseVariable use = chain.getUse();
-            if(use.getLinenumber() == linenumber && use.getValue().equals(value) && use.getMethod().equals(method)){
+            if(use.getLinenumber() == linenumber && use.getMethod().equals(method) &&
+                    (use.getValue() == value || value != null && isPrimitiveOrWrapper(value) && value.equals(use.getValue()))){
                 if(!removed){
                     defUseChains.remove(chain);
                 }
@@ -76,7 +77,7 @@ public class DefUseChains {
                 if(use.getValue() == null && object == null){
                     defUseChains.remove(chain);
                     return chain.getUse().getVariableName();
-                } else if(use.getValue() != null && use.getValue().equals(object) && !isPrimitiveOrWrapper(object)) {
+                } else if(use.getValue() != null && use.getValue() == object && !isPrimitiveOrWrapper(object)) {
                     defUseChains.remove(chain);
                     return chain.getUse().getVariableName();
                 }

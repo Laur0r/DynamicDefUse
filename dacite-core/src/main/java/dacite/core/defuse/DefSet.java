@@ -11,7 +11,7 @@ public class DefSet {
         for(DefUseVariable def : defs){
             if(def.getVariableIndex() == index && def.getMethod().equals(method)
                     && !(def instanceof DefUseField)){
-                if(def.getValue() == null && value == null || def.getValue() != null && def.getValue().equals(value)) {
+                if(def.getValue() == value || value != null && isPrimitiveOrWrapper(value) && value.equals(def.getValue())) {
                     output = def;
                     break;
                 }
@@ -26,8 +26,8 @@ public class DefSet {
             if(def instanceof DefUseField) {
                 DefUseField field = (DefUseField) def;
                 if(field.getVariableIndex() == index && (varname.equals(field.getVariableName()) || varname.equals(""))
-                        && (fieldInstance == null || field.getInstance().equals(fieldInstance))){
-                    if(field.getValue() == null && value == null || field.getValue() != null && field.getValue().equals(value)){
+                        && (fieldInstance == null || field.getInstance()== fieldInstance)){
+                    if(def.getValue() == value || value != null && isPrimitiveOrWrapper(value) && value.equals(field.getValue())){
                         output = def;
                         break;
                     }
@@ -41,7 +41,7 @@ public class DefSet {
         DefUseVariable output = null;
         for(DefUseVariable def : defs){
             if(def.getVariableIndex() == index && def.getVariableName().equals(varname)){
-                if(def.getValue() == null && value == null || def.getValue() != null && def.getValue().equals(value)) {
+                if(def.getValue() == value || value != null && isPrimitiveOrWrapper(value) && value.equals(def.getValue())) {
                     output = def;
                     break;
                 }
@@ -56,7 +56,7 @@ public class DefSet {
             if(def.getValue() == null){
                 continue;
             }
-            if(def.getValue().equals(newDef.getValue()) && !(def.getVariableIndex() == newDef.getVariableIndex())
+            if(def.getValue() == newDef.getValue() && !(def.getVariableIndex() == newDef.getVariableIndex())
                     && !isPrimitiveOrWrapper(def.getValue())){
                 if(output == null || def.getLinenumber() > output.getLinenumber()){
                     output = def;
@@ -72,7 +72,7 @@ public class DefSet {
         for(DefUseVariable d: defs){
             if(d.getMethod().equals(method) && d.getVariableIndex() == index
                             && d.getLinenumber() == ln && d.getInstruction() == ins){
-                    if(d.getValue() == null && value == null || d.getValue() != null && d.getValue().equals(value)) {
+                    if(d.getValue() == value || value != null && isPrimitiveOrWrapper(value) && value.equals(d.getValue())) {
                         return d;
                     }
             }
@@ -85,8 +85,8 @@ public class DefSet {
             if(d instanceof DefUseField){
                 DefUseField field = (DefUseField) d;
                 if(d.getVariableIndex() == index && d.getVariableName().equals(varname) && d.getLinenumber() == ln &&
-                        d.getInstruction() == ins && (instance == null || field.getInstance().equals(instance)) ) {
-                    if(field.getValue() == null && value == null || field.getValue() != null && field.getValue().equals(value)){
+                        d.getInstruction() == ins && (instance == null || field.getInstance() == instance)) {
+                    if(field.getValue() == value || value != null && isPrimitiveOrWrapper(value) && value.equals(field.getValue())){
                         return d;
                     }
                 }
@@ -103,7 +103,7 @@ public class DefSet {
         for(DefUseVariable d: defs) {
             if (d instanceof DefUseField) {
                 DefUseField field = (DefUseField) d;
-                if(field.getInstanceName() == null && array.equals(field.getInstance())){
+                if(field.getInstanceName() == null && array == field.getInstance()){
                     field.setInstanceName(varname);
                     field.setVariableName(varname+"[");
                 }

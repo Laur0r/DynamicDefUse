@@ -64,7 +64,7 @@ public class DefUseVariable {
     public boolean equals(DefUseVariable var){
         if(var.getLinenumber() == this.linenumber && var.getInstruction() == this.instruction &&
                 var.getVariableIndex() == this.variableIndex && var.getVariableName().equals(this.variableName) && var.getMethod().equals(this.method)){
-            return this.value == null && var.getValue() == null || var.getValue() != null && var.getValue().equals(this.value);
+            return this.value == null && var.getValue() == null || var.getValue() != null && var.getValue() == this.value;
         } else return false;
     }
 

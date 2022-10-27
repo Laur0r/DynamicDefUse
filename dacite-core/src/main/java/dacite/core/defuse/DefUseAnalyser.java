@@ -154,7 +154,7 @@ public class DefUseAnalyser {
             } else {
                 alloc.addAlias(def.getVariableName(), def.getVariableIndex());
             }
-        defs.addDef(def);
+            defs.addDef(def);
             //logger.info(def.toString());
     }
 
@@ -162,7 +162,7 @@ public class DefUseAnalyser {
         if(interMethods.size() != 0){
             for(InterMethodAlloc alloc : interMethods.interMethodAllocs){
                 if(alloc.newMethod.equals(method)) {
-                    if(alloc.value == null && value == null || alloc.value != null && alloc.value.equals(value)){
+                    if(alloc.value == null && value == null || alloc.value != null && alloc.value == value){
                         alloc.newIndex = index;
                         alloc.newName = varname;
                         DefUseVariable result = chains.findUse(alloc.currentMethod, alloc.linenumber, value, alloc.isRemoved);

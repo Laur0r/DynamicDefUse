@@ -11,7 +11,7 @@ public class InterMethodAllocDequeue {
     public InterMethodAlloc contains(InterMethodAlloc alloc){
         for(InterMethodAlloc a: interMethodAllocs){
             if(a.newMethod.equals(alloc.newMethod) && a.currentMethod.equals(alloc.currentMethod) && a.linenumber == alloc.linenumber
-            && a.value.equals(alloc.value)){
+            && (a.value == alloc.value || a.value != null && isPrimitiveOrWrapper(a.value) && a.value.equals(alloc.value))){
                 return a;
             }
         }
@@ -24,5 +24,12 @@ public class InterMethodAllocDequeue {
     }
     public int size(){
         return interMethodAllocs.size();
+    }
+
+    protected boolean isPrimitiveOrWrapper(Object obj){
+        Class<?> type = obj.getClass();
+        return type.isPrimitive() || type == Double.class || type == Float.class || type == Long.class
+                || type == Integer.class || type == Short.class || type == Character.class
+                || type == Byte.class || type == Boolean.class || type == String.class;
     }
 }
