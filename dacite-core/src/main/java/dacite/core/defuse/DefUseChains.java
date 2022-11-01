@@ -60,7 +60,7 @@ public class DefUseChains {
         for(DefUseChain chain : defUseChains){
             DefUseVariable use = chain.getUse();
             if(use.getLinenumber() == linenumber && use.getMethod().equals(method) &&
-                    (use.getValue() == value || value != null && isPrimitiveOrWrapper(value) && value.equals(use.getValue()))){
+                    (use.getValue() == value || value != null && DefUseAnalyser.isPrimitiveOrWrapper(value) && value.equals(use.getValue()))){
                 if(!removed){
                     defUseChains.remove(chain);
                 }
@@ -77,19 +77,12 @@ public class DefUseChains {
                 if(use.getValue() == null && object == null){
                     defUseChains.remove(chain);
                     return chain.getUse().getVariableName();
-                } else if(use.getValue() != null && use.getValue() == object && !isPrimitiveOrWrapper(object)) {
+                } else if(use.getValue() != null && use.getValue() == object && !DefUseAnalyser.isPrimitiveOrWrapper(object)) {
                     defUseChains.remove(chain);
                     return chain.getUse().getVariableName();
                 }
             }
         }
         return "this";
-    }
-
-    protected boolean isPrimitiveOrWrapper(Object obj){
-        Class<?> type = obj.getClass();
-        return type.isPrimitive() || type == Double.class || type == Float.class || type == Long.class
-                || type == Integer.class || type == Short.class || type == Character.class
-                || type == Byte.class || type == Boolean.class || type == String.class;
     }
 }

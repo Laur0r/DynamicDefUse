@@ -92,6 +92,9 @@ public class DefUseMain {
 			xsw.writeCharacters(String.valueOf(var.getMethod()));
 			xsw.writeEndElement();
 			xsw.writeStartElement("variableIndex");
+			xsw.writeCharacters(String.valueOf(var.getVariableIndex()));
+			xsw.writeEndElement();
+			xsw.writeStartElement("instruction");
 			xsw.writeCharacters(String.valueOf(var.getInstruction()));
 			xsw.writeEndElement();
 			xsw.writeStartElement("variableName");

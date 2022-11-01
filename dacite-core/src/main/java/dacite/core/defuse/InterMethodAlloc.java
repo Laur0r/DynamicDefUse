@@ -13,6 +13,8 @@ public class InterMethodAlloc {
     public boolean isField;
     public boolean isRemoved;
 
+    public int parameter;
+
     public InterMethodAlloc(Object value, int linenumber, String cM, String nM){
         this.value = value;
         this.linenumber = linenumber;

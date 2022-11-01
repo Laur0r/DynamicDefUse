@@ -37,7 +37,7 @@ public class DefUseAnalyser {
     public static void visitUse(Object value, int index, int linenumber, int instruction, String method, String varname){
         //System.out.println("Use at line "+linenumber+": var"+index+", value "+value+", method :"+method);
         DefUseVariable use = new DefUseVariable(linenumber, instruction, index, value, method, varname);
-        DefUseVariable def = defs.getLastDefinition(index, method, value);
+        DefUseVariable def = defs.getLastDefinition(index, method, value, varname);
         if(def != null && def.isAlias()){
             AliasAlloc alloc = aliases.get(def.getValue());
             for(int i = 0; i<alloc.varNames.size(); i++){
@@ -121,9 +121,9 @@ public class DefUseAnalyser {
         registerDef(def);
     }
 
-    public static void visitParameter(Object value, int index, int linenumber, String method, String varname){
+    public static void visitParameter(Object value, int index, int linenumber, String method, String varname, int parameter){
         //System.out.println("Parameter of method " + method +": var"+index+", value "+value);
-        registerParameter(value, index, linenumber, method, varname);
+        registerParameter(value, index, linenumber, method, varname, parameter);
     }
 
     protected static void registerUse(DefUseVariable def, DefUseVariable use, int index, String name, String method){
@@ -158,14 +158,14 @@ public class DefUseAnalyser {
             //logger.info(def.toString());
     }
 
-    protected static void registerParameter(Object value, int index, int ln, String method, String varname){
+    protected static void registerParameter(Object value, int index, int ln, String method, String varname, int parameter){
         if(interMethods.size() != 0){
             for(InterMethodAlloc alloc : interMethods.interMethodAllocs){
-                if(alloc.newMethod.equals(method)) {
-                    if(alloc.value == null && value == null || alloc.value != null && alloc.value == value){
+                if(alloc.newMethod.equals(method) && (alloc.newName == null || alloc.newName.equals(varname)) && parameter == alloc.parameter) {
+                    if(alloc.value == value || (value != null && isPrimitiveOrWrapper(value) && value.equals(alloc.value))){
                         alloc.newIndex = index;
                         alloc.newName = varname;
-                        DefUseVariable result = chains.findUse(alloc.currentMethod, alloc.linenumber, value, alloc.isRemoved);
+                        DefUseVariable result = chains.findUse(alloc.currentMethod, alloc.linenumber, value, alloc.isRemoved); // TODO Erkennung von Operationen in Methodenaufrufen?
                         if(result != null) {
                             if(!alloc.isRemoved){
                                 alloc.isRemoved = true;
@@ -192,9 +192,10 @@ public class DefUseAnalyser {
         registerDef(def);
     }
 
-    public static void registerInterMethod(Object value, int linenumber, String currentMethod, String newMethod){
+    public static void registerInterMethod(Object value, int linenumber, String currentMethod, String newMethod, int parameter){
         //System.out.println("interMethod");
         InterMethodAlloc m = new InterMethodAlloc(value, linenumber, currentMethod, newMethod);
+        m.parameter = parameter;
         InterMethodAlloc a = interMethods.contains(m);
         if(a == null) {
             interMethods.addAlloc(m);
@@ -205,8 +206,8 @@ public class DefUseAnalyser {
 
     public static void registerInterMethod(Object[] values, int linenumber, String currentMethod, String newMethod){
         //System.out.println("interMethod");
-        for(Object obj: values){
-            registerInterMethod(obj, linenumber,currentMethod, newMethod);
+        for(int i=0;i<values.length;i++){
+            registerInterMethod(values[i], linenumber,currentMethod, newMethod,i);
         }
     }
 
@@ -217,7 +218,7 @@ public class DefUseAnalyser {
                 if(alloc.isField) {
                     def = defs.getLastDefinitionFields(alloc.currentIndex, alloc.currentName, alloc.value, null);
                 } else {
-                    def = defs.getLastDefinition(alloc.currentIndex, alloc.currentMethod, alloc.value);
+                    def = defs.getLastDefinition(alloc.currentIndex, alloc.currentMethod, alloc.value, alloc.currentName);
                 }
                 if(def == null){
                     if(!alloc.currentMethod.equals(method)){
@@ -234,5 +235,12 @@ public class DefUseAnalyser {
 
     public static void check(){
         logger.info("Size: "+chains.getChainSize());
+    }
+
+    protected static boolean isPrimitiveOrWrapper(Object obj){
+        Class<?> type = obj.getClass();
+        return type.isPrimitive() || type == Double.class || type == Float.class || type == Long.class
+                || type == Integer.class || type == Short.class || type == Character.class
+                || type == Byte.class || type == Boolean.class || type == String.class;
     }
 }

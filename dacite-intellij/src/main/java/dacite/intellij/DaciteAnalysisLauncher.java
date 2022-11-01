@@ -75,7 +75,7 @@ public class DaciteAnalysisLauncher {
                     DefUseChains chains = (DefUseChains) jaxbUnmarshaller.unmarshal(new StringReader(test));// (DefUseChains) jaxbUnmarshaller.unmarshal(new StringReader(s));//
                     ArrayList<DefUseClass> list = transformDefUse(chains);
                     for (DefUseClass cl : list) {
-                        //System.out.println(cl.toString());
+                        System.out.println(cl.toString());
                     }
                     ToolWindowManager toolWindowManager = ToolWindowManager.getInstance(project);
                     ToolWindow toolWindow = toolWindowManager.getToolWindow("DaciteAnalysisToolWindow");
@@ -139,7 +139,6 @@ public class DaciteAnalysisLauncher {
 
             DefUseClass defUseClass = new DefUseClass(defClassName);
             DefUseMethod m = new DefUseMethod(defMethodName);
-            DefUseVar var = new DefUseVar(def.getVariableName());
             String useLocation = useMethodPath +" line "+use.getLinenumber();
             String defLocation = "Line "+def.getLinenumber();
             if(defClassName.equals(useClassName)){
@@ -148,11 +147,20 @@ public class DaciteAnalysisLauncher {
                 }
             }
             String varName = def.getVariableName();
+            DefUseVar var = new DefUseVar(def.getVariableName());
             if(!use.getVariableName().equals(varName)){
-                varName = varName + "/"+use.getVariableName();
+                if(use.getVariableName().contains("[")){
+                    varName = use.getVariableName() + use.getVariableIndex() + "]";
+                    var = new DefUseVar(varName);
+                } else {
+                    varName = varName + "/"+use.getVariableName();
+                }
+            } else if(varName.contains("[")){
+                varName = varName + use.getVariableIndex() + "]";
+                var = new DefUseVar(varName);
             }
             DefUseData data = new DefUseData(varName, defLocation, useLocation);
-            data.setIndex(use.getVariableIndex());
+            data.setIndex(use.getInstruction());
             // if output already contains class, add data to existing class instance
             if(output.contains(defUseClass)){
                 DefUseClass instance = output.get(output.indexOf(defUseClass));

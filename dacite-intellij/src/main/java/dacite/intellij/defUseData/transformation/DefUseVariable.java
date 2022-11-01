@@ -5,6 +5,8 @@ import javax.xml.bind.annotation.XmlElement;
 public class DefUseVariable {
     private int linenumber;
     private String method;
+
+    private int instruction;
     private int variableIndex;
     private String variableName;
 
@@ -33,6 +35,15 @@ public class DefUseVariable {
 
     public void setVariableIndex(int variableIndex) {
         this.variableIndex = variableIndex;
+    }
+
+    @XmlElement
+    public int getInstruction() {
+        return instruction;
+    }
+
+    public void setInstruction(int instruction) {
+        this.instruction = instruction;
     }
 
     @XmlElement

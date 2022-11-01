@@ -66,7 +66,7 @@ public class Transformer implements ClassFileTransformer {
 								break;
 							}
 						}
-						InsnList il = instrumentVarInsn(varins, mnode.name, varname, op, linenumber, index);
+						InsnList il = instrumentVarInsn(varins, mnode, varname, op, linenumber, index);
 						index++;
 						if(il != null){
 							insns.insert(in, il);
@@ -154,7 +154,8 @@ public class Transformer implements ClassFileTransformer {
 						methodStart.add(new LdcInsnNode(firstLinenumber));
 						methodStart.add(new LdcInsnNode(classname+"."+mnode.name));
 						methodStart.add(new LdcInsnNode(localVariable.name));
-						methodStart.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/defuse/DefUseAnalyser", "visitParameter", "(Ljava/lang/Object;IILjava/lang/String;Ljava/lang/String;)V", false));
+						methodStart.add(new IntInsnNode(Opcodes.BIPUSH, typeindex));
+						methodStart.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/defuse/DefUseAnalyser", "visitParameter", "(Ljava/lang/Object;IILjava/lang/String;Ljava/lang/String;I)V", false));
 						if(types[typeindex] == Type.DOUBLE_TYPE || types[typeindex] == Type.LONG_TYPE){
 							i++;
 						}
@@ -170,7 +171,7 @@ public class Transformer implements ClassFileTransformer {
 				e.printStackTrace();
 			}
 			File outputfile = new File("/home/l_troo01/Development/Forschung/ByteCode/"+node.name.substring(node.name.lastIndexOf("/")+1)+".class");
-			/*try{
+			try{
 				OutputStream fos = new FileOutputStream(outputfile);
 				fos.write(writer.toByteArray());
 				fos.flush();
@@ -178,7 +179,7 @@ public class Transformer implements ClassFileTransformer {
 			} catch (Exception e){
 				e.printStackTrace();
 			}
-			System.out.println("Transformer has class written");*/
+			System.out.println("Transformer has class written");
 			return writer.toByteArray();
 		}
 
@@ -267,19 +268,53 @@ public class Transformer implements ClassFileTransformer {
 	 * Instrument Variable Instructions (Load and Store of variables). Includes pushing relevant parameter on the operating
 	 * stack and calling the DefUseAnalyser
 	 * @param varins the variable instruction
-	 * @param methodName name of the current method
+	 * @param mnode name of the current method
 	 * @param op operating instruction as int
 	 * @param linenumber current linenumber of source code
 	 * @return instrumented instructions
 	 */
-	protected InsnList instrumentVarInsn(VarInsnNode varins, String methodName, String variableName, int op, int linenumber, int index){
+	protected InsnList instrumentVarInsn(VarInsnNode varins, MethodNode mnode, String variableName, int op, int linenumber, int index){
 		if((op == Opcodes.ILOAD || op == Opcodes.LLOAD || op == Opcodes.FLOAD ||
-				op == Opcodes.DLOAD || (op == Opcodes.ALOAD && !methodName.equals("<init>")) ||
+				op == Opcodes.DLOAD || op == Opcodes.ALOAD ||// && !mnode.name.equals("<init>")) ||
 				op == Opcodes.ISTORE || op == Opcodes.LSTORE || op == Opcodes.FSTORE ||
 				op == Opcodes.DSTORE || op == Opcodes.ASTORE)) {
-			methodName = classname+"."+methodName;
+			if(op == Opcodes.ALOAD && mnode.name.equals("<init>") && variableName.equals("this")){
+				return null;
+			}
+			String methodName = classname+"."+mnode.name;
 			InsnList il = new InsnList();
 			Type varType = getTypeFromOpcode(op);
+			for(LocalVariableNode lv: mnode.localVariables){
+				if(lv.index == varins.var){
+					Type varType2 = Type.getType(lv.desc);
+					if(varType == Type.INT_TYPE && (varType2 == Type.BYTE_TYPE || varType2 == Type.BOOLEAN_TYPE || varType2 == Type.CHAR_TYPE)){
+						varType=varType2;
+					}
+					if(varType2.getSort() != varType.getSort() ){
+						if(varType2.getSort() == Type.ARRAY){
+							if(varType.getSort() != Type.OBJECT){
+								variableName = "";
+							}
+						} else if(varType.getSort() == Type.ARRAY){
+							if(varType2.getSort() != Type.OBJECT) {
+								variableName = "";
+							}
+						} else if(varType2.getSort() == Type.OBJECT){
+							if(varType.getSort() != Type.ARRAY){
+								variableName = "";
+							}
+						} else if(varType.getSort() == Type.OBJECT){
+							if(varType2.getSort() != Type.ARRAY){
+								variableName = "";
+							}
+						} else {
+							variableName = "";
+						}
+					}
+					break;
+				}
+			}
+
 			boxing(varType, varins.var, il, true);
 			il.add(new LdcInsnNode(varins.var));
 			il.add(new LdcInsnNode(linenumber));
@@ -465,7 +500,8 @@ public class Transformer implements ClassFileTransformer {
 			il.add(new LdcInsnNode(linenumber));
 			il.add(new LdcInsnNode(classname+"."+mnode.name));
 			il.add(new LdcInsnNode(methodins.owner+"."+methodins.name));
-			il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/defuse/DefUseAnalyser", "registerInterMethod", "(Ljava/lang/Object;ILjava/lang/String;Ljava/lang/String;)V", false));
+			il.add(new IntInsnNode(Opcodes.BIPUSH, 0));
+			il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/defuse/DefUseAnalyser", "registerInterMethod", "(Ljava/lang/Object;ILjava/lang/String;Ljava/lang/String;I)V", false));
 			return il;
 		} else if(parameterTypes.length != 0){
 			// if there are more parameters, duplicating has to be done by storing values in local variables and retrieving values
