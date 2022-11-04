@@ -99,7 +99,7 @@ public final class LanguageServerService {
     LOG.info("Dacite language server process started: " + process);
 
     // Create client launcher
-    this.client = new LanguageClientImpl();
+    //this.client = new LanguageClientImpl();
     Launcher<LanguageServer> launcher = Launcher.createLauncher(this.client, LanguageServer.class,
         process.getInputStream(), process.getOutputStream());
 

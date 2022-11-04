@@ -11,7 +11,7 @@ import org.jetbrains.annotations.Nullable;
 public class DaciteRunLineMarkerContributor extends RunLineMarkerContributor {
     @Override
     public @Nullable Info getInfo(@NotNull PsiElement element) {
-        PsiClass test = JUnitUtil.getTestClass(element);
+        PsiClass test = JUnitUtil.getTestClass(element); // TODO requestmanager Return check
         if(test == null){
             return null;
         }

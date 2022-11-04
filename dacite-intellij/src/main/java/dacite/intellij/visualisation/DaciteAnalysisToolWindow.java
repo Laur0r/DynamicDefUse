@@ -1,8 +1,11 @@
 package dacite.intellij.visualisation;
 
+import com.intellij.codeInsight.hints.InlineInlayRenderer;
+import com.intellij.codeInsight.hints.presentation.*;
 import com.intellij.icons.AllIcons;
-import com.intellij.openapi.editor.Editor;
-import com.intellij.openapi.editor.LogicalPosition;
+import com.intellij.openapi.editor.*;
+import com.intellij.openapi.editor.colors.EditorFontType;
+import com.intellij.openapi.editor.impl.EditorImpl;
 import com.intellij.openapi.editor.markup.HighlighterTargetArea;
 import com.intellij.openapi.editor.markup.RangeHighlighter;
 import com.intellij.openapi.editor.markup.TextAttributes;
@@ -23,13 +26,20 @@ import dacite.intellij.defUseData.DefUseData;
 import dacite.intellij.defUseData.DefUseMethod;
 import dacite.intellij.defUseData.DefUseVar;
 import groovy.lang.Tuple;
+import org.jetbrains.annotations.NotNull;
 
 import javax.swing.*;
 import javax.swing.event.*;
 import javax.swing.tree.DefaultMutableTreeNode;
 import java.awt.*;
+import java.awt.font.FontRenderContext;
+import java.awt.geom.AffineTransform;
+import java.awt.image.AffineTransformOp;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
+
+import static javax.swing.UIManager.getFont;
 
 public class DaciteAnalysisToolWindow {
 
@@ -39,8 +49,40 @@ public class DaciteAnalysisToolWindow {
     private Project project;
     private ArrayList<DefUseClass> data;
 
-    public DaciteAnalysisToolWindow(ToolWindow toolWindow, ArrayList<DefUseClass> data) {
+    public DaciteAnalysisToolWindow(ToolWindow toolWindow, ArrayList<DefUseClass> data, Project project) {
         this.data = data;
+        this.project = project;
+        FileEditorManager manager = FileEditorManager.getInstance(project);
+        Editor textEditor = manager.getSelectedTextEditor();
+        String word = "Def:";
+        Font font = textEditor.getColorsScheme().getFont(EditorFontType.PLAIN);
+        AffineTransform a = font.getTransform();
+        FontRenderContext frc = new FontRenderContext(a,true,true);
+        InlayProperties prop = new InlayProperties();
+        prop.relatesToPrecedingText(false);
+        prop.showAbove(false);
+        textEditor.getInlayModel().addInlineElement(getOffSets(textEditor, 6, "b").get(0), prop, new EditorCustomElementRenderer() {
+            @Override
+            public int calcWidthInPixels(@NotNull Inlay inlay) {
+                return (int) font.getStringBounds(word,frc).getWidth()+3;
+            }
+
+            @Override
+            public int calcHeightInPixels(@NotNull Inlay inlay) {
+                return (int) font.getStringBounds(word,frc).getHeight();
+            }
+
+            @Override
+            public void paint(@NotNull Inlay inlay, @NotNull Graphics g, @NotNull Rectangle targetRegion, @NotNull TextAttributes textAttributes) {
+                Graphics2D gr = (Graphics2D) g;
+                gr.setColor(new Color(59,59,59,20));
+                g.fillRect(targetRegion.x-3, targetRegion.y+1, calcWidthInPixels(inlay)+3, calcHeightInPixels(inlay)+3);
+                gr.setFont(font);
+                gr.setColor(JBColor.RED);
+                gr.drawString(word, targetRegion.x, targetRegion.y+15);
+            }
+        });
+
         button = new JButton("Highlight all");
         button.addActionListener(e -> highlightAll());
         myToolWindowContent = new JPanel();
@@ -60,7 +102,7 @@ public class DaciteAnalysisToolWindow {
         cellEditor.addCellEditorListener(new CellEditorListener() {
             @Override
             public void editingStopped(ChangeEvent changeEvent) {
-                DefUseData data = (DefUseData) changeEvent.getSource();
+                /*DefUseData data = (DefUseData) changeEvent.getSource();
                 String varName = data.getName();
                 String def = data.getDefLocation();
                 String use = data.getUseLocation();
@@ -77,8 +119,7 @@ public class DaciteAnalysisToolWindow {
                     jumpToFile(project, defline, useline, varName, className);
                 } else {
                     System.out.println("not checked");
-                    FileEditorManager manager = FileEditorManager.getInstance(project);
-                    Editor textEditor = manager.getSelectedTextEditor();
+                    textEditor = manager.getSelectedTextEditor();
                     RangeHighlighter[] highlighters = textEditor.getMarkupModel().getAllHighlighters();
                     boolean useRemoved = false;
                     boolean defRemoved = false;
@@ -103,7 +144,7 @@ public class DaciteAnalysisToolWindow {
                             useRemoved = true;
                         }
                     }
-                }
+                }*/
             }
 
             @Override

@@ -26,10 +26,9 @@ public class DaciteToolWindowFactory implements ToolWindowFactory {
      * @param toolWindow current tool window
      */
     public void createToolWindowContent(@NotNull Project project, @NotNull ToolWindow toolWindow) {
-        DaciteAnalysisToolWindow daciteAnalysisToolWindow = new DaciteAnalysisToolWindow(toolWindow, data);
+        DaciteAnalysisToolWindow daciteAnalysisToolWindow = new DaciteAnalysisToolWindow(toolWindow, data, project);
         ContentFactory contentFactory = ContentFactory.getInstance();
         Content content = contentFactory.createContent(daciteAnalysisToolWindow.getContent(), "", false);
-        daciteAnalysisToolWindow.setProject(project);
         toolWindow.getContentManager().addContent(content);
 
     }
