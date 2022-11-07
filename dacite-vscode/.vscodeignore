@@ -1,0 +1,28 @@
+src/**
+
+# VS Code
+.vscode/**
+.vscode-test/**
+
+# Git
+.gitignore
+
+# GitHub
+.github/
+
+# Gradle
+.gradle/**
+build/**
+*.gradle
+.project
+gradlew
+gradlew.bat
+gradle/
+.settings
+
+# Node
+node_modules/
+
+# Other
+**/tsconfig.json
+**/.eslintrc.json
