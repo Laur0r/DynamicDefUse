@@ -3,6 +3,8 @@ plugins {
     id 'application'
 }
 
+version '0.1.0'
+
 application {
     applicationDefaultJvmArgs = ["-javaagent:../dacite-core/build/libs/dacite-core-${project.version}.jar=dacite/examples/benchmarks"]
     mainClass = 'dacite.examples.DefUseMain'
