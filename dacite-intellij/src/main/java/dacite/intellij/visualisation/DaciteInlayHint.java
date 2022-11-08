@@ -77,12 +77,12 @@ public class DaciteInlayHint implements InlayHintsProvider {
                 TextAttributes attributes = new TextAttributes(Color.CYAN, Color.BLACK, Color.LIGHT_GRAY, null, 1);
                 InlayPresentation base = getFactory().smallText("help!!");
                 //InlayPresentation att = new WithAttributesPresentation(base, attributes, editor,);
-                InlayPresentation presentation = new RoundWithBackgroundPresentation(base, 8, 8, JBColor.BLUE, 0);
+                InlayPresentation presentation = new ColorInlayPresentation("TEST", JBColor.RED,null,1);
                 //BufferedImage image = UIUtil.createImage((Component)new JPanel(), 1,1,2);
                 //((Graphics2D g2 = (Graphics2D) image.getGraphics();
                 //presentation.paint(g2, attributes);
-                inlayHintsSink.addInlineElement(10, false, getFactory().roundWithBackgroundAndSmallInset(base), false);
-                //inlayHintsSink.addInlineElement(50, false, base, false);
+                inlayHintsSink.addInlineElement(10, false, presentation, false);
+                inlayHintsSink.addInlineElement(50, false, base, false);
                 return false;
             }
         };

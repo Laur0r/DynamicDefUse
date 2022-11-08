@@ -1,7 +1,9 @@
 package dacite.intellij.visualisation;
 
+import com.intellij.codeInsight.hints.InlayInfo;
 import com.intellij.codeInsight.hints.InlineInlayRenderer;
 import com.intellij.codeInsight.hints.presentation.*;
+import com.intellij.formatting.visualLayer.VisualFormattingLayerElement;
 import com.intellij.icons.AllIcons;
 import com.intellij.openapi.editor.*;
 import com.intellij.openapi.editor.colors.EditorFontType;
@@ -9,7 +11,11 @@ import com.intellij.openapi.editor.impl.EditorImpl;
 import com.intellij.openapi.editor.markup.HighlighterTargetArea;
 import com.intellij.openapi.editor.markup.RangeHighlighter;
 import com.intellij.openapi.editor.markup.TextAttributes;
+import com.intellij.openapi.fileEditor.FileEditor;
 import com.intellij.openapi.fileEditor.FileEditorManager;
+import com.intellij.openapi.fileEditor.TextEditor;
+import com.intellij.openapi.fileEditor.impl.text.PsiAwareTextEditorImpl;
+import com.intellij.openapi.fileEditor.impl.text.TextEditorImpl;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.roots.ProjectRootManager;
 import com.intellij.openapi.util.TextRange;
@@ -52,37 +58,6 @@ public class DaciteAnalysisToolWindow {
     public DaciteAnalysisToolWindow(ToolWindow toolWindow, ArrayList<DefUseClass> data, Project project) {
         this.data = data;
         this.project = project;
-        FileEditorManager manager = FileEditorManager.getInstance(project);
-        Editor textEditor = manager.getSelectedTextEditor();
-        String word = "Def:";
-        Font font = textEditor.getColorsScheme().getFont(EditorFontType.PLAIN);
-        AffineTransform a = font.getTransform();
-        FontRenderContext frc = new FontRenderContext(a,true,true);
-        InlayProperties prop = new InlayProperties();
-        prop.relatesToPrecedingText(false);
-        prop.showAbove(false);
-        textEditor.getInlayModel().addInlineElement(getOffSets(textEditor, 6, "b").get(0), prop, new EditorCustomElementRenderer() {
-            @Override
-            public int calcWidthInPixels(@NotNull Inlay inlay) {
-                return (int) font.getStringBounds(word,frc).getWidth()+3;
-            }
-
-            @Override
-            public int calcHeightInPixels(@NotNull Inlay inlay) {
-                return (int) font.getStringBounds(word,frc).getHeight();
-            }
-
-            @Override
-            public void paint(@NotNull Inlay inlay, @NotNull Graphics g, @NotNull Rectangle targetRegion, @NotNull TextAttributes textAttributes) {
-                Graphics2D gr = (Graphics2D) g;
-                gr.setColor(new Color(59,59,59,20));
-                g.fillRect(targetRegion.x-3, targetRegion.y+1, calcWidthInPixels(inlay)+3, calcHeightInPixels(inlay)+3);
-                gr.setFont(font);
-                gr.setColor(JBColor.RED);
-                gr.drawString(word, targetRegion.x, targetRegion.y+15);
-            }
-        });
-
         button = new JButton("Highlight all");
         button.addActionListener(e -> highlightAll());
         myToolWindowContent = new JPanel();
@@ -99,9 +74,12 @@ public class DaciteAnalysisToolWindow {
         renderer.setIcon(AllIcons.Actions.GroupByClass);
         tree.setCellRenderer(renderer);
         tree.setCellEditor(cellEditor);
+        addInlays();
         cellEditor.addCellEditorListener(new CellEditorListener() {
             @Override
             public void editingStopped(ChangeEvent changeEvent) {
+                Object obj = changeEvent.getSource();
+                //textEditor.getInlayModel().getInlineElementsInRange(getOffSets(textEditor, 6, "b").get(0),getOffSets(textEditor, 6, "b").get(1)).forEach(inlay -> {inlay.dispose();});
                 /*DefUseData data = (DefUseData) changeEvent.getSource();
                 String varName = data.getName();
                 String def = data.getDefLocation();
@@ -260,7 +238,8 @@ public class DaciteAnalysisToolWindow {
             for(DefUseMethod dfMethod:dfClass.getMethods()){
                 MethodNode mnode = new MethodNode(dfMethod.getName());
                 for(DefUseVar dfVariable : dfMethod.getVariables()){
-                    VariableNode vnode = new VariableNode(dfVariable.getName());
+                    DefUseVar var = new DefUseVar(dfVariable.getName());
+                    VariableNode vnode = new VariableNode(var);
                     DefUseData[] data = dfVariable.getData().toArray(new DefUseData[0]);
                     vnode.setNumberChains(data.length);
                     DefUseNode dnode = new DefUseNode(data);
@@ -273,16 +252,46 @@ public class DaciteAnalysisToolWindow {
             }
             top.add(cnode);
         }
-        /*DefUseData[] data = new DefUseData[2];
-        DefUseData defuse1 = new DefUseData("x", "Class.method line 2", "Class.method line 3");
-        DefUseData defuse2 = new DefUseData("y", "Class.method line 3", "Class.method line 4");
-        data[0] = defuse1;
-        data[1] = defuse2;
-        MethodNode method = new MethodNode("method");
-        DefUseNode defUseNode = new DefUseNode(data);
-        method.add(defUseNode);
-        top.add(method);
-        method = new MethodNode("test");
-        top.add(method);*/
+    }
+
+    public void addInlays(){
+        FileEditorManager manager = FileEditorManager.getInstance(project);
+        Editor textEditor = manager.getSelectedTextEditor();
+        String word = "Def:";
+        Font font = textEditor.getColorsScheme().getFont(EditorFontType.PLAIN);
+        AffineTransform a = font.getTransform();
+        FontRenderContext frc = new FontRenderContext(a,true,true);
+        InlayProperties prop = new InlayProperties();
+        prop.relatesToPrecedingText(false);
+        prop.showAbove(false);
+        FileEditor[] fileEditors = FileEditorManager.getInstance(project).getAllEditors();
+        textEditor.getInlayModel().getInlineElementsInRange(getOffSets(textEditor, 6, "a").get(0),getOffSets(textEditor, 6, "b").get(1)).forEach(inlay -> {inlay.dispose();});
+        for(FileEditor ed:fileEditors){
+            PsiAwareTextEditorImpl impl = (PsiAwareTextEditorImpl) ed;
+            Editor eachEditor = impl.getEditor();
+            eachEditor.getInlayModel().addInlineElement(getOffSets(textEditor, 6, "a").get(0), prop, new EditorCustomElementRenderer() {
+                @Override
+                public int calcWidthInPixels(@NotNull Inlay inlay) {
+                    return (int) font.getStringBounds(word,frc).getWidth()+3;
+                }
+
+                @Override
+                public int calcHeightInPixels(@NotNull Inlay inlay) {
+                    return (int) font.getStringBounds(word,frc).getHeight();
+                }
+
+                @Override
+                public void paint(@NotNull Inlay inlay, @NotNull Graphics g, @NotNull Rectangle targetRegion, @NotNull TextAttributes textAttributes) {
+                    Graphics2D gr = (Graphics2D) g;
+                    //gr.setColor(JBColor.LIGHT_GRAY);
+                    //gr.fillRect(targetRegion.x-3, targetRegion.y+1, calcWidthInPixels(inlay)+3, calcHeightInPixels(inlay)+3);
+                    gr.setFont(font);
+                    gr.setColor(JBColor.RED);
+                    gr.drawString(word, targetRegion.x, targetRegion.y+ eachEditor.getAscent());
+                }
+            });
+
+        }
+
     }
 }

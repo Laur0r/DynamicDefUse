@@ -2,9 +2,11 @@ package dacite.intellij.visualisation;
 
 import com.intellij.icons.AllIcons;
 import com.intellij.ui.JBColor;
+import com.intellij.ui.components.JBCheckBox;
 import com.intellij.ui.components.JBScrollPane;
 import com.intellij.ui.table.JBTable;
 import dacite.intellij.defUseData.DefUseData;
+import dacite.intellij.defUseData.DefUseVar;
 
 import javax.swing.*;
 import javax.swing.tree.DefaultTreeCellRenderer;
@@ -16,6 +18,7 @@ class DefUseCellRenderer extends DefaultTreeCellRenderer {
 
     JLabel name = new JLabel();
     JLabel number = new JLabel();
+    JBCheckBox box = new JBCheckBox();
 
     DefaultTreeCellRenderer defaultRenderer = new DefaultTreeCellRenderer();
 
@@ -89,9 +92,9 @@ class DefUseCellRenderer extends DefaultTreeCellRenderer {
 
             returnValue = labelPanel;
         } else if(value instanceof VariableNode){
-            String name = ((VariableNode) value).getUserObject();
+            DefUseVar var = ((VariableNode) value).getUserObject();
             String number = ((VariableNode) value).getNumberChains() + " chains";
-            this.name.setText(name);
+            this.name.setText(var.getName());
             this.name.setIcon(AllIcons.Nodes.Variable);
             this.number.setText(number);
             JPanel labelPanel = new JPanel();
@@ -99,6 +102,9 @@ class DefUseCellRenderer extends DefaultTreeCellRenderer {
             labelPanel.add(this.name);
             labelPanel.add(Box.createHorizontalStrut(10)); //creates space between the JLabels
             labelPanel.add(this.number);
+            labelPanel.add(Box.createHorizontalStrut(10));
+            box.setSelected(var.isChecked());
+            labelPanel.add(box);
 
             returnValue = labelPanel;
         }

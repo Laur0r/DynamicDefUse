@@ -1,5 +1,7 @@
 package dacite.intellij.visualisation;
 
+import dacite.intellij.defUseData.DefUseVar;
+
 import javax.swing.tree.DefaultMutableTreeNode;
 
 public class VariableNode extends DefaultMutableTreeNode {
@@ -8,20 +10,20 @@ public class VariableNode extends DefaultMutableTreeNode {
      */
 
     private int numberChains;
-    public VariableNode(String resource) {
+    public VariableNode(DefUseVar resource) {
         super(resource);
     }
 
     @Override
     public void setUserObject(Object userObject) {
-        if(userObject instanceof String) {
+        if(userObject instanceof DefUseVar) {
             super.setUserObject(userObject);
         }
     }
 
     @Override
-    public String getUserObject() {
-        return (String) super.getUserObject();
+    public DefUseVar getUserObject() {
+        return (DefUseVar) super.getUserObject();
     }
 
     public void setNumberChains(int number) {numberChains = number;}
