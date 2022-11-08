@@ -4,8 +4,8 @@ import com.github.javaparser.StaticJavaParser;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.body.MethodDeclaration;
 
-import org.eclipse.lsp4j.CodeAction;
-import org.eclipse.lsp4j.CodeActionParams;
+import org.eclipse.lsp4j.CodeLens;
+import org.eclipse.lsp4j.CodeLensParams;
 import org.eclipse.lsp4j.Command;
 import org.eclipse.lsp4j.DidChangeTextDocumentParams;
 import org.eclipse.lsp4j.DidCloseTextDocumentParams;
@@ -16,9 +16,11 @@ import org.eclipse.lsp4j.InlayHintParams;
 import org.eclipse.lsp4j.MarkupContent;
 import org.eclipse.lsp4j.MarkupKind;
 import org.eclipse.lsp4j.Position;
+import org.eclipse.lsp4j.Range;
 import org.eclipse.lsp4j.TextDocumentContentChangeEvent;
 import org.eclipse.lsp4j.TextDocumentItem;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
+import org.eclipse.lsp4j.services.TextDocumentService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,7 +30,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
-public class DaciteTextDocumentService implements org.eclipse.lsp4j.services.TextDocumentService {
+import dacite.lsp.DaciteExtendedTextDocumentService;
+import dacite.lsp.tvp.DaciteTreeViewService;
+import dacite.lsp.tvp.TreeViewChildrenParams;
+import dacite.lsp.tvp.TreeViewChildrenResult;
+import dacite.lsp.tvp.TreeViewNode;
+import dacite.lsp.tvp.TreeViewParentParams;
+import dacite.lsp.tvp.TreeViewParentResult;
+
+public class DaciteTextDocumentService
+    implements TextDocumentService, DaciteExtendedTextDocumentService, DaciteTreeViewService {
 
   private static final Logger logger = LoggerFactory.getLogger(DaciteTextDocumentService.class);
 
@@ -63,20 +74,21 @@ public class DaciteTextDocumentService implements org.eclipse.lsp4j.services.Tex
   }
 
   @Override
-  public CompletableFuture<List<Either<Command, CodeAction>>> codeAction(CodeActionParams params) {
-    logger.info("codeAction {}", params);
+  public CompletableFuture<List<? extends CodeLens>> codeLens(CodeLensParams params) {
+    logger.info("codeLens {}", params);
 
-    List<Either<Command, CodeAction>> codeActions = new ArrayList<>();
+    List<CodeLens> codeLenses = new ArrayList<>();
 
     String javaCode = openedDocuments.get(params.getTextDocument().getUri()).getText();
     CompilationUnit compilationUnit = StaticJavaParser.parse(javaCode);
     compilationUnit.findAll(MethodDeclaration.class).forEach(methodDeclaration -> {
       methodDeclaration.getName().getRange().ifPresent(range -> {
-        codeActions.add(Either.forLeft(new Command("Run Analysis", "dacite.analyze")));
+        codeLenses.add(new CodeLens(new Range(new Position(range.begin.line - 1, range.begin.column - 1),
+            new Position(range.end.line - 1, range.end.column)), new Command("Run Analysis", "dacite.analyze"), null));
       });
     });
 
-    return CompletableFuture.completedFuture(codeActions);
+    return CompletableFuture.completedFuture(codeLenses);
   }
 
   @Override
@@ -89,17 +101,11 @@ public class DaciteTextDocumentService implements org.eclipse.lsp4j.services.Tex
     CompilationUnit compilationUnit = StaticJavaParser.parse(javaCode);
     compilationUnit.findAll(MethodDeclaration.class).forEach(methodDeclaration -> {
       methodDeclaration.getName().getRange().ifPresent(range -> {
-        var hint = new InlayHint(
-            new Position(range.begin.line - 1, range.begin.column - 1),
-            Either.forLeft("Usage")
-        );
+        var hint = new InlayHint(new Position(range.begin.line - 1, range.begin.column - 1), Either.forLeft("Usage"));
         hint.setPaddingLeft(true);
         hint.setPaddingRight(true);
-        hint.setTooltip(new MarkupContent(
-            MarkupKind.MARKDOWN,
-            "# This is a test heading\n"
-                + "This *is* **formatted** text."
-        ));
+        hint.setTooltip(
+            new MarkupContent(MarkupKind.MARKDOWN, "# This is a test heading\n" + "This *is* **formatted** text."));
         inlayHints.add(hint);
       });
     });
@@ -107,6 +113,76 @@ public class DaciteTextDocumentService implements org.eclipse.lsp4j.services.Tex
     logger.info("hints {}", inlayHints);
 
     return CompletableFuture.completedFuture(inlayHints);
+  }
+
+  @Override
+  public CompletableFuture<Object> inlayHintDecoration(Object params) {
+    return null;
+  }
+
+  @Override
+  public CompletableFuture<TreeViewChildrenResult> treeViewChildren(TreeViewChildrenParams params) {
+    logger.info("experimental/treeViewChildren: {}", params);
+
+    var nodeUri = params.getNodeUri();
+    nodeUri = nodeUri == null ? "" : nodeUri;
+
+    var nodes = new ArrayList<TreeViewNode>();
+
+    if (params.getViewId().equals("defUseChains")) {
+      switch (nodeUri) {
+        case "dacite/tryme/EuclidianGcd":
+          var node1 = new TreeViewNode("defUseChains", "dacite/tryme/EuclidianGcd/egcd", "egcd");
+          node1.setCollapseState("expanded");
+          nodes.add(node1);
+
+          var node2 = new TreeViewNode("defUseChains", "dacite/tryme/EuclidianGcd/testGCD", "testGCD");
+          node2.setCollapseState("collapsed");
+          nodes.add(node2);
+          break;
+        case "dacite/tryme/EuclidianGcd/egcd":
+          var node3 = new TreeViewNode("defUseChains", "dacite/tryme/EuclidianGcd/egcd/a", "a");
+          node3.setCollapseState("expanded");
+          nodes.add(node3);
+
+          var node4 = new TreeViewNode("defUseChains", "dacite/tryme/EuclidianGcd/egcd/b", "b");
+          node4.setCollapseState("collapsed");
+          nodes.add(node4);
+          break;
+        case "dacite/tryme/EuclidianGcd/egcd/a":
+          var node5 = new TreeViewNode("defUseChains", "dacite/tryme/EuclidianGcd/egcd/a/1", "D8 - D9");
+          nodes.add(node5);
+
+          var node6 = new TreeViewNode("defUseChains", "dacite/tryme/EuclidianGcd/egcd/a/2", "D15 - U14");
+          nodes.add(node6);
+          break;
+        case "":
+          var node = new TreeViewNode("defUseChains", "dacite/tryme/EuclidianGcd", "tryme/EuclidianGcd");
+          node.setCollapseState("collapsed");
+          nodes.add(node);
+      }
+    }
+
+    var result = new TreeViewChildrenResult(nodes.toArray(new TreeViewNode[0]));
+    logger.info("children: {}", result);
+
+    return CompletableFuture.completedFuture(result);
+  }
+
+  @Override
+  public CompletableFuture<TreeViewParentResult> treeViewParent(TreeViewParentParams params) {
+    logger.info("experimental/treeViewParent: {}", params);
+
+    switch (params.getNodeUri()) {
+      case "dacite/tryme/EuclidianGcd/egcd/a/1":
+        return CompletableFuture.completedFuture(new TreeViewParentResult("dacite/tryme/EuclidianGcd/egcd/a"));
+      case "dacite/tryme/EuclidianGcd/egcd/a":
+        return CompletableFuture.completedFuture(new TreeViewParentResult("dacite/tryme/EuclidianGcd/egcd"));
+      case "dacite/tryme/EuclidianGcd/egcd":
+        return CompletableFuture.completedFuture(new TreeViewParentResult("dacite/tryme/EuclidianGcd"));
+    }
+
+    return CompletableFuture.completedFuture(new TreeViewParentResult(null));
   }
 
 }

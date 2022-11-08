@@ -1,5 +1,8 @@
 package dacite.ls;
 
+import com.google.gson.JsonObject;
+
+import org.eclipse.lsp4j.CodeLensOptions;
 import org.eclipse.lsp4j.ExecuteCommandOptions;
 import org.eclipse.lsp4j.InitializeParams;
 import org.eclipse.lsp4j.InitializeResult;
@@ -8,22 +11,25 @@ import org.eclipse.lsp4j.TextDocumentSyncKind;
 import org.eclipse.lsp4j.TextDocumentSyncOptions;
 import org.eclipse.lsp4j.services.LanguageClient;
 import org.eclipse.lsp4j.services.LanguageClientAware;
-import org.eclipse.lsp4j.services.LanguageServer;
+import org.eclipse.lsp4j.services.TextDocumentService;
+import org.eclipse.lsp4j.services.WorkspaceService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.CompletableFuture;
 
-import dacite.ls.feature.CommandRegistry;
+import dacite.lsp.DaciteExtendedLanguageServer;
+import dacite.lsp.DaciteExtendedTextDocumentService;
+import dacite.lsp.tvp.DaciteTreeViewService;
 
-public class DaciteLanguageServer implements LanguageServer, LanguageClientAware {
+public class DaciteLanguageServer implements DaciteExtendedLanguageServer, LanguageClientAware {
 
   private static final Logger logger = LoggerFactory.getLogger(DaciteLanguageServer.class);
 
   public static final String LANGUAGE_ID = "java";
 
-  private final org.eclipse.lsp4j.services.TextDocumentService textDocumentService;
-  private final org.eclipse.lsp4j.services.WorkspaceService workspaceService;
+  private final DaciteTextDocumentService textDocumentService;
+  private final DaciteWorkspaceService workspaceService;
 
   private int errorCode = 1;
 
@@ -43,8 +49,13 @@ public class DaciteLanguageServer implements LanguageServer, LanguageClientAware
     syncOptions.setOpenClose(true);
     capabilities.setTextDocumentSync(syncOptions);
     capabilities.setExecuteCommandProvider(new ExecuteCommandOptions(CommandRegistry.getCommands()));
-    capabilities.setCodeActionProvider(true);
+    capabilities.setCodeLensProvider(new CodeLensOptions(false));
     capabilities.setInlayHintProvider(true);
+
+    // Tree View Protocol Extension
+    var experimental = new JsonObject();
+    experimental.addProperty("treeViewProvider", true);
+    capabilities.setExperimental(experimental);
 
     return CompletableFuture.supplyAsync(() -> new InitializeResult(capabilities));
   }
@@ -61,18 +72,28 @@ public class DaciteLanguageServer implements LanguageServer, LanguageClientAware
   }
 
   @Override
-  public org.eclipse.lsp4j.services.TextDocumentService getTextDocumentService() {
+  public TextDocumentService getTextDocumentService() {
     return this.textDocumentService;
   }
 
   @Override
-  public org.eclipse.lsp4j.services.WorkspaceService getWorkspaceService() {
+  public WorkspaceService getWorkspaceService() {
     return this.workspaceService;
   }
 
   @Override
   public void connect(LanguageClient client) {
     Util.setClient(client);
+  }
+
+  @Override
+  public DaciteExtendedTextDocumentService getDaciteExtendedTextDocumentService() {
+    return this.textDocumentService;
+  }
+
+  @Override
+  public DaciteTreeViewService getDaciteTreeViewService() {
+    return this.textDocumentService;
   }
 
 }

@@ -1,4 +1,4 @@
-package dacite.ls.feature;
+package dacite.ls;
 
 import org.eclipse.lsp4j.ExecuteCommandParams;
 import org.eclipse.lsp4j.MessageParams;
@@ -13,8 +13,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
-
-import dacite.ls.Util;
 
 public class CommandRegistry {
 

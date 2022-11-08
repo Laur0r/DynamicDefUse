@@ -7,6 +7,7 @@ version '0.1.0'
 
 dependencies {
     runtimeOnly project(':dacite-core')
+    implementation project(':dacite-lsp')
     implementation 'org.eclipse.lsp4j:org.eclipse.lsp4j:0.17.0'
     implementation 'com.github.javaparser:javaparser-symbol-solver-core:3.24.7'
     implementation 'org.slf4j:slf4j-api:2.0.3'

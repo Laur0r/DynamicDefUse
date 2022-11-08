@@ -11,6 +11,7 @@ repositories {
 
 dependencies {
     runtimeOnly project(':dacite-ls')
+    implementation project(':dacite-lsp')
     implementation 'org.eclipse.lsp4j:org.eclipse.lsp4j:0.17.0'
     implementation 'com.github.dacite-defuse:lsp4intellij:567dd3841b'
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.9.0'

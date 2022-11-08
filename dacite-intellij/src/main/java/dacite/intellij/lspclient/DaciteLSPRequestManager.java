@@ -1,23 +1,43 @@
 package dacite.intellij.lspclient;
 
-import dacite.intellij.defUseData.DefUseClass;
-import dacite.intellij.defUseData.transformation.DefUseChains;
-import org.eclipse.lsp4j.*;
-import org.eclipse.lsp4j.jsonrpc.services.JsonRequest;
+import com.intellij.openapi.diagnostic.Logger;
+
+import org.eclipse.lsp4j.InlayHint;
+import org.eclipse.lsp4j.InlayHintParams;
+import org.eclipse.lsp4j.ServerCapabilities;
 import org.eclipse.lsp4j.services.LanguageClient;
 import org.eclipse.lsp4j.services.LanguageServer;
-import org.eclipse.lsp4j.services.TextDocumentService;
 import org.wso2.lsp4intellij.client.languageserver.requestmanager.DefaultRequestManager;
 import org.wso2.lsp4intellij.client.languageserver.wrapper.LanguageServerWrapper;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
-public class DaciteLSPRequestManager extends DefaultRequestManager {
+import dacite.lsp.DaciteExtendedLanguageServer;
+import dacite.lsp.DaciteExtendedTextDocumentService;
+import dacite.lsp.tvp.DaciteTreeViewService;
+import dacite.lsp.tvp.TreeViewChildrenParams;
+import dacite.lsp.tvp.TreeViewChildrenResult;
+import dacite.lsp.tvp.TreeViewParentParams;
+import dacite.lsp.tvp.TreeViewParentResult;
 
-    public DaciteLSPRequestManager(LanguageServerWrapper wrapper, LanguageServer server, LanguageClient client, ServerCapabilities serverCapabilities) {
-        super(wrapper, server, client, serverCapabilities);
-    }
+public class DaciteLSPRequestManager extends DefaultRequestManager
+    implements DaciteExtendedTextDocumentService, DaciteTreeViewService {
+
+  private final Logger LOG = Logger.getInstance(DaciteLSPRequestManager.class);
+
+  private LanguageServerWrapper languageServerWrapper;
+  DaciteExtendedTextDocumentService extendedTextDocumentService;
+  DaciteTreeViewService treeViewService;
+
+  public DaciteLSPRequestManager(LanguageServerWrapper wrapper, LanguageServer server, LanguageClient client,
+      ServerCapabilities serverCapabilities) {
+    super(wrapper, server, client, serverCapabilities);
+    this.languageServerWrapper = wrapper;
+    DaciteExtendedLanguageServer extendedServer = (DaciteExtendedLanguageServer) server;
+    this.extendedTextDocumentService = extendedServer.getDaciteExtendedTextDocumentService();
+    this.treeViewService = extendedServer.getDaciteTreeViewService();
+  }
 
     @Override
     public CompletableFuture<List<InlayHint>> inlayHint(InlayHintParams params) {
@@ -32,7 +52,48 @@ public class DaciteLSPRequestManager extends DefaultRequestManager {
         return null;
     }
 
-    public CompletableFuture<List<DefUseClass>> daciteAnalysis(DefUseChains chains){
-        return null; //TODO return server.daciteAnalysis
+  @Override
+  public CompletableFuture<Object> inlayHintDecoration(Object params) {
+    if (checkStatus()) {
+      try {
+        return extendedTextDocumentService.inlayHintDecoration(params);
+      } catch (Exception e) {
+        crashed(e);
+        return null;
+      }
     }
+    return null;
+  }
+
+  @Override
+  public CompletableFuture<TreeViewChildrenResult> treeViewChildren(TreeViewChildrenParams params) {
+    if (checkStatus()) {
+      try {
+        return treeViewService.treeViewChildren(params);
+      } catch (Exception e) {
+        crashed(e);
+        return null;
+      }
+    }
+    return null;
+  }
+
+  @Override
+  public CompletableFuture<TreeViewParentResult> treeViewParent(TreeViewParentParams params) {
+    if (checkStatus()) {
+      try {
+        return treeViewService.treeViewParent(params);
+      } catch (Exception e) {
+        crashed(e);
+        return null;
+      }
+    }
+    return null;
+  }
+
+  private void crashed(Exception e) {
+    LOG.warn(e);
+    languageServerWrapper.crashed(e);
+  }
+
 }
