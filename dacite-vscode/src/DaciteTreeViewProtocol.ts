@@ -57,7 +57,7 @@ export namespace TreeViewChildren {
     TreeViewChildrenParams,
     TreeViewChildrenResult,
     void
-  >("experimental/treeViewChildren");
+  >("dacite/treeViewChildren");
 }
 
 export interface TreeViewDidChangeParams {
@@ -65,7 +65,7 @@ export interface TreeViewDidChangeParams {
 }
 export namespace TreeViewDidChange {
   export const type = new NotificationType<TreeViewDidChangeParams>(
-    "experimental/treeViewDidChange"
+    "dacite/treeViewDidChange"
   );
 }
 
@@ -83,7 +83,7 @@ export namespace TreeViewParent {
     TreeViewParentParams,
     TreeViewParentResult,
     void
-  >("experimental/treeViewParent");
+  >("dacite/treeViewParent");
 }
 
 export interface TreeViewVisibilityDidChangeParams {
@@ -96,7 +96,7 @@ export interface TreeViewVisibilityDidChangeParams {
 export namespace TreeViewVisibilityDidChange {
   export const type =
     new NotificationType<TreeViewVisibilityDidChangeParams>(
-      "experimental/treeViewVisibilityDidChange"
+      "dacite/treeViewVisibilityDidChange"
     );
 }
 
@@ -112,7 +112,7 @@ export interface TreeViewNodeCollapseDidChangeParams {
 export namespace TreeViewNodeCollapseDidChange {
   export const type =
     new NotificationType<TreeViewNodeCollapseDidChangeParams>(
-      "experimental/treeViewNodeCollapseDidChange"
+      "dacite/treeViewNodeCollapseDidChange"
     );
 }
 
@@ -133,5 +133,5 @@ export namespace TreeViewReveal {
     TextDocumentPositionParams,
     TreeRevealResult,
     void
-  >("experimental/treeViewReveal");
+  >("dacite/treeViewReveal");
 }

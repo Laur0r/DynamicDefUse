@@ -31,6 +31,8 @@ public class DaciteLanguageServer implements DaciteExtendedLanguageServer, Langu
   private final DaciteTextDocumentService textDocumentService;
   private final DaciteWorkspaceService workspaceService;
 
+  private LanguageClient client;
+
   private int errorCode = 1;
 
   public DaciteLanguageServer() {
@@ -83,7 +85,7 @@ public class DaciteLanguageServer implements DaciteExtendedLanguageServer, Langu
 
   @Override
   public void connect(LanguageClient client) {
-    Util.setClient(client);
+    this.client = client;
   }
 
   @Override

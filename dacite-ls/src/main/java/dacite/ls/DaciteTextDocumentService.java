@@ -117,7 +117,7 @@ public class DaciteTextDocumentService
 
   @Override
   public CompletableFuture<Object> inlayHintDecoration(Object params) {
-    return null;
+    throw new UnsupportedOperationException();
   }
 
   @Override

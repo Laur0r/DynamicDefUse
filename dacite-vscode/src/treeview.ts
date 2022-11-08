@@ -24,7 +24,7 @@ import {
   TreeViewParent,
   TreeViews,
   TreeViewVisibilityDidChange
-} from "./TreeViewProtocol";
+} from "./DaciteTreeViewProtocol";
 
 export function startTreeView(
   client: LanguageClient,

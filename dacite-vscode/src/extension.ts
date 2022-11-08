@@ -9,7 +9,7 @@ import {
   LanguageClientOptions,
   ServerOptions
 } from 'vscode-languageclient/node';
-import { TreeViews } from './TreeViewProtocol';
+import { TreeViews } from './DaciteTreeViewProtocol';
 import { startTreeView } from './treeview';
 
 let languageClient: LanguageClient;

@@ -31,8 +31,6 @@ public class CommandRegistry {
   public static CompletableFuture<Object> execute(ExecuteCommandParams params) {
     switch (Command.valueOf(params.getCommand().replaceFirst(COMMAND_PREFIX, ""))) {
       case analyze:
-        Util.getClient().logMessage(new MessageParams(MessageType.Info, "Running... " + params));
-
         ProcessHandle.Info currentProcessInfo = ProcessHandle.current().info();
         List<String> newProcessCommandLine = new ArrayList<>();
         newProcessCommandLine.add(currentProcessInfo.command().get());
