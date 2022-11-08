@@ -11,7 +11,7 @@ public class ServerLauncher {
 
   public static void main(String[] args) throws ExecutionException, InterruptedException {
     // Create server launcher
-    LanguageServerImpl server = new LanguageServerImpl();
+    DaciteLanguageServer server = new DaciteLanguageServer();
     Launcher<LanguageClient> launcher = LSPLauncher.createServerLauncher(server, System.in, System.out);
 
     // Connect to client

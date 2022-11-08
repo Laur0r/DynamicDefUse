@@ -1,0 +1,96 @@
+plugins {
+    id "com.github.node-gradle.node" version "3.5.0"
+}
+apply plugin: 'base'
+
+import groovy.json.JsonSlurper
+def packageJson = (new JsonSlurper()).parse file('package.json')
+version = packageJson.version
+
+def inputFiles = fileTree(
+	dir: projectDir,
+	excludes: [ 'out/**', '.gitignore', '.gradle/**', 'build/**', '*.gradle' ]
+)
+
+node {
+	version = '16.18.0'
+	npmVersion = '8.19.2'
+	download = true
+}
+
+task copyLS(type: Sync, dependsOn: ':dacite-ls:distZip') {
+	from zipTree(new File('../dacite-ls/build/distributions', 'dacite-ls-0.1.0.zip'))
+	into 'dacite-ls'
+}
+
+npmInstall {
+	inputs.files(inputFiles)
+	outputs.dir('out')
+}
+npmInstall.dependsOn copyLS
+
+task npmInstallVsce(type: NpmTask, dependsOn: npmSetup) {
+	mustRunAfter "npmInstall"
+	ext.destPath = "$projectDir/node_modules/vsce"
+	outputs.dir(destPath)
+	group 'Node'
+	description 'Installs the NodeJS package "Visual Studio Code Extension Manager"'
+	args = [ 'install', 'vsce' ]
+}
+
+task vscodeExtension(dependsOn: [npmInstall, npmInstallVsce], type: NodeTask) {
+	ext.destDir = new File(buildDir, 'vscode')
+	ext.archiveName = "$project.name-${project.version}.vsix"
+	ext.destPath = "$destDir/$archiveName"
+	inputs.with {
+		files inputFiles
+		dir npmInstallVsce.destPath
+	}
+	outputs.dir destDir
+	doFirst {
+		destDir.mkdirs()
+	}
+	script = file("$npmInstallVsce.destPath/vsce")
+	args = [ 'package', '--out', destPath ]
+	execOverrides {
+		workingDir = projectDir
+	}
+}
+
+task installExtension(type: Exec, dependsOn: vscodeExtension) {
+	commandLine '/usr/local/bin/code'
+	args '--install-extension', vscodeExtension.destPath
+}
+
+task runCode(type:Exec, dependsOn: installExtension) {
+	commandLine '/usr/local/bin/code'
+	args '--new-window'
+}
+
+task debugCode(type:Exec, dependsOn: vscodeExtension) {
+	commandLine '/usr/local/bin/code'
+	args "--extensionDevelopmentPath=$projectDir", '--inspect-extensions=9993'
+}
+
+clean {
+	doLast {
+		delete vscodeExtension.destDir
+		delete 'out'
+		delete 'dacite-ls'
+	}
+}
+
+task publishVSM(dependsOn: vscodeExtension, type: NodeTask) {
+	script = file("$projectDir/node_modules/vsce/vsce")
+	args = [ 'publish', '-p', System.getenv('VSCE_TOKEN') ?: "", "--packagePath", "${project.buildDir}/vscode/dacite-${project.version}.vsix"]
+	execOverrides {
+		workingDir = projectDir
+	}
+}
+
+task publishOVSX(dependsOn: vscodeExtension, type: Exec) {
+	commandLine 'npx', 'ovsx', 'publish', "${project.buildDir}/vscode/dacite-${project.version}.vsix", '-p', System.getenv('OVSX_TOKEN') ?: ""
+}
+
+// build.dependsOn ':dacite-ls:build'
+build.dependsOn vscodeExtension

@@ -1,0 +1,10 @@
+# Node
+node_modules
+
+# VS Code
+*.vsix
+!.vscode/
+out/
+
+# Application binaries
+dacite-ls/

@@ -3,6 +3,8 @@ package dacite.ls.feature;
 import org.eclipse.lsp4j.ExecuteCommandParams;
 import org.eclipse.lsp4j.MessageParams;
 import org.eclipse.lsp4j.MessageType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.lang.ProcessBuilder.Redirect;
 import java.lang.management.ManagementFactory;
@@ -16,16 +18,20 @@ import dacite.ls.Util;
 
 public class CommandRegistry {
 
+  private static final Logger logger = LoggerFactory.getLogger(CommandRegistry.class);
+
+  public static final String COMMAND_PREFIX = "dacite.";
+
   enum Command {
     analyze;
   }
 
   public static List<String> getCommands() {
-    return Arrays.stream(Command.values()).map(Enum::name).collect(Collectors.toList());
+    return Arrays.stream(Command.values()).map(it -> COMMAND_PREFIX + it.name()).collect(Collectors.toList());
   }
 
   public static CompletableFuture<Object> execute(ExecuteCommandParams params) {
-    switch (Command.valueOf(params.getCommand())) {
+    switch (Command.valueOf(params.getCommand().replaceFirst(COMMAND_PREFIX, ""))) {
       case analyze:
         Util.getClient().logMessage(new MessageParams(MessageType.Info, "Running... " + params));
 
@@ -43,10 +49,10 @@ public class CommandRegistry {
             .redirectError(Redirect.INHERIT);
         try {
           Process newProcess = newProcessBuilder.start();
-          System.out.format("%s: process %s started%n", "executed command", newProcessBuilder.command());
-          System.out.format("process exited with status %s%n", newProcess.waitFor());
+          logger.info("{}: process {} started", "executed command", newProcessBuilder.command());
+          logger.info("process exited with status {}", newProcess.waitFor());
         } catch (Exception e) {
-          System.out.println(e.getMessage());
+          logger.error(e.getMessage());
         }
 
         return CompletableFuture.completedFuture(null);

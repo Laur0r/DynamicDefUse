@@ -1,2 +1,2 @@
 rootProject.name = 'dacite'
-include 'dacite-core', 'dacite-examples', 'dacite-intellij', 'dacite-ls'
+include 'dacite-core', 'dacite-examples', 'dacite-ls', 'dacite-intellij', 'dacite-vscode'
