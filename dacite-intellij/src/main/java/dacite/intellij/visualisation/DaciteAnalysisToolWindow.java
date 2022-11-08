@@ -1,21 +1,13 @@
 package dacite.intellij.visualisation;
 
-import com.intellij.codeInsight.hints.InlayInfo;
-import com.intellij.codeInsight.hints.InlineInlayRenderer;
-import com.intellij.codeInsight.hints.presentation.*;
-import com.intellij.formatting.visualLayer.VisualFormattingLayerElement;
 import com.intellij.icons.AllIcons;
 import com.intellij.openapi.editor.*;
 import com.intellij.openapi.editor.colors.EditorFontType;
-import com.intellij.openapi.editor.impl.EditorImpl;
 import com.intellij.openapi.editor.markup.HighlighterTargetArea;
-import com.intellij.openapi.editor.markup.RangeHighlighter;
 import com.intellij.openapi.editor.markup.TextAttributes;
 import com.intellij.openapi.fileEditor.FileEditor;
 import com.intellij.openapi.fileEditor.FileEditorManager;
-import com.intellij.openapi.fileEditor.TextEditor;
 import com.intellij.openapi.fileEditor.impl.text.PsiAwareTextEditorImpl;
-import com.intellij.openapi.fileEditor.impl.text.TextEditorImpl;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.roots.ProjectRootManager;
 import com.intellij.openapi.util.TextRange;
@@ -32,7 +24,11 @@ import dacite.intellij.defUseData.DefUseData;
 import dacite.intellij.defUseData.DefUseMethod;
 import dacite.intellij.defUseData.DefUseVar;
 import groovy.lang.Tuple;
+import org.eclipse.lsp4j.*;
+import org.eclipse.lsp4j.jsonrpc.JsonRpcException;
+import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.jetbrains.annotations.NotNull;
+import org.wso2.lsp4intellij.client.languageserver.requestmanager.RequestManager;
 
 import javax.swing.*;
 import javax.swing.event.*;
@@ -40,12 +36,17 @@ import javax.swing.tree.DefaultMutableTreeNode;
 import java.awt.*;
 import java.awt.font.FontRenderContext;
 import java.awt.geom.AffineTransform;
-import java.awt.image.AffineTransformOp;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import static javax.swing.UIManager.getFont;
+import static org.wso2.lsp4intellij.requests.Timeout.getTimeout;
+import static org.wso2.lsp4intellij.requests.Timeouts.REFERENCES;
 
 public class DaciteAnalysisToolWindow {
 
@@ -53,11 +54,13 @@ public class DaciteAnalysisToolWindow {
     private JPanel myToolWindowContent;
     private DefUseTree tree;
     private Project project;
+    private RequestManager requestManager;
     private ArrayList<DefUseClass> data;
 
-    public DaciteAnalysisToolWindow(ToolWindow toolWindow, ArrayList<DefUseClass> data, Project project) {
+    public DaciteAnalysisToolWindow(ToolWindow toolWindow, ArrayList<DefUseClass> data, Project project, RequestManager requestManager) {
         this.data = data;
         this.project = project;
+        this.requestManager = requestManager;
         button = new JButton("Highlight all");
         button.addActionListener(e -> highlightAll());
         myToolWindowContent = new JPanel();
@@ -74,11 +77,17 @@ public class DaciteAnalysisToolWindow {
         renderer.setIcon(AllIcons.Actions.GroupByClass);
         tree.setCellRenderer(renderer);
         tree.setCellEditor(cellEditor);
-        addInlays();
+        //addInlays();
         cellEditor.addCellEditorListener(new CellEditorListener() {
             @Override
             public void editingStopped(ChangeEvent changeEvent) {
                 Object obj = changeEvent.getSource();
+                if(obj instanceof DefUseVar){
+
+                } else if(obj instanceof DefUseData){
+
+                }
+                addInlays();
                 //textEditor.getInlayModel().getInlineElementsInRange(getOffSets(textEditor, 6, "b").get(0),getOffSets(textEditor, 6, "b").get(1)).forEach(inlay -> {inlay.dispose();});
                 /*DefUseData data = (DefUseData) changeEvent.getSource();
                 String varName = data.getName();
@@ -269,27 +278,55 @@ public class DaciteAnalysisToolWindow {
         for(FileEditor ed:fileEditors){
             PsiAwareTextEditorImpl impl = (PsiAwareTextEditorImpl) ed;
             Editor eachEditor = impl.getEditor();
-            eachEditor.getInlayModel().addInlineElement(getOffSets(textEditor, 6, "a").get(0), prop, new EditorCustomElementRenderer() {
-                @Override
-                public int calcWidthInPixels(@NotNull Inlay inlay) {
-                    return (int) font.getStringBounds(word,frc).getWidth()+3;
-                }
+            // get InlayHints from Server
+            Range range = new Range(new Position(0,0), new Position(15,0));
+            InlayHintParams param = new InlayHintParams(new TextDocumentIdentifier(ed.getFile().getUrl()), range);
+            CompletableFuture<List<InlayHint>> request =  requestManager.inlayHint(param);
+            if (request != null) {
+                try {
+                    List<InlayHint> res = request.get(getTimeout(REFERENCES), TimeUnit.MILLISECONDS);
+                    if (res != null && res.size() > 0) {
+                        for(InlayHint hint: res){
+                            LogicalPosition lpos = new LogicalPosition(hint.getPosition().getLine(), hint.getPosition().getCharacter());
+                            int offset = eachEditor.logicalPositionToOffset(lpos);
+                            Either<String, List<InlayHintLabelPart>> label = hint.getLabel();
+                            String hintWord = "";
+                            if(label.getLeft() != null){
+                                hintWord = label.getLeft();
+                            }
+                            textEditor.getInlayModel().getInlineElementsInRange(offset,offset+6).forEach(inlay -> {inlay.dispose();});
+                            String finalHintWord = hintWord;
+                            eachEditor.getInlayModel().addInlineElement(offset, new EditorCustomElementRenderer() {
+                                @Override
+                                public int calcWidthInPixels(@NotNull Inlay inlay) {
+                                    return (int) font.getStringBounds(finalHintWord,frc).getWidth()+3;
+                                }
 
-                @Override
-                public int calcHeightInPixels(@NotNull Inlay inlay) {
-                    return (int) font.getStringBounds(word,frc).getHeight();
-                }
+                                @Override
+                                public int calcHeightInPixels(@NotNull Inlay inlay) {
+                                    return (int) font.getStringBounds(finalHintWord,frc).getHeight();
+                                }
 
-                @Override
-                public void paint(@NotNull Inlay inlay, @NotNull Graphics g, @NotNull Rectangle targetRegion, @NotNull TextAttributes textAttributes) {
-                    Graphics2D gr = (Graphics2D) g;
-                    //gr.setColor(JBColor.LIGHT_GRAY);
-                    //gr.fillRect(targetRegion.x-3, targetRegion.y+1, calcWidthInPixels(inlay)+3, calcHeightInPixels(inlay)+3);
-                    gr.setFont(font);
-                    gr.setColor(JBColor.RED);
-                    gr.drawString(word, targetRegion.x, targetRegion.y+ eachEditor.getAscent());
+                                @Override
+                                public void paint(@NotNull Inlay inlay, @NotNull Graphics g, @NotNull Rectangle targetRegion, @NotNull TextAttributes textAttributes) {
+                                    Graphics2D gr = (Graphics2D) g;
+                                    //gr.setColor(JBColor.LIGHT_GRAY);
+                                    //gr.fillRect(targetRegion.x-3, targetRegion.y+1, calcWidthInPixels(inlay)+3, calcHeightInPixels(inlay)+3);
+                                    gr.setFont(font);
+                                    gr.setColor(JBColor.RED);
+                                    gr.drawString(finalHintWord, targetRegion.x, targetRegion.y+ eachEditor.getAscent());
+                                }
+                            });
+                        }
+                    } else {
+
+                    }
+                } catch (TimeoutException e) {
+                    e.printStackTrace();
+                } catch (InterruptedException | JsonRpcException | ExecutionException e) {
+                    e.printStackTrace();
                 }
-            });
+            }
 
         }
 
