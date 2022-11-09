@@ -20,10 +20,14 @@ import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiManager;
 import com.intellij.ui.JBColor;
 import com.intellij.ui.components.JBScrollPane;
+import com.intellij.util.NotNullProducer;
 import dacite.intellij.defUseData.DefUseClass;
 import dacite.intellij.defUseData.DefUseData;
 import dacite.intellij.defUseData.DefUseMethod;
 import dacite.intellij.defUseData.DefUseVar;
+import dacite.intellij.lspclient.DaciteLSPRequestManager;
+import dacite.lsp.InlayHintDecoration;
+import dacite.lsp.InlayHintDecorationParams;
 import groovy.lang.Tuple;
 import org.eclipse.lsp4j.*;
 import org.eclipse.lsp4j.jsonrpc.JsonRpcException;
@@ -35,6 +39,7 @@ import javax.swing.*;
 import javax.swing.event.*;
 import javax.swing.tree.DefaultMutableTreeNode;
 import java.awt.*;
+import java.awt.Color;
 import java.awt.font.FontRenderContext;
 import java.awt.geom.AffineTransform;
 import java.util.ArrayList;
@@ -45,7 +50,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import static javax.swing.UIManager.getFont;
 import static org.wso2.lsp4intellij.requests.Timeout.getTimeout;
 import static org.wso2.lsp4intellij.requests.Timeouts.REFERENCES;
 
@@ -267,20 +271,13 @@ public class DaciteAnalysisToolWindow {
     public void addInlays(){
         FileEditorManager manager = FileEditorManager.getInstance(project);
         Editor textEditor = manager.getSelectedTextEditor();
-        String word = "Def:";
         Font font = textEditor.getColorsScheme().getFont(EditorFontType.PLAIN);
-        AffineTransform a = font.getTransform();
-        FontRenderContext frc = new FontRenderContext(a,true,true);
-        InlayProperties prop = new InlayProperties();
-        prop.relatesToPrecedingText(false);
-        prop.showAbove(false);
         FileEditor[] fileEditors = FileEditorManager.getInstance(project).getAllEditors();
-        textEditor.getInlayModel().getInlineElementsInRange(getOffSets(textEditor, 6, "a").get(0),getOffSets(textEditor, 6, "b").get(1)).forEach(inlay -> {inlay.dispose();});
         for(FileEditor ed:fileEditors){
             PsiAwareTextEditorImpl impl = (PsiAwareTextEditorImpl) ed;
             Editor eachEditor = impl.getEditor();
             // get InlayHints from Server
-            Range range = new Range(new Position(0,0), new Position(15,0));
+            Range range = new Range(new Position(0,0), new Position(eachEditor.getDocument().getLineCount()-1,0));
             InlayHintParams param = new InlayHintParams(new TextDocumentIdentifier(ed.getFile().getUrl()), range);
             CompletableFuture<List<InlayHint>> request =  requestManager.inlayHint(param);
             if (request != null) {
@@ -288,6 +285,20 @@ public class DaciteAnalysisToolWindow {
                     List<InlayHint> res = request.get(getTimeout(REFERENCES), TimeUnit.MILLISECONDS);
                     if (res != null && res.size() > 0) {
                         for(InlayHint hint: res){
+                            InlayHintDecorationParams decParams = new InlayHintDecorationParams(new TextDocumentIdentifier(ed.getFile().getUrl()), hint.getPosition());
+                            CompletableFuture<InlayHintDecoration> decorationRequest = ((DaciteLSPRequestManager) requestManager).inlayHintDecoration(decParams);
+                            Color color = JBColor.BLUE;
+                            if (decorationRequest != null) {
+                                try {
+                                    InlayHintDecoration decoration = decorationRequest.get(getTimeout(REFERENCES), TimeUnit.MILLISECONDS);
+                                    font = new Font(decoration.getFontStyle(), Font.PLAIN, font.getSize());
+                                    int[] colors = decoration.getColor();
+                                    color = new Color(colors[0], colors[1], colors[2], colors[3]);
+                                } catch (TimeoutException | InterruptedException | JsonRpcException |
+                                         ExecutionException e) {
+                                    e.printStackTrace();
+                                }
+                            }
                             LogicalPosition lpos = new LogicalPosition(hint.getPosition().getLine(), hint.getPosition().getCharacter());
                             int offset = eachEditor.logicalPositionToOffset(lpos);
                             Either<String, List<InlayHintLabelPart>> label = hint.getLabel();
@@ -297,15 +308,21 @@ public class DaciteAnalysisToolWindow {
                             }
                             textEditor.getInlayModel().getInlineElementsInRange(offset,offset+6).forEach(inlay -> {inlay.dispose();});
                             String finalHintWord = hintWord;
+                            Font finalFont = font;
+                            Color finalColor = color;
                             eachEditor.getInlayModel().addInlineElement(offset, new EditorCustomElementRenderer() {
                                 @Override
                                 public int calcWidthInPixels(@NotNull Inlay inlay) {
-                                    return (int) font.getStringBounds(finalHintWord,frc).getWidth()+3;
+                                    AffineTransform a = finalFont.getTransform();
+                                    FontRenderContext frc = new FontRenderContext(a,true,true);
+                                    return (int) finalFont.getStringBounds(finalHintWord,frc).getWidth()+3;
                                 }
 
                                 @Override
                                 public int calcHeightInPixels(@NotNull Inlay inlay) {
-                                    return (int) font.getStringBounds(finalHintWord,frc).getHeight();
+                                    AffineTransform a = finalFont.getTransform();
+                                    FontRenderContext frc = new FontRenderContext(a,true,true);
+                                    return (int) finalFont.getStringBounds(finalHintWord,frc).getHeight();
                                 }
 
                                 @Override
@@ -313,18 +330,14 @@ public class DaciteAnalysisToolWindow {
                                     Graphics2D gr = (Graphics2D) g;
                                     //gr.setColor(JBColor.LIGHT_GRAY);
                                     //gr.fillRect(targetRegion.x-3, targetRegion.y+1, calcWidthInPixels(inlay)+3, calcHeightInPixels(inlay)+3);
-                                    gr.setFont(font);
-                                    gr.setColor(JBColor.RED);
+                                    gr.setFont(finalFont);
+                                    gr.setColor(finalColor);
                                     gr.drawString(finalHintWord, targetRegion.x, targetRegion.y+ eachEditor.getAscent());
                                 }
                             });
                         }
-                    } else {
-
                     }
-                } catch (TimeoutException e) {
-                    e.printStackTrace();
-                } catch (InterruptedException | JsonRpcException | ExecutionException e) {
+                } catch (TimeoutException | InterruptedException | JsonRpcException | ExecutionException e) {
                     e.printStackTrace();
                 }
             }

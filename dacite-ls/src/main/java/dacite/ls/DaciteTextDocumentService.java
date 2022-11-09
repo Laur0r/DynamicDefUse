@@ -4,6 +4,7 @@ import com.github.javaparser.StaticJavaParser;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.body.MethodDeclaration;
 
+import dacite.lsp.InlayHintDecorationParams;
 import org.eclipse.lsp4j.CodeLens;
 import org.eclipse.lsp4j.CodeLensParams;
 import org.eclipse.lsp4j.Command;
@@ -24,6 +25,7 @@ import org.eclipse.lsp4j.services.TextDocumentService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.awt.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -31,6 +33,7 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import dacite.lsp.DaciteExtendedTextDocumentService;
+import dacite.lsp.InlayHintDecoration;
 import dacite.lsp.tvp.DaciteTreeViewService;
 import dacite.lsp.tvp.TreeViewChildrenParams;
 import dacite.lsp.tvp.TreeViewChildrenResult;
@@ -116,8 +119,13 @@ public class DaciteTextDocumentService
   }
 
   @Override
-  public CompletableFuture<Object> inlayHintDecoration(Object params) {
-    throw new UnsupportedOperationException();
+  public CompletableFuture<InlayHintDecoration> inlayHintDecoration(InlayHintDecorationParams params) {
+    logger.info("inlayHint {}", params);
+
+    int[] color = new int[]{255,0,0,255};
+    InlayHintDecoration inlayHints = new InlayHintDecoration( color, Font.SERIF);
+
+    return CompletableFuture.completedFuture(inlayHints);
   }
 
   @Override
