@@ -29,9 +29,7 @@ import org.slf4j.LoggerFactory;
 
 import java.awt.*;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import dacite.lsp.DaciteExtendedTextDocumentService;
@@ -48,30 +46,25 @@ public class DaciteTextDocumentService
 
   private static final Logger logger = LoggerFactory.getLogger(DaciteTextDocumentService.class);
 
-  private final Map<String, TextDocumentItem> openedDocuments = new HashMap<>();
-
   @Override
   public void didOpen(DidOpenTextDocumentParams params) {
     logger.info("didOpen {}", params);
-    TextDocumentItem textDocument = params.getTextDocument();
-    openedDocuments.put(textDocument.getUri(), textDocument);
+    TextDocumentItemProvider.add(params.getTextDocument());
   }
 
   @Override
   public void didChange(DidChangeTextDocumentParams params) {
     logger.info("didChange {}", params);
     List<TextDocumentContentChangeEvent> contentChanges = params.getContentChanges();
-    TextDocumentItem textDocumentItem = openedDocuments.get(params.getTextDocument().getUri());
     if (!contentChanges.isEmpty()) {
-      textDocumentItem.setText(contentChanges.get(0).getText());
+      TextDocumentItemProvider.get(params.getTextDocument()).setText(contentChanges.get(0).getText());
     }
   }
 
   @Override
   public void didClose(DidCloseTextDocumentParams params) {
     logger.info("didClose {}", params);
-    String uri = params.getTextDocument().getUri();
-    openedDocuments.remove(uri);
+    TextDocumentItemProvider.remove(params.getTextDocument());
   }
 
   @Override
@@ -85,7 +78,7 @@ public class DaciteTextDocumentService
     List<CodeLens> codeLenses = new ArrayList<>();
 
     try {
-      String javaCode = openedDocuments.get(params.getTextDocument().getUri()).getText();
+      String javaCode = TextDocumentItemProvider.get(params.getTextDocument()).getText();
       CompilationUnit compilationUnit = StaticJavaParser.parse(javaCode);
 
       compilationUnit.findAll(ClassOrInterfaceDeclaration.class).stream()
@@ -108,7 +101,7 @@ public class DaciteTextDocumentService
 
     List<InlayHint> inlayHints = new ArrayList<>();
 
-    String javaCode = openedDocuments.get(params.getTextDocument().getUri()).getText();
+    String javaCode = TextDocumentItemProvider.get(params.getTextDocument()).getText();
     CompilationUnit compilationUnit = StaticJavaParser.parse(javaCode);
     compilationUnit.findAll(MethodDeclaration.class).forEach(methodDeclaration -> {
       methodDeclaration.getName().getRange().ifPresent(range -> {

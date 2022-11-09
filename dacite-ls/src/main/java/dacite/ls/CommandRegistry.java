@@ -1,14 +1,18 @@
 package dacite.ls;
 
+import com.github.javaparser.StaticJavaParser;
+import com.github.javaparser.ast.CompilationUnit;
+import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
+import com.google.gson.JsonPrimitive;
+
 import org.eclipse.lsp4j.ExecuteCommandParams;
-import org.eclipse.lsp4j.MessageParams;
-import org.eclipse.lsp4j.MessageType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.lang.ProcessBuilder.Redirect;
-import java.lang.management.ManagementFactory;
-import java.util.ArrayList;
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -29,32 +33,78 @@ public class CommandRegistry {
   }
 
   public static CompletableFuture<Object> execute(ExecuteCommandParams params) {
-    switch (Command.valueOf(params.getCommand().replaceFirst(COMMAND_PREFIX, ""))) {
-      case analyze:
-        ProcessHandle.Info currentProcessInfo = ProcessHandle.current().info();
-        List<String> newProcessCommandLine = new ArrayList<>();
-        newProcessCommandLine.add(currentProcessInfo.command().get());
+    var command = Command.valueOf(params.getCommand().replaceFirst(COMMAND_PREFIX, ""));
 
-        newProcessCommandLine.add("-javaagent:lib/dacite-intellij-1.0-SNAPSHOT.jar=tryme/");
-        newProcessCommandLine.add("-classpath");
-        newProcessCommandLine.add(ManagementFactory.getRuntimeMXBean().getClassPath());
-        newProcessCommandLine.add("DefUseMain");
-        newProcessCommandLine.add("tryme.SatGcd");
+    if (command == Command.analyze) {
+      try {
+        String textDocumentUri =
+            params.getArguments().size() > 0 ? ((JsonPrimitive) params.getArguments().get(0)).getAsString() : null;
 
-        ProcessBuilder newProcessBuilder = new ProcessBuilder(newProcessCommandLine).redirectOutput(Redirect.INHERIT)
-            .redirectError(Redirect.INHERIT);
-        try {
-          Process newProcess = newProcessBuilder.start();
-          logger.info("{}: process {} started", "executed command", newProcessBuilder.command());
-          logger.info("process exited with status {}", newProcess.waitFor());
-        } catch (Exception e) {
-          logger.error(e.getMessage());
+        if (textDocumentUri != null && textDocumentUri.startsWith("file://")) {
+          // Extract project's root directory
+          Path textDocumentPath = Paths.get(textDocumentUri.replace("file://", ""));
+          String projectDir = textDocumentPath.getParent().toString().split("src/")[0];
+
+          // Extract package and class name
+          String javaCode = TextDocumentItemProvider.get(textDocumentUri).getText();
+          CompilationUnit compilationUnit = StaticJavaParser.parse(javaCode);
+          String className = compilationUnit.findFirst(ClassOrInterfaceDeclaration.class).get().getName().asString();
+          String packageName = compilationUnit.getPackageDeclaration().get().getName().asString();
+
+          // Construct class path
+          // * dacite-core (and thus the agent) is a dependency of dacite-ls and is thus contained in the class path
+          //   of the running language server process
+          // * We also add all jars that can be found within the project's root directory
+          String fullClassPath = System.getProperty("java.class.path");
+          fullClassPath += Files.find(Paths.get(projectDir), 50,
+                  (p, bfa) -> bfa.isRegularFile() && p.getFileName().toString().endsWith(".jar")).map(Path::toString)
+              .reduce(":", String::concat);
+
+          // As dacite-core must be within the constructed class path we can extract the corresponding jar
+          String javaAgentJar = Arrays.stream(fullClassPath.split(":")).filter(it -> it.contains("dacite-core"))
+              .findFirst().get();
+
+          // Construct command arguments
+          var commandArgs = List.of(
+              // Java binary
+              System.getProperty("java.home") + File.separator + "bin" + File.separator + "java",
+              // Java agent
+              "-javaagent:" + javaAgentJar + "=" + packageName.replace(".", "/"),
+              // Classpath
+              "-classpath", fullClassPath,
+              // Main class in dacite-core
+              "dacite.core.DefUseMain",
+              // Class to be analyzed
+              packageName + "." + className);
+
+          // Start process in project's root directory
+          ProcessBuilder pb = (new ProcessBuilder(commandArgs)).redirectError(ProcessBuilder.Redirect.INHERIT)
+              .directory(new File(projectDir));
+          Process process = pb.start();
+          logger.info("{}: process {} started", "executed command", pb.command());
+          logger.info("process exited with status {}", process.waitFor());
+
+          // Get standard output
+          /*
+          StringBuilder processOutput = new StringBuilder();
+          try (BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+            String readLine;
+            while ((readLine = bufferedReader.readLine()) != null) {
+              processOutput.append(readLine + System.lineSeparator());
+            }
+          }
+          String stdOut = processOutput.toString().trim();
+           */
+
+          // TODO: process result
+
+          return CompletableFuture.completedFuture(null);
         }
-
-        return CompletableFuture.completedFuture(null);
-      default:
-        throw new RuntimeException("Not implemented");
+      } catch (Exception e) {
+        logger.error(e.getMessage());
+      }
     }
+    throw new RuntimeException("Not implemented");
   }
 
 }
