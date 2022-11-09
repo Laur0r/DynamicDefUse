@@ -2,6 +2,7 @@ package dacite.intellij.lspclient;
 
 import com.intellij.openapi.diagnostic.Logger;
 
+import dacite.lsp.InlayHintDecorationParams;
 import org.eclipse.lsp4j.InlayHint;
 import org.eclipse.lsp4j.InlayHintParams;
 import org.eclipse.lsp4j.ServerCapabilities;
@@ -13,6 +14,7 @@ import org.wso2.lsp4intellij.client.languageserver.wrapper.LanguageServerWrapper
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
+import dacite.lsp.InlayHintDecoration;
 import dacite.lsp.DaciteExtendedLanguageServer;
 import dacite.lsp.DaciteExtendedTextDocumentService;
 import dacite.lsp.tvp.DaciteTreeViewService;
@@ -53,7 +55,7 @@ public class DaciteLSPRequestManager extends DefaultRequestManager
     }
 
   @Override
-  public CompletableFuture<Object> inlayHintDecoration(Object params) {
+  public CompletableFuture<InlayHintDecoration> inlayHintDecoration(InlayHintDecorationParams params) {
     if (checkStatus()) {
       try {
         return extendedTextDocumentService.inlayHintDecoration(params);

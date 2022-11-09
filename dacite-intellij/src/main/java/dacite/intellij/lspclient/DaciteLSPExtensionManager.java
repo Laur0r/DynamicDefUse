@@ -34,7 +34,7 @@ public class DaciteLSPExtensionManager implements LSPExtensionManager {
       DocumentListener documentListener, EditorMouseListenerImpl mouseListener,
       EditorMouseMotionListenerImpl mouseMotionListener, LSPCaretListenerImpl caretListener,
       RequestManager requestManager, ServerOptions serverOptions, LanguageServerWrapper wrapper) {
-    return (T) new EditorEventManager(editor, documentListener, mouseListener, mouseMotionListener, caretListener,
+    return (T) new DaciteEditorEventManager(editor, documentListener, mouseListener, mouseMotionListener, caretListener,
         requestManager, serverOptions, wrapper);
   }
 
