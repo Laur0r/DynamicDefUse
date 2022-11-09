@@ -1,7 +1,9 @@
 package dacite.ls;
 
+import com.github.javaparser.ParseProblemException;
 import com.github.javaparser.StaticJavaParser;
 import com.github.javaparser.ast.CompilationUnit;
+import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
 
 import org.eclipse.lsp4j.CodeLens;
@@ -79,14 +81,20 @@ public class DaciteTextDocumentService
 
     List<CodeLens> codeLenses = new ArrayList<>();
 
-    String javaCode = openedDocuments.get(params.getTextDocument().getUri()).getText();
-    CompilationUnit compilationUnit = StaticJavaParser.parse(javaCode);
-    compilationUnit.findAll(MethodDeclaration.class).forEach(methodDeclaration -> {
-      methodDeclaration.getName().getRange().ifPresent(range -> {
-        codeLenses.add(new CodeLens(new Range(new Position(range.begin.line - 1, range.begin.column - 1),
-            new Position(range.end.line - 1, range.end.column)), new Command("Run Analysis", "dacite.analyze"), null));
-      });
-    });
+    try {
+      String javaCode = openedDocuments.get(params.getTextDocument().getUri()).getText();
+      CompilationUnit compilationUnit = StaticJavaParser.parse(javaCode);
+
+      compilationUnit.findAll(ClassOrInterfaceDeclaration.class).stream()
+          .filter(coid -> coid.getMethods().stream().anyMatch(md -> md.getAnnotationByName("Test").isPresent()))
+          .forEach(coid -> coid.getName().getRange().ifPresent(range -> {
+            codeLenses.add(new CodeLens(new Range(new Position(range.begin.line - 1, range.begin.column - 1),
+                new Position(range.end.line - 1, range.end.column)),
+                new Command("Run Analysis", "dacite.analyze", List.of(params.getTextDocument().getUri())), null));
+          }));
+    } catch (ParseProblemException e) {
+      logger.error("Document {} could not be parsed successfully: {}", params.getTextDocument().getUri(), e);
+    }
 
     return CompletableFuture.completedFuture(codeLenses);
   }
