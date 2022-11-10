@@ -55,13 +55,15 @@ public class CommandRegistry {
           // * dacite-core (and thus the agent) is a dependency of dacite-ls and is thus contained in the class path
           //   of the running language server process
           // * We also add all jars that can be found within the project's root directory
+          // * We also add all folders which contain .class files
+          // * We also add folders we can find that typically contain .class files
           String fullClassPath = System.getProperty("java.class.path");
           fullClassPath += Files.find(Paths.get(projectDir), 50,
-                  (p, bfa) -> bfa.isRegularFile() && (p.getFileName().toString().endsWith(".jar"))).map(it -> ":"+it.toString())
-              .reduce(String::concat);
-          fullClassPath += Files.find(Paths.get(projectDir), 50,
-                  (p, bfa) -> bfa.isRegularFile() && (p.getFileName().toString().endsWith(".class"))).map(it -> ":"+it.getParent().toString()).distinct().reduce(String::concat);
-          //fullClassPath += ":"+"/home/l_troo01/Development/Forschung/TestAnalysis/out/production";
+                  (p, bfa) -> bfa.isRegularFile() && p.getFileName().toString().endsWith(".jar")).map(it -> ":"+it.toString())
+              .reduce(String::concat).orElse("");
+          fullClassPath += findClassPathFolders(projectDir + "out/production"); // IntelliJ
+          fullClassPath += findClassPathFolders(projectDir + "build/classes/java/main"); // gradle
+          fullClassPath += findClassPathFolders(projectDir + "target/classes"); // maven
 
           // As dacite-core must be within the constructed class path we can extract the corresponding jar
           String javaAgentJar = Arrays.stream(fullClassPath.split(":")).filter(it -> it.contains("dacite-core"))
@@ -108,6 +110,15 @@ public class CommandRegistry {
       }
     }
     throw new RuntimeException("Not implemented");
+  }
+
+  private static String findClassPathFolders(String basePath) {
+    var files = new File(basePath).listFiles(File::isDirectory);
+    if (files != null) {
+      return Arrays.stream(files).map(File::toString).collect(Collectors.toList()).stream().map(it -> ":" + it).reduce(String::concat).orElse("");
+    }
+
+    return "";
   }
 
 }
