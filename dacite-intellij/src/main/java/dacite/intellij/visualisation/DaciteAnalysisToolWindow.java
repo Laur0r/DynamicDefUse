@@ -1,6 +1,5 @@
 package dacite.intellij.visualisation;
 
-import com.intellij.codeInsight.navigation.NavigationGutterIconBuilder;
 import com.intellij.icons.AllIcons;
 import com.intellij.openapi.editor.*;
 import com.intellij.openapi.editor.colors.EditorFontType;
@@ -20,7 +19,7 @@ import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiManager;
 import com.intellij.ui.JBColor;
 import com.intellij.ui.components.JBScrollPane;
-import com.intellij.util.NotNullProducer;
+import com.intellij.ui.treeStructure.Tree;
 import dacite.intellij.defUseData.DefUseClass;
 import dacite.intellij.defUseData.DefUseData;
 import dacite.intellij.defUseData.DefUseMethod;
@@ -28,6 +27,9 @@ import dacite.intellij.defUseData.DefUseVar;
 import dacite.intellij.lspclient.DaciteLSPRequestManager;
 import dacite.lsp.InlayHintDecoration;
 import dacite.lsp.InlayHintDecorationParams;
+import dacite.lsp.tvp.TreeViewChildrenParams;
+import dacite.lsp.tvp.TreeViewChildrenResult;
+import dacite.lsp.tvp.TreeViewNode;
 import groovy.lang.Tuple;
 import org.eclipse.lsp4j.*;
 import org.eclipse.lsp4j.jsonrpc.JsonRpcException;
@@ -38,6 +40,8 @@ import org.wso2.lsp4intellij.client.languageserver.requestmanager.RequestManager
 import javax.swing.*;
 import javax.swing.event.*;
 import javax.swing.tree.DefaultMutableTreeNode;
+import javax.swing.tree.DefaultTreeModel;
+import javax.swing.tree.TreePath;
 import java.awt.*;
 import java.awt.Color;
 import java.awt.font.FontRenderContext;
@@ -59,20 +63,45 @@ public class DaciteAnalysisToolWindow {
     private JPanel myToolWindowContent;
     private DefUseTree tree;
     private Project project;
-    private RequestManager requestManager;
+    private DaciteLSPRequestManager requestManager;
     private ArrayList<DefUseClass> data;
 
     public DaciteAnalysisToolWindow(ToolWindow toolWindow, ArrayList<DefUseClass> data, Project project, RequestManager requestManager) {
         this.data = data;
         this.project = project;
-        this.requestManager = requestManager;
+        this.requestManager = (DaciteLSPRequestManager) requestManager;
         button = new JButton("Highlight all");
         button.addActionListener(e -> highlightAll());
         myToolWindowContent = new JPanel();
         myToolWindowContent.setLayout(new BoxLayout(myToolWindowContent, BoxLayout.Y_AXIS));
         DefaultMutableTreeNode top =
                 new DefaultMutableTreeNode("root");
-        createNodes(top);
+        //createNodes(top);
+        TreeViewNode root = new TreeViewNode("defUseChains", "", "root");
+        DefaultMutableTreeNode top2 =
+                new DefaultMutableTreeNode(root);
+        createTreeViewChildren(top2);
+        Tree tree2 = new DefUseTree(top2);
+        TreeExpansionListener listener = new TreeExpansionListener() {
+            @Override
+            public void treeExpanded(TreeExpansionEvent treeExpansionEvent) {
+                TreePath path = treeExpansionEvent.getPath();
+                DefaultMutableTreeNode node = (DefaultMutableTreeNode) path.getLastPathComponent();
+                if(node.isLeaf()){
+                    int[] indexes = createTreeViewChildren(node);
+                    ((DefaultTreeModel)tree2.getModel()).nodesWereInserted( node, indexes);
+                }
+            }
+
+            @Override
+            public void treeCollapsed(TreeExpansionEvent treeExpansionEvent) {
+
+            }
+        };
+        tree2.addTreeExpansionListener(listener);
+        ((DefaultTreeModel)tree2.getModel()).setAsksAllowsChildren(true);
+        tree2.setCellRenderer(new TreeViewCellRenderer());
+        tree2.setRootVisible(false);
         tree = new DefUseTree(top);
         tree.setRootVisible(false);
         tree.setEditable(true);
@@ -87,56 +116,7 @@ public class DaciteAnalysisToolWindow {
             @Override
             public void editingStopped(ChangeEvent changeEvent) {
                 Object obj = changeEvent.getSource();
-                if(obj instanceof DefUseVar){
-
-                } else if(obj instanceof DefUseData){
-
-                }
                 addInlays();
-                //textEditor.getInlayModel().getInlineElementsInRange(getOffSets(textEditor, 6, "b").get(0),getOffSets(textEditor, 6, "b").get(1)).forEach(inlay -> {inlay.dispose();});
-                /*DefUseData data = (DefUseData) changeEvent.getSource();
-                String varName = data.getName();
-                String def = data.getDefLocation();
-                String use = data.getUseLocation();
-                DefaultMutableTreeNode root = (DefaultMutableTreeNode) tree.getModel().getRoot();
-                DefaultMutableTreeNode node = findNode(root, data);
-                if(node == null){
-                    throw new RuntimeException("Could not find checked entry in tree");
-                }
-                ClassNode classNode = (ClassNode) node.getParent().getParent();
-                String className = classNode.getUserObject();
-                int useline = Integer.parseInt(use.substring(use.lastIndexOf(" ")+1))-1;
-                int defline = Integer.parseInt(def.substring(def.lastIndexOf(" ")+1))-1;
-                if(data.isChecked()){
-                    jumpToFile(project, defline, useline, varName, className);
-                } else {
-                    System.out.println("not checked");
-                    textEditor = manager.getSelectedTextEditor();
-                    RangeHighlighter[] highlighters = textEditor.getMarkupModel().getAllHighlighters();
-                    boolean useRemoved = false;
-                    boolean defRemoved = false;
-                    for (RangeHighlighter high : highlighters) {
-                        if (useRemoved && defRemoved) {
-                            break;
-                        }
-                        Tuple<Integer> defOffsets = getOffSets(textEditor, defline, varName);
-                        int startOffsetDef = defOffsets.get(0);
-                        int endOffsetDef = defOffsets.get(1);
-                        if (high.getStartOffset() == startOffsetDef && high.getEndOffset() == endOffsetDef && !defRemoved) {
-                            System.out.println("remove def Highlights");
-                            textEditor.getMarkupModel().removeHighlighter(high);
-                            defRemoved = true;
-                            continue;
-                        }
-                        Tuple<Integer> useOffsets = getOffSets(textEditor, useline, varName);
-                        int startOffsetUse = useOffsets.get(0);
-                        int endOffsetUse = useOffsets.get(1);
-                        if (high.getStartOffset() == startOffsetUse && high.getEndOffset() == endOffsetUse && !useRemoved) {
-                            textEditor.getMarkupModel().removeHighlighter(high);
-                            useRemoved = true;
-                        }
-                    }
-                }*/
             }
 
             @Override
@@ -145,42 +125,14 @@ public class DaciteAnalysisToolWindow {
             }
         });
         JScrollPane treeView = new JBScrollPane(tree);
-        myToolWindowContent.add(treeView, BorderLayout.CENTER);
+        //myToolWindowContent.add(treeView, BorderLayout.CENTER);
+        JScrollPane treeView2 = new JBScrollPane(tree2);
+        myToolWindowContent.add(treeView2, BorderLayout.CENTER);
         myToolWindowContent.add(button);
     }
 
     public JPanel getContent() {
         return myToolWindowContent;
-    }
-
-    public void jumpToFile(Project project, int defLine, int useLine, String varName, String className){
-        VirtualFile[] vFiles = ProjectRootManager.getInstance(project).getContentRoots();
-        System.out.println(vFiles[0].getChildren().length);
-        System.out.println(vFiles[0].getChildren()[0].getPath());
-        VirtualFile vf = LocalFileSystem.getInstance().findFileByPath(project.getBasePath() +"/src/"+ className + ".java");
-        if(vf == null){
-            System.out.println("noFile");
-            System.out.println("update");
-        } else{
-            FileEditorManager manager = FileEditorManager.getInstance(project);
-            manager.openFile(vf, true);
-            Editor textEditor = manager.getSelectedTextEditor();
-            LogicalPosition position = new LogicalPosition(defLine,0);
-            textEditor.getCaretModel().moveToLogicalPosition(position);
-            Tuple<Integer> defOffsets = getOffSets(textEditor, defLine, varName);
-            PsiFile psi = PsiManager.getInstance(project).findFile(vf);
-            PsiElement element = psi.findElementAt(textEditor.getDocument().getLineStartOffset(defLine));
-            int startOffsetDef = defOffsets.get(0);
-            int endOffsetDef = defOffsets.get(1);
-            textEditor.getMarkupModel().addRangeHighlighter(startOffsetDef, endOffsetDef, 9999, new TextAttributes(null, JBColor.CYAN, null, null, Font.PLAIN), HighlighterTargetArea.EXACT_RANGE);
-
-            LogicalPosition usePosition = new LogicalPosition(useLine,0);
-            textEditor.getCaretModel().moveToLogicalPosition(usePosition);
-            Tuple<Integer> useOffsets = getOffSets(textEditor, useLine, varName);
-            int startOffsetUse = useOffsets.get(0);
-            int endOffsetUse = useOffsets.get(1);
-            textEditor.getMarkupModel().addRangeHighlighter(startOffsetUse, endOffsetUse, 9999, new TextAttributes(null, JBColor.MAGENTA, null, null, Font.PLAIN), HighlighterTargetArea.EXACT_RANGE);
-        }
     }
 
     public void highlightAll(){
@@ -235,10 +187,6 @@ public class DaciteAnalysisToolWindow {
         return new Tuple<>(startOffsetDef, endOffsetDef);
     }
 
-    /*public void setTableData() {
-        model.addRow("x", "Class.method line 2", "Class.method line 3");
-        model.addRow("y", "Class.method line 3", "Class.method line 4");
-    }*/
     public void setProject(Project project){
         this.project = project;
     }
@@ -266,6 +214,29 @@ public class DaciteAnalysisToolWindow {
             }
             top.add(cnode);
         }
+    }
+
+    private int[] createTreeViewChildren(DefaultMutableTreeNode top){
+        int[] output = null;
+        TreeViewNode parent = (TreeViewNode) top.getUserObject();
+        TreeViewChildrenParams params = new TreeViewChildrenParams(parent.getViewId(), parent.getNodeUri());
+        CompletableFuture<TreeViewChildrenResult> request = requestManager.treeViewChildren(params);
+        if(request != null){
+            try{
+                TreeViewChildrenResult result = request.get(getTimeout(REFERENCES), TimeUnit.MILLISECONDS);
+                output = new int[result.getNodes().length];
+                int i = 0;
+                for(TreeViewNode child : result.getNodes()){
+                    DefaultMutableTreeNode node = new DefaultMutableTreeNode(child);
+                    top.add(node);
+                    output[i] = i;
+                    i++;
+                }
+            } catch (TimeoutException | InterruptedException | JsonRpcException | ExecutionException e) {
+                e.printStackTrace();
+            }
+        }
+        return output;
     }
 
     public void addInlays(){

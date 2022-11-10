@@ -54,7 +54,7 @@ public class DaciteAnalysisLauncher {
         fullClasspath += currentProcessInfo.command().get();
         List<String> newProcessCommandLine = new LinkedList();
         newProcessCommandLine.add(javaBin);
-        newProcessCommandLine.add("-javaagent:"+workingDir+"/dacite-core-1.0-SNAPSHOT.jar="+packagename+"/");
+        newProcessCommandLine.add("-javaagent:"+workingDir+"/dacite-core-0.1.0-SNAPSHOT.jar="+packagename+"/");
         newProcessCommandLine.add("-classpath");
         newProcessCommandLine.add(fullClasspath);
         newProcessCommandLine.add("dacite.core.DefUseMain");

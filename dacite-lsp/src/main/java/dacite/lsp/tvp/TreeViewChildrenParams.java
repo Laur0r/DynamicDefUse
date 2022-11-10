@@ -17,6 +17,11 @@ public class TreeViewChildrenParams {
    */
   private String nodeUri;
 
+  public TreeViewChildrenParams(String viewId, String nodeUri){
+    this.viewId = viewId;
+    this.nodeUri = nodeUri;
+  }
+
   public String getViewId() {
     return viewId;
   }

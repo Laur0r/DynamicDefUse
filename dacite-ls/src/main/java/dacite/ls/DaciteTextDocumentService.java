@@ -7,6 +7,7 @@ import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
 
 import dacite.lsp.InlayHintDecorationParams;
+import dacite.lsp.tvp.*;
 import org.eclipse.lsp4j.CodeLens;
 import org.eclipse.lsp4j.CodeLensParams;
 import org.eclipse.lsp4j.Command;
@@ -34,12 +35,6 @@ import java.util.concurrent.CompletableFuture;
 
 import dacite.lsp.DaciteExtendedTextDocumentService;
 import dacite.lsp.InlayHintDecoration;
-import dacite.lsp.tvp.DaciteTreeViewService;
-import dacite.lsp.tvp.TreeViewChildrenParams;
-import dacite.lsp.tvp.TreeViewChildrenResult;
-import dacite.lsp.tvp.TreeViewNode;
-import dacite.lsp.tvp.TreeViewParentParams;
-import dacite.lsp.tvp.TreeViewParentResult;
 
 public class DaciteTextDocumentService
     implements TextDocumentService, DaciteExtendedTextDocumentService, DaciteTreeViewService {
@@ -141,33 +136,38 @@ public class DaciteTextDocumentService
     if (params.getViewId().equals("defUseChains")) {
       switch (nodeUri) {
         case "dacite/tryme/EuclidianGcd":
-          var node1 = new TreeViewNode("defUseChains", "dacite/tryme/EuclidianGcd/egcd", "egcd");
+          var node1 = new TreeViewNode("defUseChains", "dacite/tryme/EuclidianGcd/egcd", "egcd 6 chains");
           node1.setCollapseState("expanded");
+          node1.setIcon("method");
           nodes.add(node1);
 
-          var node2 = new TreeViewNode("defUseChains", "dacite/tryme/EuclidianGcd/testGCD", "testGCD");
+          var node2 = new TreeViewNode("defUseChains", "dacite/tryme/EuclidianGcd/testGCD", "testGCD 5 chains");
           node2.setCollapseState("collapsed");
+          node2.setIcon("method");
           nodes.add(node2);
           break;
         case "dacite/tryme/EuclidianGcd/egcd":
-          var node3 = new TreeViewNode("defUseChains", "dacite/tryme/EuclidianGcd/egcd/a", "a");
+          var node3 = new TreeViewNode("defUseChains", "dacite/tryme/EuclidianGcd/egcd/a", "a 8 chains");
           node3.setCollapseState("expanded");
+          node3.setIcon("variable");
           nodes.add(node3);
 
-          var node4 = new TreeViewNode("defUseChains", "dacite/tryme/EuclidianGcd/egcd/b", "b");
+          var node4 = new TreeViewNode("defUseChains", "dacite/tryme/EuclidianGcd/egcd/b", "b 4 chains");
           node4.setCollapseState("collapsed");
+          node4.setIcon("variable");
           nodes.add(node4);
           break;
         case "dacite/tryme/EuclidianGcd/egcd/a":
-          var node5 = new TreeViewNode("defUseChains", "dacite/tryme/EuclidianGcd/egcd/a/1", "D8 - D9");
+          var node5 = new TreeViewNode("defUseChains", "dacite/tryme/EuclidianGcd/egcd/a/1", "a L8 - L9");
           nodes.add(node5);
 
-          var node6 = new TreeViewNode("defUseChains", "dacite/tryme/EuclidianGcd/egcd/a/2", "D15 - U14");
+          var node6 = new TreeViewNode("defUseChains", "dacite/tryme/EuclidianGcd/egcd/a/2", "a/k L15 - testGcd L14");
           nodes.add(node6);
           break;
         case "":
-          var node = new TreeViewNode("defUseChains", "dacite/tryme/EuclidianGcd", "tryme/EuclidianGcd");
+          var node = new TreeViewNode("defUseChains", "dacite/tryme/EuclidianGcd", "tryme/EuclidianGcd 22 chains");
           node.setCollapseState("collapsed");
+          node.setIcon("class");
           nodes.add(node);
       }
     }

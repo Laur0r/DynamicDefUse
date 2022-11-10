@@ -6,6 +6,7 @@ import com.intellij.openapi.wm.ToolWindow;
 import com.intellij.openapi.wm.ToolWindowFactory;
 import com.intellij.ui.content.Content;
 import com.intellij.ui.content.ContentFactory;
+import dacite.intellij.DaciteAnalysisLauncher;
 import dacite.intellij.defUseData.DefUseClass;
 import org.jetbrains.annotations.NotNull;
 import org.wso2.lsp4intellij.IntellijLanguageClient;
@@ -19,6 +20,10 @@ import java.util.Set;
 public class DaciteToolWindowFactory implements ToolWindowFactory {
 
     private ArrayList<DefUseClass> data;
+
+    public DaciteToolWindowFactory(){
+
+    }
 
     public DaciteToolWindowFactory(ArrayList<DefUseClass> data){
         super();
