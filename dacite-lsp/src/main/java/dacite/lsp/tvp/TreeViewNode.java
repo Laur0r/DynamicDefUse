@@ -43,6 +43,8 @@ public class TreeViewNode {
    */
   private String collapseState;
 
+  boolean editorHighlight;
+
   public TreeViewNode(String viewId, String nodeUri, String label) {
     this.viewId = viewId;
     this.nodeUri = nodeUri;
@@ -103,6 +105,14 @@ public class TreeViewNode {
 
   public void setCollapseState(String collapseState) {
     this.collapseState = collapseState;
+  }
+
+  public boolean isEditorHighlight() {
+    return editorHighlight;
+  }
+
+  public void setEditorHighlight(boolean editorHighlight) {
+    this.editorHighlight = editorHighlight;
   }
 
   @Override

@@ -2,13 +2,23 @@ package dacite.intellij.visualisation;
 
 import com.intellij.icons.AllIcons;
 import com.intellij.ui.JBColor;
+import com.intellij.ui.components.JBCheckBox;
 import com.intellij.ui.treeStructure.Tree;
+import com.intellij.util.diff.Diff;
 import dacite.intellij.defUseData.DefUseData;
 import dacite.lsp.tvp.TreeViewNode;
 
 import javax.swing.*;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 import javax.swing.tree.DefaultMutableTreeNode;
 import java.awt.*;
+import java.awt.event.InputMethodEvent;
+import java.awt.event.InputMethodListener;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
 
 public class TreeViewCellRenderer extends DefUseCellRenderer{
 
@@ -18,6 +28,7 @@ public class TreeViewCellRenderer extends DefUseCellRenderer{
     JLabel def = new JLabel();
     JLabel use = new JLabel();
 
+    JBCheckBox box = new JBCheckBox();
     boolean defuse;
 
     public TreeViewCellRenderer() {
@@ -58,6 +69,9 @@ public class TreeViewCellRenderer extends DefUseCellRenderer{
                 labelPanel.add(name);
                 labelPanel.add(Box.createHorizontalStrut(10)); //creates space between the JLabels
                 labelPanel.add(number);
+                labelPanel.add(Box.createHorizontalStrut(10));
+                box.setSelected(e.isEditorHighlight());
+                labelPanel.add(box);
                 returnValue=labelPanel;
             } else {
                 JPanel labelPanel = new JPanel();
@@ -75,6 +89,9 @@ public class TreeViewCellRenderer extends DefUseCellRenderer{
                 labelPanel.add(useLabel);
                 use.setText(usetext);
                 labelPanel.add(use);
+                labelPanel.add(Box.createHorizontalStrut(10));
+                box.setSelected(e.isEditorHighlight());
+                labelPanel.add(box);
                 returnValue=labelPanel;
             }
 

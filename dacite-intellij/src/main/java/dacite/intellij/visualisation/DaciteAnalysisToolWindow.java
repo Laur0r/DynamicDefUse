@@ -20,6 +20,7 @@ import com.intellij.psi.PsiManager;
 import com.intellij.ui.JBColor;
 import com.intellij.ui.components.JBScrollPane;
 import com.intellij.ui.treeStructure.Tree;
+import com.thaiopensource.xml.dtd.om.Def;
 import dacite.intellij.defUseData.DefUseClass;
 import dacite.intellij.defUseData.DefUseData;
 import dacite.intellij.defUseData.DefUseMethod;
@@ -41,13 +42,19 @@ import javax.swing.*;
 import javax.swing.event.*;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
+import javax.swing.tree.TreeNode;
 import javax.swing.tree.TreePath;
 import java.awt.*;
 import java.awt.Color;
+import java.awt.event.InputMethodEvent;
+import java.awt.event.InputMethodListener;
 import java.awt.font.FontRenderContext;
 import java.awt.geom.AffineTransform;
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Enumeration;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -74,14 +81,11 @@ public class DaciteAnalysisToolWindow {
         button.addActionListener(e -> highlightAll());
         myToolWindowContent = new JPanel();
         myToolWindowContent.setLayout(new BoxLayout(myToolWindowContent, BoxLayout.Y_AXIS));
-        DefaultMutableTreeNode top =
-                new DefaultMutableTreeNode("root");
-        //createNodes(top);
         TreeViewNode root = new TreeViewNode("defUseChains", "", "root");
-        DefaultMutableTreeNode top2 =
+        DefaultMutableTreeNode top =
                 new DefaultMutableTreeNode(root);
-        createTreeViewChildren(top2);
-        Tree tree2 = new DefUseTree(top2);
+        createTreeViewChildren(top);
+        Tree tree2 = new DefUseTree(top);
         TreeExpansionListener listener = new TreeExpansionListener() {
             @Override
             public void treeExpanded(TreeExpansionEvent treeExpansionEvent) {
@@ -101,21 +105,14 @@ public class DaciteAnalysisToolWindow {
         tree2.addTreeExpansionListener(listener);
         ((DefaultTreeModel)tree2.getModel()).setAsksAllowsChildren(true);
         tree2.setCellRenderer(new TreeViewCellRenderer());
-        tree2.setRootVisible(false);
-        tree = new DefUseTree(top);
-        tree.setRootVisible(false);
-        tree.setEditable(true);
-        DefUseCellEditor cellEditor = new DefUseCellEditor(tree);
-        DefUseCellRenderer renderer = new DefUseCellRenderer();
-        renderer.setLeafIcon(null);
-        renderer.setIcon(AllIcons.Actions.GroupByClass);
-        tree.setCellRenderer(renderer);
-        tree.setCellEditor(cellEditor);
-        //addInlays();
-        cellEditor.addCellEditorListener(new CellEditorListener() {
+        TreeViewCellEditor editor = new TreeViewCellEditor();
+        editor.addChangeListener(new CellEditorListener() {
             @Override
             public void editingStopped(ChangeEvent changeEvent) {
-                Object obj = changeEvent.getSource();
+                DefaultMutableTreeNode node = (DefaultMutableTreeNode) changeEvent.getSource();
+                updateChildrenNodes(node);
+
+                //Todo sind inlays schon synchronisiert?
                 addInlays();
             }
 
@@ -124,8 +121,9 @@ public class DaciteAnalysisToolWindow {
 
             }
         });
-        JScrollPane treeView = new JBScrollPane(tree);
-        //myToolWindowContent.add(treeView, BorderLayout.CENTER);
+        tree2.setCellEditor(editor);
+        tree2.setRootVisible(false);
+        tree2.setEditable(true);
         JScrollPane treeView2 = new JBScrollPane(tree2);
         myToolWindowContent.add(treeView2, BorderLayout.CENTER);
         myToolWindowContent.add(button);
@@ -158,61 +156,18 @@ public class DaciteAnalysisToolWindow {
         }
     }
 
-    public DefaultMutableTreeNode findNode(DefaultMutableTreeNode node, DefUseData data){
-        DefaultMutableTreeNode output = null;
-        for (int i = 0; i < node.getChildCount(); i++) {
-            DefaultMutableTreeNode childNode = (DefaultMutableTreeNode) node.getChildAt(i);
-            if (childNode.getChildCount() > 0) {
-                output = findNode(childNode, data);
-                if(output !=null){
-                    return output;
-                }
-            } else if(childNode instanceof DefUseNode){
-                DefUseData[] d = ((DefUseNode) childNode).getUserObject();
-                if(Arrays.asList(d).contains(data)){
-                    output = childNode;
-                    return output;
+    public void updateChildrenNodes(DefaultMutableTreeNode node){
+        TreeViewNode iniView = (TreeViewNode) node.getUserObject();
+        if(node.getChildCount() != 0){
+            Enumeration<TreeNode> nodes = node.children();
+            while(nodes.hasMoreElements()){
+                DefaultMutableTreeNode child = (DefaultMutableTreeNode) nodes.nextElement();
+                TreeViewNode treeView = (TreeViewNode) child.getUserObject();
+                treeView.setEditorHighlight(iniView.isEditorHighlight());
+                if(child.getChildCount() != 0){
+                    updateChildrenNodes(child);
                 }
             }
-        }
-        return output;
-    }
-
-    public Tuple<Integer> getOffSets(Editor textEditor, int line, String varName){
-        TextRange defRange = new TextRange(textEditor.getDocument().getLineStartOffset(line),textEditor.getDocument().getLineEndOffset(line));
-        String lineTextDef = textEditor.getDocument().getText(defRange);
-        int index = lineTextDef.indexOf(varName);
-        int startOffsetDef = textEditor.getDocument().getLineStartOffset(line) + index;
-        int endOffsetDef = startOffsetDef + varName.length();
-        return new Tuple<>(startOffsetDef, endOffsetDef);
-    }
-
-    public void setProject(Project project){
-        this.project = project;
-    }
-    public void setData(ArrayList<DefUseClass> data){
-        this.data = data;
-    }
-
-    private void createNodes(DefaultMutableTreeNode top) {
-        for(DefUseClass dfClass: data){
-            ClassNode cnode = new ClassNode(dfClass.getName());
-            for(DefUseMethod dfMethod:dfClass.getMethods()){
-                MethodNode mnode = new MethodNode(dfMethod.getName());
-                for(DefUseVar dfVariable : dfMethod.getVariables()){
-                    DefUseVar var = new DefUseVar(dfVariable.getName());
-                    VariableNode vnode = new VariableNode(var);
-                    DefUseData[] data = dfVariable.getData().toArray(new DefUseData[0]);
-                    vnode.setNumberChains(data.length);
-                    DefUseNode dnode = new DefUseNode(data);
-                    vnode.add(dnode);
-                    mnode.add(vnode);
-                    mnode.addNumberChains(data.length);
-                }
-                cnode.add(mnode);
-                cnode.addNumberChains(mnode.getNumberChains());
-            }
-            top.add(cnode);
         }
     }
 
