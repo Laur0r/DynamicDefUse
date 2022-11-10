@@ -57,8 +57,11 @@ public class CommandRegistry {
           // * We also add all jars that can be found within the project's root directory
           String fullClassPath = System.getProperty("java.class.path");
           fullClassPath += Files.find(Paths.get(projectDir), 50,
-                  (p, bfa) -> bfa.isRegularFile() && p.getFileName().toString().endsWith(".jar")).map(Path::toString)
-              .reduce(":", String::concat);
+                  (p, bfa) -> bfa.isRegularFile() && (p.getFileName().toString().endsWith(".jar"))).map(it -> ":"+it.toString())
+              .reduce(String::concat);
+          fullClassPath += Files.find(Paths.get(projectDir), 50,
+                  (p, bfa) -> bfa.isRegularFile() && (p.getFileName().toString().endsWith(".class"))).map(it -> ":"+it.getParent().toString()).distinct().reduce(String::concat);
+          //fullClassPath += ":"+"/home/l_troo01/Development/Forschung/TestAnalysis/out/production";
 
           // As dacite-core must be within the constructed class path we can extract the corresponding jar
           String javaAgentJar = Arrays.stream(fullClassPath.split(":")).filter(it -> it.contains("dacite-core"))
