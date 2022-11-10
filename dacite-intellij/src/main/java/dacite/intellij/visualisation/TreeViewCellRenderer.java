@@ -2,13 +2,17 @@ package dacite.intellij.visualisation;
 
 import com.intellij.icons.AllIcons;
 import com.intellij.ui.JBColor;
-import com.intellij.ui.treeStructure.Tree;
-import dacite.intellij.defUseData.DefUseData;
-import dacite.lsp.tvp.TreeViewNode;
 
-import javax.swing.*;
+import java.awt.Component;
+
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JTree;
 import javax.swing.tree.DefaultMutableTreeNode;
-import java.awt.*;
+
+import dacite.lsp.tvp.TreeViewNode;
 
 public class TreeViewCellRenderer extends DefUseCellRenderer{
 

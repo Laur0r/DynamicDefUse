@@ -1,8 +1,8 @@
 package dacite.intellij.visualisation;
 
-import dacite.intellij.defUseData.DefUseVar;
-
 import javax.swing.tree.DefaultMutableTreeNode;
+
+import dacite.lsp.defUseData.DefUseVar;
 
 public class VariableNode extends DefaultMutableTreeNode {
     /**

@@ -1,4 +1,4 @@
-package dacite.intellij.defUseData;
+package dacite.lsp.defUseData;
 
 import java.util.ArrayList;
 

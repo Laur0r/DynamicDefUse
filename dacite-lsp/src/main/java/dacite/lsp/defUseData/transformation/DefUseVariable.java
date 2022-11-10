@@ -1,6 +1,6 @@
-package dacite.intellij.defUseData.transformation;
+package dacite.lsp.defUseData.transformation;
 
-import javax.xml.bind.annotation.XmlElement;
+import jakarta.xml.bind.annotation.XmlElement;
 
 public class DefUseVariable {
     private int linenumber;

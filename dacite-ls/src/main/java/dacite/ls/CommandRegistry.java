@@ -101,7 +101,7 @@ public class CommandRegistry {
           String stdOut = processOutput.toString().trim();
            */
 
-          // TODO: process result
+          AnalysisProvider.processXmlFile(projectDir + "file.xml");
 
           return CompletableFuture.completedFuture(null);
         }

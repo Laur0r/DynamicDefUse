@@ -1,4 +1,4 @@
-package dacite.intellij.defUseData;
+package dacite.lsp.defUseData;
 
 public class DefUseData {
     private String name;

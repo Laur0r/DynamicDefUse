@@ -1,27 +1,25 @@
 package dacite.intellij.visualisation;
 
-import com.intellij.codeInsight.hints.*;
-import com.intellij.codeInsight.hints.presentation.*;
-import com.intellij.ide.presentation.Presentation;
+import com.intellij.codeInsight.hints.FactoryInlayHintsCollector;
+import com.intellij.codeInsight.hints.ImmediateConfigurable;
+import com.intellij.codeInsight.hints.InlayHintsCollector;
+import com.intellij.codeInsight.hints.InlayHintsProvider;
+import com.intellij.codeInsight.hints.InlayHintsSink;
+import com.intellij.codeInsight.hints.NoSettings;
+import com.intellij.codeInsight.hints.SettingsKey;
+import com.intellij.codeInsight.hints.presentation.InlayPresentation;
 import com.intellij.lang.Language;
 import com.intellij.openapi.editor.Editor;
-import com.intellij.openapi.editor.Inlay;
 import com.intellij.openapi.editor.markup.TextAttributes;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
 import com.intellij.ui.JBColor;
-import com.intellij.ui.layout.LCFlags;
-import com.intellij.ui.layout.LayoutKt;
-import com.intellij.util.ui.UIUtil;
-import kotlin.jvm.functions.Function0;
+
 import org.jetbrains.annotations.Nls;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import javax.swing.*;
-import java.awt.*;
-import java.awt.event.MouseEvent;
-import java.awt.image.BufferedImage;
+import java.awt.Color;
 
 public class DaciteInlayHint implements InlayHintsProvider {
 

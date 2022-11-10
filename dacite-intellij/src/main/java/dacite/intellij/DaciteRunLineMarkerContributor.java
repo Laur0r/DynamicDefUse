@@ -1,22 +1,17 @@
 package dacite.intellij;
 
-import com.intellij.ConfigurableFactory;
-import com.intellij.execution.junit.JUnitUtil;
+import static org.wso2.lsp4intellij.requests.Timeout.getTimeout;
+import static org.wso2.lsp4intellij.requests.Timeouts.REFERENCES;
+
 import com.intellij.execution.lineMarker.RunLineMarkerContributor;
-import com.intellij.execution.lineMarker.RunLineMarkerProvider;
 import com.intellij.openapi.actionSystem.ActionManager;
 import com.intellij.openapi.editor.Document;
-import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.editor.LogicalPosition;
-import com.intellij.openapi.fileEditor.FileEditor;
-import com.intellij.openapi.fileEditor.FileEditorManager;
-import com.intellij.psi.PsiClass;
 import com.intellij.psi.PsiDocumentManager;
 import com.intellij.psi.PsiElement;
-import com.intellij.psi.util.PsiEditorUtil;
+
 import org.eclipse.lsp4j.CodeLens;
 import org.eclipse.lsp4j.CodeLensParams;
-import org.eclipse.lsp4j.InlayHint;
 import org.eclipse.lsp4j.TextDocumentIdentifier;
 import org.eclipse.lsp4j.jsonrpc.JsonRpcException;
 import org.jetbrains.annotations.NotNull;
@@ -32,9 +27,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-
-import static org.wso2.lsp4intellij.requests.Timeout.getTimeout;
-import static org.wso2.lsp4intellij.requests.Timeouts.REFERENCES;
 
 public class DaciteRunLineMarkerContributor extends RunLineMarkerContributor {
 
