@@ -4,6 +4,8 @@ import java.util.ArrayList;
 
 public class DefUseClass {
     private String name;
+
+    private int numberChains;
     private ArrayList<DefUseMethod> methods;
 
     public DefUseClass(String name){
@@ -20,6 +22,14 @@ public class DefUseClass {
         methods.add(method);
     }
     public String getName(){return name;}
+
+    public int getNumberChains() {
+        return numberChains;
+    }
+
+    public void addNumberChains(int numberChains) {
+        this.numberChains += numberChains;
+    }
 
     @Override
     public boolean equals(Object obj){

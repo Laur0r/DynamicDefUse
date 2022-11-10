@@ -7,6 +7,10 @@ import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
 
 import dacite.lsp.InlayHintDecorationParams;
+import dacite.lsp.defUseData.DefUseClass;
+import dacite.lsp.defUseData.DefUseData;
+import dacite.lsp.defUseData.DefUseMethod;
+import dacite.lsp.defUseData.DefUseVar;
 import dacite.lsp.tvp.*;
 import org.eclipse.lsp4j.CodeLens;
 import org.eclipse.lsp4j.CodeLensParams;
@@ -132,8 +136,52 @@ public class DaciteTextDocumentService
     nodeUri = nodeUri == null ? "" : nodeUri;
 
     var nodes = new ArrayList<TreeViewNode>();
+    ArrayList<DefUseClass> classes = AnalysisProvider.getDefUseClasses();
 
     if (params.getViewId().equals("defUseChains")) {
+      if(nodeUri.equals("")){
+        for(DefUseClass cl: classes){
+          TreeViewNode node = new TreeViewNode("defUseChains", cl.getName(), cl.getName()+" "+cl.getNumberChains()+" chains");
+          node.setCollapseState("collapsed");
+          node.setIcon("class");
+          nodes.add(node);
+        }
+      } else {
+        for(DefUseClass cl: classes){
+          if(nodeUri.equals(cl.getName())){
+            for(DefUseMethod m: cl.getMethods()){
+              TreeViewNode node = new TreeViewNode("defUseChains", m.getName(), m.getName()+" "+m.getNumberChains()+" chains");
+              node.setCollapseState("collapsed");
+              node.setIcon("method");
+              nodes.add(node);
+            }
+            break;
+          } else{
+            for(DefUseMethod m: cl.getMethods()){
+              if(nodeUri.equals(m.getName())){
+                for(DefUseVar var: m.getVariables()){
+                  TreeViewNode node = new TreeViewNode("defUseChains", var.getName(), var.getName()+" "+var.getNumberChains()+" chains");
+                  node.setCollapseState("collapsed");
+                  node.setIcon("variable");
+                  nodes.add(node);
+                }
+                break;
+              } else {
+                for(DefUseVar var: m.getVariables()){
+                  if(nodeUri.equals(var.getName())){
+                    for(DefUseData data: var.getData()){
+                      TreeViewNode node = new TreeViewNode("defUseChains", data.getName(), data.getName()+ " "+data.getDefLocation()+" - "+data.getUseLocation());
+                      node.setCollapseState("collapsed");
+                      nodes.add(node);
+                    }
+                    break;
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
       switch (nodeUri) {
         case "dacite/tryme/EuclidianGcd":
           var node1 = new TreeViewNode("defUseChains", "dacite/tryme/EuclidianGcd/egcd", "egcd 6 chains");
@@ -165,10 +213,7 @@ public class DaciteTextDocumentService
           nodes.add(node6);
           break;
         case "":
-          var node = new TreeViewNode("defUseChains", "dacite/tryme/EuclidianGcd", "tryme/EuclidianGcd 22 chains");
-          node.setCollapseState("collapsed");
-          node.setIcon("class");
-          nodes.add(node);
+
       }
     }
 

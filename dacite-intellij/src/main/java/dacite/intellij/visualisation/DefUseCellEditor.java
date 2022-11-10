@@ -132,7 +132,7 @@ class DefUseCellEditor extends AbstractCellEditor implements TreeCellEditor {
             listener.editingStopped(new ChangeEvent(defUse));
         } else {
             boolean value = box.isSelected();
-            variable.setChecked(value);
+            //variable.setChecked(value);
             listener.editingStopped(new ChangeEvent(variable));
         }
         return true;

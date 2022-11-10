@@ -1,19 +1,14 @@
 package dacite.intellij.visualisation;
 
 import com.intellij.ui.components.JBCheckBox;
-import com.thaiopensource.xml.dtd.om.Def;
-import dacite.intellij.defUseData.DefUseData;
-import dacite.intellij.defUseData.DefUseVar;
 import dacite.lsp.tvp.TreeViewNode;
 
 import javax.swing.*;
 import javax.swing.event.CellEditorListener;
 import javax.swing.event.ChangeEvent;
-import javax.swing.event.ChangeListener;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.TreeCellEditor;
 import javax.swing.tree.TreeCellRenderer;
-import javax.swing.tree.TreePath;
 import java.awt.*;
 import java.awt.event.*;
 import java.util.EventObject;

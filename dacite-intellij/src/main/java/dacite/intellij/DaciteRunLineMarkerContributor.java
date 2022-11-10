@@ -38,8 +38,13 @@ public class DaciteRunLineMarkerContributor extends RunLineMarkerContributor {
         int offset = element.getTextOffset();
         PsiDocumentManager m = PsiDocumentManager.getInstance(element.getProject());
         Document doc = m.getDocument(element.getContainingFile());
-        int line = doc.getLineNumber(offset);
-        LogicalPosition elemPos = new LogicalPosition(line + 1, offset - doc.getLineStartOffset(line));
+        LogicalPosition elemPos;
+        if(doc != null){
+            int line = doc.getLineNumber(offset);
+            elemPos = new LogicalPosition(line + 1, offset - doc.getLineStartOffset(line));
+        } else {
+            elemPos = new LogicalPosition(0,0);
+        }
         Set<LanguageServerWrapper> wrapper = IntellijLanguageClient.getAllServerWrappersFor(FileUtils.projectToUri(element.getProject()));
         RequestManager requestManager = null;
         if (wrapper.size() == 1) {

@@ -3,7 +3,6 @@ package dacite.intellij.visualisation;
 import static org.wso2.lsp4intellij.requests.Timeout.getTimeout;
 import static org.wso2.lsp4intellij.requests.Timeouts.REFERENCES;
 
-import com.intellij.icons.AllIcons;
 import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.editor.EditorCustomElementRenderer;
 import com.intellij.openapi.editor.Inlay;
@@ -14,24 +13,16 @@ import com.intellij.openapi.fileEditor.FileEditor;
 import com.intellij.openapi.fileEditor.FileEditorManager;
 import com.intellij.openapi.fileEditor.impl.text.PsiAwareTextEditorImpl;
 import com.intellij.openapi.project.Project;
-import com.intellij.openapi.util.TextRange;
 import com.intellij.openapi.wm.ToolWindow;
 import com.intellij.ui.JBColor;
 import com.intellij.ui.components.JBScrollPane;
 import com.intellij.ui.treeStructure.Tree;
-import com.thaiopensource.xml.dtd.om.Def;
-import dacite.intellij.defUseData.DefUseClass;
-import dacite.intellij.defUseData.DefUseData;
-import dacite.intellij.defUseData.DefUseMethod;
-import dacite.intellij.defUseData.DefUseVar;
 import dacite.intellij.lspclient.DaciteLSPRequestManager;
 import dacite.lsp.InlayHintDecoration;
 import dacite.lsp.InlayHintDecorationParams;
 import dacite.lsp.tvp.TreeViewChildrenParams;
 import dacite.lsp.tvp.TreeViewChildrenResult;
 import dacite.lsp.tvp.TreeViewNode;
-import groovy.lang.Tuple;
-import org.eclipse.lsp4j.*;
 
 import org.eclipse.lsp4j.InlayHint;
 import org.eclipse.lsp4j.InlayHintLabelPart;
@@ -45,26 +36,18 @@ import org.jetbrains.annotations.NotNull;
 import org.wso2.lsp4intellij.client.languageserver.requestmanager.RequestManager;
 
 import java.awt.BorderLayout;
-import javax.swing.*;
-import javax.swing.event.*;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreeNode;
 import javax.swing.tree.TreePath;
-import java.awt.*;
 import java.awt.Color;
 import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
-import java.awt.event.InputMethodEvent;
-import java.awt.event.InputMethodListener;
 import java.awt.font.FontRenderContext;
 import java.awt.geom.AffineTransform;
-import java.beans.PropertyChangeEvent;
-import java.beans.PropertyChangeListener;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -80,21 +63,8 @@ import javax.swing.event.CellEditorListener;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.TreeExpansionEvent;
 import javax.swing.event.TreeExpansionListener;
-import javax.swing.tree.DefaultMutableTreeNode;
-import javax.swing.tree.DefaultTreeModel;
-import javax.swing.tree.TreePath;
-
-import dacite.intellij.lspclient.DaciteLSPRequestManager;
-import dacite.lsp.InlayHintDecoration;
-import dacite.lsp.InlayHintDecorationParams;
 import dacite.lsp.defUseData.DefUseClass;
 import dacite.lsp.defUseData.DefUseData;
-import dacite.lsp.defUseData.DefUseMethod;
-import dacite.lsp.defUseData.DefUseVar;
-import dacite.lsp.tvp.TreeViewChildrenParams;
-import dacite.lsp.tvp.TreeViewChildrenResult;
-import dacite.lsp.tvp.TreeViewNode;
-import groovy.lang.Tuple;
 
 public class DaciteAnalysisToolWindow {
 
@@ -238,6 +208,9 @@ public class DaciteAnalysisToolWindow {
             Range range = new Range(new Position(0,0), new Position(eachEditor.getDocument().getLineCount()-1,0));
             InlayHintParams param = new InlayHintParams(new TextDocumentIdentifier(ed.getFile().getUrl()), range);
             CompletableFuture<List<InlayHint>> request =  requestManager.inlayHint(param);
+            int lastLine = eachEditor.getDocument().getLineCount()-1;
+            LogicalPosition pos = new LogicalPosition(lastLine, eachEditor.getDocument().getLineEndOffset(lastLine));
+            eachEditor.getInlayModel().getInlineElementsInRange(0,eachEditor.logicalPositionToOffset(pos)).forEach(inlay -> {inlay.dispose();});
             if (request != null) {
                 try {
                     List<InlayHint> res = request.get(getTimeout(REFERENCES), TimeUnit.MILLISECONDS);
@@ -264,7 +237,6 @@ public class DaciteAnalysisToolWindow {
                             if(label.getLeft() != null){
                                 hintWord = label.getLeft();
                             }
-                            textEditor.getInlayModel().getInlineElementsInRange(offset,offset+6).forEach(inlay -> {inlay.dispose();});
                             String finalHintWord = hintWord;
                             Font finalFont = font;
                             Color finalColor = color;

@@ -26,6 +26,8 @@ public class AnalysisProvider {
 
   private static DefUseChains defUseChains;
 
+  private static ArrayList<DefUseClass> defUseClasses;
+
   public static DefUseChains getDefUseChains() {
     return defUseChains;
   }
@@ -66,11 +68,13 @@ public class AnalysisProvider {
 
       DefUseClass defUseClass = new DefUseClass(defClassName);
       DefUseMethod m = new DefUseMethod(defMethodName);
-      String useLocation = useMethodPath + " line " + use.getLinenumber();
-      String defLocation = "Line " + def.getLinenumber();
+      String useLocation = useMethodPath + " L" + use.getLinenumber();
+      String defLocation = "L" + def.getLinenumber();
       if (defClassName.equals(useClassName)) {
         if (defMethodName.equals(useMethodName)) {
-          useLocation = "Line " + use.getLinenumber();
+          useLocation = "L" + use.getLinenumber();
+        } else {
+          useLocation = useMethodName + " L"+use.getLinenumber();
         }
       }
       String varName = def.getVariableName();
@@ -110,6 +114,15 @@ public class AnalysisProvider {
         m.addVariable(var);
         defUseClass.addMethod(m);
         output.add(defUseClass);
+      }
+    }
+    for(DefUseClass cl:output){
+      for(DefUseMethod m:cl.getMethods()){
+        for(DefUseVar var:m.getVariables()){
+          var.setNumberChains(var.getData().size());
+          m.addNumberChains(var.getNumberChains());
+        }
+        cl.addNumberChains(m.getNumberChains());
       }
     }
     return output;

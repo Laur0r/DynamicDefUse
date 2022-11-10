@@ -112,7 +112,7 @@ class DefUseCellRenderer extends DefaultTreeCellRenderer {
             labelPanel.add(Box.createHorizontalStrut(10)); //creates space between the JLabels
             labelPanel.add(this.number);
             labelPanel.add(Box.createHorizontalStrut(10));
-            box.setSelected(var.isChecked());
+            //box.setSelected(var.isChecked());
             labelPanel.add(box);
 
             returnValue = labelPanel;

@@ -4,7 +4,7 @@ import java.util.ArrayList;
 
 public class DefUseVar {
     private String name;
-    private boolean checked;
+    private int numberChains;
     private ArrayList<DefUseData> data;
 
     public DefUseVar(String name){
@@ -22,8 +22,14 @@ public class DefUseVar {
         data.add(defuse);
     }
     public String getName(){return name;}
-    public void setChecked(boolean value){checked=value;}
-    public boolean isChecked(){return checked;}
+
+    public void setNumberChains(int numberChains) {
+        this.numberChains = numberChains;
+    }
+
+    public int getNumberChains() {
+        return numberChains;
+    }
 
     @Override
     public boolean equals(Object obj){
