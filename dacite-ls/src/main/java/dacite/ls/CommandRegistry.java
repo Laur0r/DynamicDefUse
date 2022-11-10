@@ -1,8 +1,5 @@
 package dacite.ls;
 
-import com.github.javaparser.StaticJavaParser;
-import com.github.javaparser.ast.CompilationUnit;
-import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.google.gson.JsonPrimitive;
 
 import org.eclipse.lsp4j.ExecuteCommandParams;
@@ -46,10 +43,9 @@ public class CommandRegistry {
           String projectDir = textDocumentPath.getParent().toString().split("src/")[0];
 
           // Extract package and class name
-          String javaCode = TextDocumentItemProvider.get(textDocumentUri).getText();
-          CompilationUnit compilationUnit = StaticJavaParser.parse(javaCode);
-          String className = compilationUnit.findFirst(ClassOrInterfaceDeclaration.class).get().getName().asString();
-          String packageName = compilationUnit.getPackageDeclaration().get().getName().asString();
+          var analyser = new CodeAnalyser(TextDocumentItemProvider.get(textDocumentUri).getText());
+          String className = analyser.extractClassName();
+          String packageName = analyser.extractPackageName();
 
           // Construct class path
           // * dacite-core (and thus the agent) is a dependency of dacite-ls and is thus contained in the class path
@@ -101,7 +97,7 @@ public class CommandRegistry {
           String stdOut = processOutput.toString().trim();
            */
 
-          AnalysisProvider.processXmlFile(projectDir + "file.xml");
+          DefUseAnalysisProvider.processXmlFile(projectDir + "file.xml");
 
           return CompletableFuture.completedFuture(null);
         }

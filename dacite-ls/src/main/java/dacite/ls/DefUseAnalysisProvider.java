@@ -3,11 +3,16 @@ package dacite.ls;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.awt.Color;
 import java.io.IOException;
 import java.io.StringReader;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Random;
+import java.util.stream.Collectors;
 
 import dacite.lsp.defUseData.DefUseClass;
 import dacite.lsp.defUseData.DefUseData;
@@ -16,19 +21,18 @@ import dacite.lsp.defUseData.DefUseVar;
 import dacite.lsp.defUseData.transformation.DefUseChain;
 import dacite.lsp.defUseData.transformation.DefUseChains;
 import dacite.lsp.defUseData.transformation.DefUseVariable;
+import dacite.lsp.defUseData.transformation.DefUseVariableRole;
 import jakarta.xml.bind.JAXBContext;
 import jakarta.xml.bind.JAXBException;
 import jakarta.xml.bind.Unmarshaller;
 
-public class AnalysisProvider {
+public class DefUseAnalysisProvider {
 
-  private static final Logger logger = LoggerFactory.getLogger(AnalysisProvider.class);
+  private static final Logger logger = LoggerFactory.getLogger(DefUseAnalysisProvider.class);
 
-  private static DefUseChains defUseChains;
+  private static List<DefUseChain> defUseChains = new ArrayList<>();
 
-  private static ArrayList<DefUseClass> defUseClasses;
-
-  public static DefUseChains getDefUseChains() {
+  public static List<DefUseChain> getDefUseChains() {
     return defUseChains;
   }
 
@@ -46,16 +50,76 @@ public class AnalysisProvider {
     JAXBContext jaxbContext = JAXBContext.newInstance(DefUseChains.class);
     Unmarshaller jaxbUnmarshaller = jaxbContext.createUnmarshaller();
     String test = Files.readString(Paths.get(path));
-    defUseChains = (DefUseChains) jaxbUnmarshaller.unmarshal(new StringReader(test));
+    var chainCollection = (DefUseChains) jaxbUnmarshaller.unmarshal(new StringReader(test));
+    defUseChains = chainCollection.getChains();
+
+    // Augment parsed information and pre-process
+    defUseChains.forEach(chain -> {
+      var def = chain.getDef();
+      var use = chain.getUse();
+
+      // Set backlink
+      def.setChain(chain);
+      use.setChain(chain);
+
+      // Set role
+      def.setRole(DefUseVariableRole.DEFINITION);
+      use.setRole(DefUseVariableRole.USAGE);
+
+      // Set random color
+      Random random = new Random();
+      var color = new Color(random.nextInt(256), random.nextInt(256), random.nextInt(256));
+      def.setColor(color);
+      use.setColor(color);
+    });
   }
 
-  public static ArrayList<DefUseClass> transformDefUse(DefUseChains chains) {
-    if (chains == null || chains.getChains().size() == 0) {
+  public static HashMap<Integer, List<DefUseVariable>> getUniqueDefUseVariables(String packageName, String className) {
+    HashMap<Integer, List<DefUseVariable>> uniqueDefUseVariablesByLine = new HashMap<>();
+
+    getDefUseVariables(packageName, className).forEach(
+        defUseVariable -> addDefUseVariable(uniqueDefUseVariablesByLine, defUseVariable));
+
+    return uniqueDefUseVariablesByLine;
+  }
+
+  private static void addDefUseVariable(HashMap<Integer, List<DefUseVariable>> defUseVariableMap,
+      DefUseVariable defUseVariable) {
+    if (defUseVariableMap.containsKey(defUseVariable.getLinenumber())) {
+      // Check for uniqueness
+      var existingDefUseVariables = defUseVariableMap.get(defUseVariable.getLinenumber());
+      if (existingDefUseVariables.stream().noneMatch(defUseVariable::equals)) {
+        existingDefUseVariables.add(defUseVariable);
+      }
+    } else {
+      List<DefUseVariable> defUseVariables = new ArrayList<>();
+      defUseVariables.add(defUseVariable);
+      defUseVariableMap.put(defUseVariable.getLinenumber(), defUseVariables);
+    }
+  }
+
+  public static List<DefUseVariable> getDefUseVariables(String packageName, String className) {
+    return getDefUseVariables().stream()
+        .filter(it -> it.getPackageName().equals(packageName) && it.getClassName().equals(className))
+        .collect(Collectors.toList());
+  }
+
+  public static List<DefUseVariable> getDefUseVariables() {
+    final List<DefUseVariable> defUseVariables = new ArrayList<>();
+    for (DefUseChain defUseChain : defUseChains) {
+      defUseVariables.add(defUseChain.getDef());
+      defUseVariables.add(defUseChain.getUse());
+    }
+    return defUseVariables;
+  }
+
+  public static ArrayList<DefUseClass> transformDefUse(List<DefUseChain> chains) {
+    if (chains == null || chains.size() == 0) {
       return null;
     }
-    ArrayList<DefUseClass> output = new ArrayList<DefUseClass>();
+    ArrayList<DefUseClass> output = new ArrayList<>();
     // Go through all recognized DefUseChains
-    for (DefUseChain chain : chains.getChains()) {
+    for (DefUseChain chain : chains) {
       DefUseVariable use = chain.getUse();
       DefUseVariable def = chain.getDef();
       String useMethodPath = chain.getUse().getMethod();
@@ -74,7 +138,7 @@ public class AnalysisProvider {
         if (defMethodName.equals(useMethodName)) {
           useLocation = "L" + use.getLinenumber();
         } else {
-          useLocation = useMethodName + " L"+use.getLinenumber();
+          useLocation = useMethodName + " L" + use.getLinenumber();
         }
       }
       String varName = def.getVariableName();
@@ -116,9 +180,9 @@ public class AnalysisProvider {
         output.add(defUseClass);
       }
     }
-    for(DefUseClass cl:output){
-      for(DefUseMethod m:cl.getMethods()){
-        for(DefUseVar var:m.getVariables()){
+    for (DefUseClass cl : output) {
+      for (DefUseMethod m : cl.getMethods()) {
+        for (DefUseVar var : m.getVariables()) {
           var.setNumberChains(var.getData().size());
           m.addNumberChains(var.getNumberChains());
         }

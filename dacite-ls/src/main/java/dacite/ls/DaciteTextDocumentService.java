@@ -4,14 +4,15 @@ import com.github.javaparser.ParseProblemException;
 import com.github.javaparser.StaticJavaParser;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
-import com.github.javaparser.ast.body.MethodDeclaration;
 
 import dacite.lsp.InlayHintDecorationParams;
 import dacite.lsp.defUseData.DefUseClass;
 import dacite.lsp.defUseData.DefUseData;
 import dacite.lsp.defUseData.DefUseMethod;
 import dacite.lsp.defUseData.DefUseVar;
+import dacite.lsp.defUseData.transformation.DefUseVariableRole;
 import dacite.lsp.tvp.*;
+
 import org.eclipse.lsp4j.CodeLens;
 import org.eclipse.lsp4j.CodeLensParams;
 import org.eclipse.lsp4j.Command;
@@ -21,12 +22,9 @@ import org.eclipse.lsp4j.DidOpenTextDocumentParams;
 import org.eclipse.lsp4j.DidSaveTextDocumentParams;
 import org.eclipse.lsp4j.InlayHint;
 import org.eclipse.lsp4j.InlayHintParams;
-import org.eclipse.lsp4j.MarkupContent;
-import org.eclipse.lsp4j.MarkupKind;
 import org.eclipse.lsp4j.Position;
 import org.eclipse.lsp4j.Range;
 import org.eclipse.lsp4j.TextDocumentContentChangeEvent;
-import org.eclipse.lsp4j.TextDocumentItem;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.eclipse.lsp4j.services.TextDocumentService;
 import org.slf4j.Logger;
@@ -100,8 +98,37 @@ public class DaciteTextDocumentService
 
     List<InlayHint> inlayHints = new ArrayList<>();
 
-    String javaCode = TextDocumentItemProvider.get(params.getTextDocument()).getText();
-    CompilationUnit compilationUnit = StaticJavaParser.parse(javaCode);
+    var codeAnalyser = new CodeAnalyser(TextDocumentItemProvider.get(params.getTextDocument()).getText());
+    var className = codeAnalyser.extractClassName();
+    var packageName = codeAnalyser.extractPackageName();
+
+    // TODO: use analysis result
+    var defUseVariableMap = DefUseAnalysisProvider.getUniqueDefUseVariables(packageName, className);
+    defUseVariableMap.forEach((lineNumber, defUseVariables) -> {
+      // TODO: compare positions to defUseVariables and match them in correct order
+      // var positions = codeAnalyser.extractVariablePositionsAtLine(lineNumber, defUseVariable.getVariableName());
+
+      defUseVariables.forEach(defUseVariable -> {
+        var label = defUseVariable.getRole() == DefUseVariableRole.DEFINITION ? "Def" : "Use";
+
+        //label += " -> " + defUseVariables.size();
+
+        var positions = codeAnalyser.extractVariablePositionsAtLine(lineNumber, defUseVariable.getVariableName());
+        if (positions.size() == 1) {
+          var hint = new InlayHint(new Position(positions.get(0).line - 1, positions.get(0).column - 1), Either.forLeft(label));
+          hint.setPaddingLeft(true);
+          hint.setPaddingRight(true);
+          inlayHints.add(hint);
+        } else {
+          var hint = new InlayHint(new Position(lineNumber - 1, 1), Either.forLeft(label));
+          hint.setPaddingLeft(true);
+          hint.setPaddingRight(true);
+          inlayHints.add(hint);
+        }
+      });
+    });
+
+    /*
     compilationUnit.findAll(MethodDeclaration.class).forEach(methodDeclaration -> {
       methodDeclaration.getName().getRange().ifPresent(range -> {
         var hint = new InlayHint(new Position(range.begin.line - 1, range.begin.column - 1), Either.forLeft("Usage"));
@@ -112,6 +139,7 @@ public class DaciteTextDocumentService
         inlayHints.add(hint);
       });
     });
+     */
 
     logger.info("hints {}", inlayHints);
 
@@ -122,8 +150,8 @@ public class DaciteTextDocumentService
   public CompletableFuture<InlayHintDecoration> inlayHintDecoration(InlayHintDecorationParams params) {
     logger.info("inlayHint {}", params);
 
-    int[] color = new int[]{255,0,0,255};
-    InlayHintDecoration inlayHints = new InlayHintDecoration( color, Font.SERIF);
+    int[] color = new int[] { 255, 0, 0, 255 };
+    InlayHintDecoration inlayHints = new InlayHintDecoration(color, Font.SERIF);
 
     return CompletableFuture.completedFuture(inlayHints);
   }
@@ -136,41 +164,45 @@ public class DaciteTextDocumentService
     nodeUri = nodeUri == null ? "" : nodeUri;
 
     var nodes = new ArrayList<TreeViewNode>();
-    ArrayList<DefUseClass> classes = AnalysisProvider.getDefUseClasses();
+    ArrayList<DefUseClass> classes = DefUseAnalysisProvider.getDefUseClasses();
 
     if (params.getViewId().equals("defUseChains")) {
-      if(nodeUri.equals("")){
-        for(DefUseClass cl: classes){
-          TreeViewNode node = new TreeViewNode("defUseChains", cl.getName(), cl.getName()+" "+cl.getNumberChains()+" chains");
+      if (nodeUri.equals("")) {
+        for (DefUseClass cl : classes) {
+          TreeViewNode node = new TreeViewNode("defUseChains", cl.getName(),
+              cl.getName() + " " + cl.getNumberChains() + " chains");
           node.setCollapseState("collapsed");
           node.setIcon("class");
           nodes.add(node);
         }
       } else {
-        for(DefUseClass cl: classes){
-          if(nodeUri.equals(cl.getName())){
-            for(DefUseMethod m: cl.getMethods()){
-              TreeViewNode node = new TreeViewNode("defUseChains", m.getName(), m.getName()+" "+m.getNumberChains()+" chains");
+        for (DefUseClass cl : classes) {
+          if (nodeUri.equals(cl.getName())) {
+            for (DefUseMethod m : cl.getMethods()) {
+              TreeViewNode node = new TreeViewNode("defUseChains", m.getName(),
+                  m.getName() + " " + m.getNumberChains() + " chains");
               node.setCollapseState("collapsed");
               node.setIcon("method");
               nodes.add(node);
             }
             break;
-          } else{
-            for(DefUseMethod m: cl.getMethods()){
-              if(nodeUri.equals(m.getName())){
-                for(DefUseVar var: m.getVariables()){
-                  TreeViewNode node = new TreeViewNode("defUseChains", var.getName(), var.getName()+" "+var.getNumberChains()+" chains");
+          } else {
+            for (DefUseMethod m : cl.getMethods()) {
+              if (nodeUri.equals(m.getName())) {
+                for (DefUseVar var : m.getVariables()) {
+                  TreeViewNode node = new TreeViewNode("defUseChains", var.getName(),
+                      var.getName() + " " + var.getNumberChains() + " chains");
                   node.setCollapseState("collapsed");
                   node.setIcon("variable");
                   nodes.add(node);
                 }
                 break;
               } else {
-                for(DefUseVar var: m.getVariables()){
-                  if(nodeUri.equals(var.getName())){
-                    for(DefUseData data: var.getData()){
-                      TreeViewNode node = new TreeViewNode("defUseChains", data.getName(), data.getName()+ " "+data.getDefLocation()+" - "+data.getUseLocation());
+                for (DefUseVar var : m.getVariables()) {
+                  if (nodeUri.equals(var.getName())) {
+                    for (DefUseData data : var.getData()) {
+                      TreeViewNode node = new TreeViewNode("defUseChains", data.getName(),
+                          data.getName() + " " + data.getDefLocation() + " - " + data.getUseLocation());
                       node.setCollapseState("collapsed");
                       nodes.add(node);
                     }

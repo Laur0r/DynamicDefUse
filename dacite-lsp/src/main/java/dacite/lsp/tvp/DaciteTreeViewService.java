@@ -18,7 +18,6 @@ public interface DaciteTreeViewService {
 
   @JsonNotification
   default void treeViewVisibilityDidChange(TreeViewVisibilityDidChangeParams params) {
-    throw new UnsupportedOperationException();
   }
 
   @JsonNotification
