@@ -18,16 +18,16 @@ import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
 import org.objectweb.asm.tree.VarInsnNode;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.OutputStream;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
 import java.security.ProtectionDomain;
+import java.util.Arrays;
 import java.util.Iterator;
+import java.util.logging.Logger;
 
 public class Transformer implements ClassFileTransformer {
 
+	static Logger logger = Logger.getLogger(Logger.GLOBAL_LOGGER_NAME);
 	private String dir;
 	private String classname;
 
@@ -170,6 +170,7 @@ public class Transformer implements ClassFileTransformer {
 			} catch(Exception e){
 				e.printStackTrace();
 			}
+			/*
 			File outputfile = new File("/home/l_troo01/Development/Forschung/ByteCode/"+node.name.substring(node.name.lastIndexOf("/")+1)+".class");
 			try{
 				OutputStream fos = new FileOutputStream(outputfile);
@@ -179,7 +180,8 @@ public class Transformer implements ClassFileTransformer {
 			} catch (Exception e){
 				e.printStackTrace();
 			}
-			System.out.println("Transformer has class written");
+			*/
+			logger.info("Transformer has class written");
 			return writer.toByteArray();
 		}
 
