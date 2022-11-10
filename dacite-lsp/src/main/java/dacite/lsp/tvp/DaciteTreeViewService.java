@@ -23,7 +23,6 @@ public interface DaciteTreeViewService {
 
   @JsonNotification
   default void treeViewNodeCollapseDidChange(TreeViewNodeCollapseDidChangeParams params) {
-    throw new UnsupportedOperationException();
   }
 
   @JsonRequest

@@ -11,6 +11,13 @@ import dacite.lsp.tvp.TreeViewNode;
 import javax.swing.*;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
+import java.awt.Component;
+
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JTree;
 import javax.swing.tree.DefaultMutableTreeNode;
 import java.awt.*;
 import java.awt.event.InputMethodEvent;
@@ -19,6 +26,8 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
+
+import dacite.lsp.tvp.TreeViewNode;
 
 public class TreeViewCellRenderer extends DefUseCellRenderer{
 

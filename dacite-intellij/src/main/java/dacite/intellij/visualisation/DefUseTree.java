@@ -2,10 +2,11 @@ package dacite.intellij.visualisation;
 
 import com.intellij.ui.treeStructure.Tree;
 
+import java.lang.reflect.Field;
+
 import javax.swing.plaf.basic.BasicTreeUI;
 import javax.swing.tree.AbstractLayoutCache;
 import javax.swing.tree.TreeNode;
-import java.lang.reflect.Field;
 
 public class DefUseTree extends Tree {
     public DefUseTree(TreeNode root) {

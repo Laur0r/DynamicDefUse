@@ -1,8 +1,8 @@
 package dacite.intellij.visualisation;
 
-import dacite.intellij.defUseData.DefUseData;
-
 import javax.swing.tree.DefaultMutableTreeNode;
+
+import dacite.lsp.defUseData.DefUseData;
 
 public class DefUseNode extends DefaultMutableTreeNode {
 

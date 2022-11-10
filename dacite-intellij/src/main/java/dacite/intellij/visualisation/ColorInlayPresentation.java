@@ -1,15 +1,15 @@
 package dacite.intellij.visualisation;
 
 import com.intellij.codeInsight.hints.presentation.BasePresentation;
-import com.intellij.codeInsight.hints.presentation.InlayPresentation;
 import com.intellij.codeInsight.hints.presentation.InlayTextMetricsStorage;
 import com.intellij.openapi.editor.impl.EditorImpl;
 import com.intellij.openapi.editor.markup.TextAttributes;
 import com.intellij.openapi.util.Key;
-import com.intellij.ui.JBColor;
+
 import org.jetbrains.annotations.NotNull;
 
-import java.awt.*;
+import java.awt.Color;
+import java.awt.Graphics2D;
 
 public class ColorInlayPresentation extends BasePresentation {
 

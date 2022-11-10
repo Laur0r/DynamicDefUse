@@ -5,12 +5,21 @@ import com.intellij.ui.JBColor;
 import com.intellij.ui.components.JBCheckBox;
 import com.intellij.ui.components.JBScrollPane;
 import com.intellij.ui.table.JBTable;
-import dacite.intellij.defUseData.DefUseData;
-import dacite.intellij.defUseData.DefUseVar;
 
-import javax.swing.*;
+import java.awt.Component;
+import java.awt.Dimension;
+
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JTable;
+import javax.swing.JTree;
+import javax.swing.ScrollPaneConstants;
 import javax.swing.tree.DefaultTreeCellRenderer;
-import java.awt.*;
+
+import dacite.lsp.defUseData.DefUseData;
+import dacite.lsp.defUseData.DefUseVar;
 
 class DefUseCellRenderer extends DefaultTreeCellRenderer {
     DefUseTableModel model = new DefUseTableModel();

@@ -1,13 +1,11 @@
 package dacite.intellij.visualisation;
 
-
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.wm.ToolWindow;
 import com.intellij.openapi.wm.ToolWindowFactory;
 import com.intellij.ui.content.Content;
 import com.intellij.ui.content.ContentFactory;
-import dacite.intellij.DaciteAnalysisLauncher;
-import dacite.intellij.defUseData.DefUseClass;
+
 import org.jetbrains.annotations.NotNull;
 import org.wso2.lsp4intellij.IntellijLanguageClient;
 import org.wso2.lsp4intellij.client.languageserver.requestmanager.RequestManager;
@@ -16,6 +14,8 @@ import org.wso2.lsp4intellij.utils.FileUtils;
 
 import java.util.ArrayList;
 import java.util.Set;
+
+import dacite.lsp.defUseData.DefUseClass;
 
 public class DaciteToolWindowFactory implements ToolWindowFactory {
 

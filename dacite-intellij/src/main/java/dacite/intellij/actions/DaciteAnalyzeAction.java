@@ -10,13 +10,9 @@ import com.intellij.openapi.wm.ToolWindow;
 import com.intellij.openapi.wm.ToolWindowAnchor;
 import com.intellij.openapi.wm.ToolWindowManager;
 import com.intellij.psi.PsiFile;
-import com.intellij.psi.PsiJavaFile;
 
-import dacite.intellij.visualisation.DaciteToolWindowFactory;
 import org.eclipse.lsp4j.ExecuteCommandParams;
 import org.jetbrains.annotations.NotNull;
-
-import dacite.intellij.DaciteAnalysisLauncher;
 import org.wso2.lsp4intellij.IntellijLanguageClient;
 import org.wso2.lsp4intellij.client.languageserver.requestmanager.RequestManager;
 import org.wso2.lsp4intellij.client.languageserver.wrapper.LanguageServerWrapper;
@@ -24,6 +20,8 @@ import org.wso2.lsp4intellij.utils.FileUtils;
 
 import java.util.List;
 import java.util.Set;
+
+import dacite.intellij.visualisation.DaciteToolWindowFactory;
 
 public class DaciteAnalyzeAction extends AnAction {
 
@@ -37,18 +35,6 @@ public class DaciteAnalyzeAction extends AnAction {
     System.out.println("action performed");
     Project project = e.getProject();
     PsiFile file = e.getData(PlatformCoreDataKeys.PSI_FILE);
-    /*String filename = "";
-    String packagename = "";
-    if (file instanceof PsiJavaFile) {
-      PsiJavaFile jfile = (PsiJavaFile) file;
-      packagename = jfile.getPackageName();
-      filename = packagename + "." + jfile.getName();
-      if (packagename.contains(".")) {
-        packagename = packagename.replace(".", "/");
-      }
-      filename = filename.substring(0, filename.lastIndexOf("."));
-    }
-    DaciteAnalysisLauncher.launch(project, packagename, filename);*/
 
     Set<LanguageServerWrapper> wrapper = IntellijLanguageClient.getAllServerWrappersFor(FileUtils.projectToUri(project));
     RequestManager requestManager = null;

@@ -1,19 +1,33 @@
 package dacite.intellij.visualisation;
 
-import com.google.errorprone.annotations.Var;
 import com.intellij.ui.components.JBCheckBox;
 import com.intellij.ui.components.JBScrollPane;
 import com.intellij.ui.components.JBViewport;
 import com.intellij.ui.table.JBTable;
-import dacite.intellij.defUseData.DefUseData;
-import dacite.intellij.defUseData.DefUseVar;
 
-import javax.swing.*;
-import javax.swing.event.*;
-import javax.swing.tree.*;
-import java.awt.*;
-import java.awt.event.*;
+import java.awt.Component;
+import java.awt.event.ComponentEvent;
+import java.awt.event.ComponentListener;
+import java.awt.event.ItemEvent;
+import java.awt.event.ItemListener;
+import java.awt.event.MouseEvent;
 import java.util.EventObject;
+
+import javax.swing.AbstractCellEditor;
+import javax.swing.JPanel;
+import javax.swing.JTree;
+import javax.swing.SwingUtilities;
+import javax.swing.event.CellEditorListener;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.TableModelEvent;
+import javax.swing.event.TableModelListener;
+import javax.swing.tree.DefaultMutableTreeNode;
+import javax.swing.tree.TreeCellEditor;
+import javax.swing.tree.TreeCellRenderer;
+import javax.swing.tree.TreePath;
+
+import dacite.lsp.defUseData.DefUseData;
+import dacite.lsp.defUseData.DefUseVar;
 
 class DefUseCellEditor extends AbstractCellEditor implements TreeCellEditor {
     TreeCellRenderer renderer = new DefUseCellRenderer();

@@ -1,7 +1,12 @@
 package dacite.intellij.visualisation;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import javax.swing.table.AbstractTableModel;
-import java.util.*;
 
 public class DefUseTableModel extends AbstractTableModel {
     private List<String> columnNames = Arrays.asList("Variable", "Def Location", "Use Location", "Highlight");
