@@ -42,7 +42,7 @@ public class DaciteAnalyzeAction extends AnAction {
       }
       filename = filename.substring(0, filename.lastIndexOf("."));
     }
-    DaciteAnalysisLauncher.launch(project, packagename, filename);
+    //DaciteAnalysisLauncher.launch(project, packagename, filename);
 
     Set<LanguageServerWrapper> wrapper = IntellijLanguageClient.getAllServerWrappersFor(FileUtils.projectToUri(project));
     RequestManager requestManager = null;
