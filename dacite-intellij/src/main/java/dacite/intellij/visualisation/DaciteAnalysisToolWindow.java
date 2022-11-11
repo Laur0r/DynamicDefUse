@@ -67,20 +67,13 @@ import dacite.lsp.defUseData.DefUseClass;
 import dacite.lsp.defUseData.DefUseData;
 
 public class DaciteAnalysisToolWindow {
-
-    private JButton button;
     private JPanel myToolWindowContent;
-    private DefUseTree tree;
     private Project project;
     private DaciteLSPRequestManager requestManager;
-    private ArrayList<DefUseClass> data;
 
-    public DaciteAnalysisToolWindow(ToolWindow toolWindow, ArrayList<DefUseClass> data, Project project, RequestManager requestManager) {
-        this.data = data;
+    public DaciteAnalysisToolWindow(ToolWindow toolWindow, Project project, RequestManager requestManager) {
         this.project = project;
         this.requestManager = (DaciteLSPRequestManager) requestManager;
-        button = new JButton("Highlight all");
-        button.addActionListener(e -> highlightAll());
         myToolWindowContent = new JPanel();
         myToolWindowContent.setLayout(new BoxLayout(myToolWindowContent, BoxLayout.Y_AXIS));
         TreeViewNode root = new TreeViewNode("defUseChains", "", "root");
@@ -88,23 +81,6 @@ public class DaciteAnalysisToolWindow {
                 new DefaultMutableTreeNode(root);
         createTreeViewChildren(top);
         Tree tree2 = new DefUseTree(top);
-        TreeExpansionListener listener = new TreeExpansionListener() {
-            @Override
-            public void treeExpanded(TreeExpansionEvent treeExpansionEvent) {
-                TreePath path = treeExpansionEvent.getPath();
-                DefaultMutableTreeNode node = (DefaultMutableTreeNode) path.getLastPathComponent();
-                if(node.isLeaf()){
-                    int[] indexes = createTreeViewChildren(node);
-                    ((DefaultTreeModel)tree2.getModel()).nodesWereInserted( node, indexes);
-                }
-            }
-
-            @Override
-            public void treeCollapsed(TreeExpansionEvent treeExpansionEvent) {
-
-            }
-        };
-        tree2.addTreeExpansionListener(listener);
         ((DefaultTreeModel)tree2.getModel()).setAsksAllowsChildren(true);
         tree2.setCellRenderer(new TreeViewCellRenderer());
         TreeViewCellEditor editor = new TreeViewCellEditor();
@@ -128,17 +104,10 @@ public class DaciteAnalysisToolWindow {
         tree2.setEditable(true);
         JScrollPane treeView2 = new JBScrollPane(tree2);
         myToolWindowContent.add(treeView2, BorderLayout.CENTER);
-        myToolWindowContent.add(button);
     }
 
     public JPanel getContent() {
         return myToolWindowContent;
-    }
-
-    public void highlightAll(){
-        DefaultMutableTreeNode root = (DefaultMutableTreeNode) tree.getModel().getRoot();
-        iterateTree(root);
-
     }
 
     public void iterateTree(DefaultMutableTreeNode node){
@@ -173,27 +142,22 @@ public class DaciteAnalysisToolWindow {
         }
     }
 
-    private int[] createTreeViewChildren(DefaultMutableTreeNode top){
-        int[] output = null;
+    private void createTreeViewChildren(DefaultMutableTreeNode top){
         TreeViewNode parent = (TreeViewNode) top.getUserObject();
         TreeViewChildrenParams params = new TreeViewChildrenParams(parent.getViewId(), parent.getNodeUri());
         CompletableFuture<TreeViewChildrenResult> request = requestManager.treeViewChildren(params);
         if(request != null){
             try{
                 TreeViewChildrenResult result = request.get(getTimeout(REFERENCES), TimeUnit.MILLISECONDS);
-                output = new int[result.getNodes().length];
-                int i = 0;
                 for(TreeViewNode child : result.getNodes()){
                     DefaultMutableTreeNode node = new DefaultMutableTreeNode(child);
                     top.add(node);
-                    output[i] = i;
-                    i++;
+                    createTreeViewChildren(node);
                 }
             } catch (TimeoutException | InterruptedException | JsonRpcException | ExecutionException e) {
                 e.printStackTrace();
             }
         }
-        return output;
     }
 
     public void addInlays(){
@@ -240,6 +204,7 @@ public class DaciteAnalysisToolWindow {
                             String finalHintWord = hintWord;
                             Font finalFont = font;
                             Color finalColor = color;
+                            eachEditor.getInlayModel().getInlineElementsInRange(offset,offset+4).forEach(inlay -> {inlay.dispose();});
                             eachEditor.getInlayModel().addInlineElement(offset, new EditorCustomElementRenderer() {
                                 @Override
                                 public int calcWidthInPixels(@NotNull Inlay inlay) {

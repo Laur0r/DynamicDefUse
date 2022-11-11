@@ -41,7 +41,7 @@ public class DaciteToolWindowFactory implements ToolWindowFactory {
         if(wrapper.size() == 1){
             requestManager = wrapper.iterator().next().getRequestManager();
         }
-        DaciteAnalysisToolWindow daciteAnalysisToolWindow = new DaciteAnalysisToolWindow(toolWindow, data, project, requestManager);
+        DaciteAnalysisToolWindow daciteAnalysisToolWindow = new DaciteAnalysisToolWindow(toolWindow, project, requestManager);
         ContentFactory contentFactory = ContentFactory.getInstance();
         Content content = contentFactory.createContent(daciteAnalysisToolWindow.getContent(), "", false);
         toolWindow.getContentManager().addContent(content);

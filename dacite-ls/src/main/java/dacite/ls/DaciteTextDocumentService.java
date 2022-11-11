@@ -179,7 +179,7 @@ public class DaciteTextDocumentService
         for (DefUseClass cl : classes) {
           if (nodeUri.equals(cl.getName())) {
             for (DefUseMethod m : cl.getMethods()) {
-              TreeViewNode node = new TreeViewNode("defUseChains", m.getName(),
+              TreeViewNode node = new TreeViewNode("defUseChains", cl.getName()+"."+m.getName(),
                   m.getName() + " " + m.getNumberChains() + " chains");
               node.setCollapseState("collapsed");
               node.setIcon("method");
@@ -188,9 +188,9 @@ public class DaciteTextDocumentService
             break;
           } else {
             for (DefUseMethod m : cl.getMethods()) {
-              if (nodeUri.equals(m.getName())) {
+              if (nodeUri.equals(cl.getName()+"."+m.getName())) {
                 for (DefUseVar var : m.getVariables()) {
-                  TreeViewNode node = new TreeViewNode("defUseChains", var.getName(),
+                  TreeViewNode node = new TreeViewNode("defUseChains", cl.getName()+"."+m.getName()+" "+var.getName(),
                       var.getName() + " " + var.getNumberChains() + " chains");
                   node.setCollapseState("collapsed");
                   node.setIcon("variable");
@@ -199,9 +199,10 @@ public class DaciteTextDocumentService
                 break;
               } else {
                 for (DefUseVar var : m.getVariables()) {
-                  if (nodeUri.equals(var.getName())) {
+                  if (nodeUri.equals(cl.getName()+"."+m.getName()+" "+var.getName())) {
                     for (DefUseData data : var.getData()) {
-                      TreeViewNode node = new TreeViewNode("defUseChains", data.getName(),
+                      TreeViewNode node = new TreeViewNode("defUseChains", cl.getName()+"."+m.getName()+" "
+                              +var.getName()+" "+data.getDefLocation() + " - " + data.getUseLocation(),
                           data.getName() + " " + data.getDefLocation() + " - " + data.getUseLocation());
                       node.setCollapseState("collapsed");
                       nodes.add(node);
