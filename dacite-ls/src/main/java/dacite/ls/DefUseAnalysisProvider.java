@@ -32,6 +32,7 @@ public class DefUseAnalysisProvider {
   private static final Logger logger = LoggerFactory.getLogger(DefUseAnalysisProvider.class);
 
   private static List<DefUseChain> defUseChains = new ArrayList<>();
+  private static List<DefUseClass> defUseClasses = new ArrayList<>();
 
   public static void processXmlFile(String path) throws JAXBException, IOException {
     JAXBContext jaxbContext = JAXBContext.newInstance(DefUseChains.class);
@@ -67,8 +68,11 @@ public class DefUseAnalysisProvider {
     return defUseChains;
   }
 
-  public static ArrayList<DefUseClass> getDefUseClasses() {
-    var defUseClasses = transformDefUse(defUseChains);
+  public static List<DefUseClass> getDefUseClasses() {
+    if(!defUseClasses.isEmpty()){
+      return defUseClasses;
+    }
+    defUseClasses = transformDefUse(defUseChains);
     for (DefUseClass cl : defUseClasses) {
       logger.info(cl.toString());
     }

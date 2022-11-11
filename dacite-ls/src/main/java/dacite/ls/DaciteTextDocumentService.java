@@ -173,7 +173,7 @@ public class DaciteTextDocumentService
     nodeUri = nodeUri == null ? "" : nodeUri;
 
     var nodes = new ArrayList<TreeViewNode>();
-    ArrayList<DefUseClass> classes = DefUseAnalysisProvider.getDefUseClasses();
+    List<DefUseClass> classes = DefUseAnalysisProvider.getDefUseClasses();
 
     if (params.getViewId().equals("defUseChains")) {
       if (nodeUri.equals("")) {
@@ -238,16 +238,39 @@ public class DaciteTextDocumentService
   public CompletableFuture<TreeViewParentResult> treeViewParent(TreeViewParentParams params) {
     logger.info("experimental/treeViewParent: {}", params);
 
-    switch (params.getNodeUri()) {
-      case "dacite/tryme/EuclidianGcd/egcd/a/1":
-        return CompletableFuture.completedFuture(new TreeViewParentResult("dacite/tryme/EuclidianGcd/egcd/a"));
-      case "dacite/tryme/EuclidianGcd/egcd/a":
-        return CompletableFuture.completedFuture(new TreeViewParentResult("dacite/tryme/EuclidianGcd/egcd"));
-      case "dacite/tryme/EuclidianGcd/egcd":
-        return CompletableFuture.completedFuture(new TreeViewParentResult("dacite/tryme/EuclidianGcd"));
+    var nodeUri = params.getNodeUri();
+    nodeUri = nodeUri == null ? "" : nodeUri;
+
+    var nodes = new ArrayList<TreeViewNode>();
+    List<DefUseClass> classes = DefUseAnalysisProvider.getDefUseClasses();
+    if(!params.getViewId().equals("defUseChains")){
+      return CompletableFuture.completedFuture(null);
     }
-
-    return CompletableFuture.completedFuture(new TreeViewParentResult(null));
+    if(params.getNodeUri().equals("")){
+      return CompletableFuture.completedFuture(new TreeViewParentResult(null));
+    } else {
+      for (DefUseClass cl : classes) {
+        if (nodeUri.equals(cl.getName())) {
+          return CompletableFuture.completedFuture(new TreeViewParentResult(null));
+        }
+        for(DefUseMethod m: cl.getMethods()){
+          if (nodeUri.equals(cl.getName() + "." + m.getName())) {
+            return CompletableFuture.completedFuture(new TreeViewParentResult(cl.getName()));
+          }
+          for (DefUseVar var : m.getVariables()) {
+            if (nodeUri.equals(cl.getName() + "." + m.getName() + " " + var.getName())) {
+              return CompletableFuture.completedFuture(new TreeViewParentResult(cl.getName() + "." + m.getName()));
+            }
+            for (DefUseData data : var.getData()) {
+              if (nodeUri.equals(cl.getName() + "." + m.getName() + " " + var.getName() + " " + data.getDefLocation() + " - "
+                      + data.getUseLocation())) {
+                return CompletableFuture.completedFuture(new TreeViewParentResult(cl.getName() + "." + m.getName() + " " + var.getName()));
+              }
+            }
+          }
+        }
+      }
+    }
+    return CompletableFuture.completedFuture(null);
   }
-
 }
