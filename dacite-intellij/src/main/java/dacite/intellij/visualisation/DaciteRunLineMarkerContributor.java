@@ -39,12 +39,11 @@ public class DaciteRunLineMarkerContributor extends RunLineMarkerContributor {
         PsiDocumentManager m = PsiDocumentManager.getInstance(element.getProject());
         Document doc = m.getDocument(element.getContainingFile());
         LogicalPosition elemPos;
-        if(doc != null){
-            int line = doc.getLineNumber(offset);
-            elemPos = new LogicalPosition(line + 1, offset - doc.getLineStartOffset(line));
-        } else {
-            elemPos = new LogicalPosition(0,0);
+        if(doc == null || element.getContainingFile().getVirtualFile() == null){
+            return null;
         }
+        int line = doc.getLineNumber(offset);
+        elemPos = new LogicalPosition(line + 1, offset - doc.getLineStartOffset(line));
         Set<LanguageServerWrapper> wrapper = IntellijLanguageClient.getAllServerWrappersFor(FileUtils.projectToUri(element.getProject()));
         RequestManager requestManager = null;
         if (wrapper.size() == 1) {

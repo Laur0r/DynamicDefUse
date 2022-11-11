@@ -40,6 +40,7 @@ public class DefUseAnalysisProvider {
     String test = Files.readString(Paths.get(path));
     var chainCollection = (DefUseChains) jaxbUnmarshaller.unmarshal(new StringReader(test));
     defUseChains = chainCollection.getChains();
+    defUseClasses = transformDefUse(defUseChains);
 
     // Augment parsed information and pre-process
     defUseChains.forEach(chain -> {
@@ -69,15 +70,6 @@ public class DefUseAnalysisProvider {
   }
 
   public static List<DefUseClass> getDefUseClasses() {
-    if(!defUseClasses.isEmpty()){
-      return defUseClasses;
-    }
-    defUseClasses = transformDefUse(defUseChains);
-    for (DefUseClass cl : defUseClasses) {
-      logger.info(cl.toString());
-    }
-    logger.info(defUseClasses.toString());
-
     return defUseClasses;
   }
 
