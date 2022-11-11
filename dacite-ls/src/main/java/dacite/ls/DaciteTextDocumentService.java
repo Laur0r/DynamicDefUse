@@ -10,6 +10,7 @@ import dacite.lsp.defUseData.DefUseClass;
 import dacite.lsp.defUseData.DefUseData;
 import dacite.lsp.defUseData.DefUseMethod;
 import dacite.lsp.defUseData.DefUseVar;
+import dacite.lsp.defUseData.transformation.DefUseVariable;
 import dacite.lsp.defUseData.transformation.DefUseVariableRole;
 import dacite.lsp.tvp.*;
 
@@ -25,6 +26,7 @@ import org.eclipse.lsp4j.InlayHintParams;
 import org.eclipse.lsp4j.Position;
 import org.eclipse.lsp4j.Range;
 import org.eclipse.lsp4j.TextDocumentContentChangeEvent;
+import org.eclipse.lsp4j.TextDocumentIdentifier;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.eclipse.lsp4j.services.TextDocumentService;
 import org.slf4j.Logger;
@@ -32,6 +34,7 @@ import org.slf4j.LoggerFactory;
 
 import java.awt.*;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
@@ -42,6 +45,8 @@ public class DaciteTextDocumentService
     implements TextDocumentService, DaciteExtendedTextDocumentService, DaciteTreeViewService {
 
   private static final Logger logger = LoggerFactory.getLogger(DaciteTextDocumentService.class);
+
+  private HashMap<TextDocumentIdentifier, HashMap<Position, DefUseVariable>> highlightedDefUseVariables = new HashMap<>();
 
   @Override
   public void didOpen(DidOpenTextDocumentParams params) {
@@ -97,12 +102,12 @@ public class DaciteTextDocumentService
     logger.info("inlayHint {}", params);
 
     List<InlayHint> inlayHints = new ArrayList<>();
+    highlightedDefUseVariables = new HashMap<>();
 
     var codeAnalyser = new CodeAnalyser(TextDocumentItemProvider.get(params.getTextDocument()).getText());
     var className = codeAnalyser.extractClassName();
     var packageName = codeAnalyser.extractPackageName();
 
-    // TODO: use analysis result
     var defUseVariableMap = DefUseAnalysisProvider.getUniqueDefUseVariables(packageName, className);
     // First use grouping by line number...
     defUseVariableMap.forEach((lineNumber, defUseVariables) -> {
@@ -112,19 +117,26 @@ public class DaciteTextDocumentService
             var positions = codeAnalyser.extractVariablePositionsAtLine(lineNumber, variableName);
             int i = 0;
 
-            logger.info("{} -> {} vs. {}", variableName, groupedDefUseVariables.size(), positions.size());
-
             while (i < groupedDefUseVariables.size() && i < positions.size()) {
               var defUseVariable = groupedDefUseVariables.get(i);
-              var position = positions.get(i);
+              var parserPosition = positions.get(i);
 
               var label = defUseVariable.getRole() == DefUseVariableRole.DEFINITION ? "Def" : "Use";
 
-              var hint = new InlayHint(new Position(position.line - 1, position.column - 1),
-                  Either.forLeft(label));
+              var lspPos = new Position(parserPosition.line - 1, parserPosition.column - 1);
+              var hint = new InlayHint(lspPos, Either.forLeft(label));
               hint.setPaddingLeft(true);
               hint.setPaddingRight(true);
               inlayHints.add(hint);
+
+              if (highlightedDefUseVariables.containsKey(params.getTextDocument())) {
+                highlightedDefUseVariables.get(params.getTextDocument()).put(lspPos, defUseVariable);
+              } else {
+                HashMap<Position, DefUseVariable> newMap = new HashMap<>();
+                newMap.put(lspPos, defUseVariable);
+                highlightedDefUseVariables.put(params.getTextDocument(), newMap);
+              }
+
               i++;
             }
           });
@@ -137,12 +149,20 @@ public class DaciteTextDocumentService
 
   @Override
   public CompletableFuture<InlayHintDecoration> inlayHintDecoration(InlayHintDecorationParams params) {
-    logger.info("inlayHint {}", params);
+    logger.info("inlayHintDecoration {}", params);
 
-    int[] color = new int[] { 255, 0, 0, 255 };
-    InlayHintDecoration inlayHints = new InlayHintDecoration(color, Font.SERIF);
+    var font = Font.SERIF;
+    var color = new int[] { 255, 0, 0, 255 };
 
-    return CompletableFuture.completedFuture(inlayHints);
+    if (highlightedDefUseVariables.containsKey(params.getIdentifier())) {
+      var defUseVars = highlightedDefUseVariables.get(params.getIdentifier());
+      if (defUseVars.containsKey(params.getPosition())) {
+        var awtColor = defUseVars.get(params.getPosition()).getColor();
+        color = new int[] { awtColor.getRed(), awtColor.getGreen(), awtColor.getBlue(), awtColor.getAlpha() };
+      }
+    }
+
+    return CompletableFuture.completedFuture(new InlayHintDecoration(color, Font.SERIF));
   }
 
   @Override
@@ -168,7 +188,7 @@ public class DaciteTextDocumentService
         for (DefUseClass cl : classes) {
           if (nodeUri.equals(cl.getName())) {
             for (DefUseMethod m : cl.getMethods()) {
-              TreeViewNode node = new TreeViewNode("defUseChains", cl.getName()+"."+m.getName(),
+              TreeViewNode node = new TreeViewNode("defUseChains", cl.getName() + "." + m.getName(),
                   m.getName() + " " + m.getNumberChains() + " chains");
               node.setCollapseState("collapsed");
               node.setIcon("method");
@@ -177,9 +197,10 @@ public class DaciteTextDocumentService
             break;
           } else {
             for (DefUseMethod m : cl.getMethods()) {
-              if (nodeUri.equals(cl.getName()+"."+m.getName())) {
+              if (nodeUri.equals(cl.getName() + "." + m.getName())) {
                 for (DefUseVar var : m.getVariables()) {
-                  TreeViewNode node = new TreeViewNode("defUseChains", cl.getName()+"."+m.getName()+" "+var.getName(),
+                  TreeViewNode node = new TreeViewNode("defUseChains",
+                      cl.getName() + "." + m.getName() + " " + var.getName(),
                       var.getName() + " " + var.getNumberChains() + " chains");
                   node.setCollapseState("collapsed");
                   node.setIcon("variable");
@@ -188,10 +209,11 @@ public class DaciteTextDocumentService
                 break;
               } else {
                 for (DefUseVar var : m.getVariables()) {
-                  if (nodeUri.equals(cl.getName()+"."+m.getName()+" "+var.getName())) {
+                  if (nodeUri.equals(cl.getName() + "." + m.getName() + " " + var.getName())) {
                     for (DefUseData data : var.getData()) {
-                      TreeViewNode node = new TreeViewNode("defUseChains", cl.getName()+"."+m.getName()+" "
-                              +var.getName()+" "+data.getDefLocation() + " - " + data.getUseLocation(),
+                      TreeViewNode node = new TreeViewNode("defUseChains",
+                          cl.getName() + "." + m.getName() + " " + var.getName() + " " + data.getDefLocation() + " - "
+                              + data.getUseLocation(),
                           data.getName() + " " + data.getDefLocation() + " - " + data.getUseLocation());
                       node.setCollapseState("collapsed");
                       nodes.add(node);
@@ -203,39 +225,6 @@ public class DaciteTextDocumentService
             }
           }
         }
-      }
-      switch (nodeUri) {
-        case "dacite/tryme/EuclidianGcd":
-          var node1 = new TreeViewNode("defUseChains", "dacite/tryme/EuclidianGcd/egcd", "egcd 6 chains");
-          node1.setCollapseState("expanded");
-          node1.setIcon("method");
-          nodes.add(node1);
-
-          var node2 = new TreeViewNode("defUseChains", "dacite/tryme/EuclidianGcd/testGCD", "testGCD 5 chains");
-          node2.setCollapseState("collapsed");
-          node2.setIcon("method");
-          nodes.add(node2);
-          break;
-        case "dacite/tryme/EuclidianGcd/egcd":
-          var node3 = new TreeViewNode("defUseChains", "dacite/tryme/EuclidianGcd/egcd/a", "a 8 chains");
-          node3.setCollapseState("expanded");
-          node3.setIcon("variable");
-          nodes.add(node3);
-
-          var node4 = new TreeViewNode("defUseChains", "dacite/tryme/EuclidianGcd/egcd/b", "b 4 chains");
-          node4.setCollapseState("collapsed");
-          node4.setIcon("variable");
-          nodes.add(node4);
-          break;
-        case "dacite/tryme/EuclidianGcd/egcd/a":
-          var node5 = new TreeViewNode("defUseChains", "dacite/tryme/EuclidianGcd/egcd/a/1", "a L8 - L9");
-          nodes.add(node5);
-
-          var node6 = new TreeViewNode("defUseChains", "dacite/tryme/EuclidianGcd/egcd/a/2", "a/k L15 - testGcd L14");
-          nodes.add(node6);
-          break;
-        case "":
-
       }
     }
 

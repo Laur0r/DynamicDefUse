@@ -2,6 +2,8 @@ package dacite.lsp;
 
 import org.eclipse.lsp4j.Position;
 import org.eclipse.lsp4j.TextDocumentIdentifier;
+import org.eclipse.xtext.xbase.lib.Pure;
+import org.eclipse.xtext.xbase.lib.util.ToStringBuilder;
 
 public class InlayHintDecorationParams {
 
@@ -19,4 +21,15 @@ public class InlayHintDecorationParams {
     public TextDocumentIdentifier getIdentifier() {
         return identifier;
     }
+
+    @Override
+    @Pure
+    @SuppressWarnings("UnstableApiUsage")
+    public String toString() {
+        ToStringBuilder b = new ToStringBuilder(this);
+        b.add("identifier", this.identifier);
+        b.add("position", this.position);
+        return b.toString();
+    }
+
 }
