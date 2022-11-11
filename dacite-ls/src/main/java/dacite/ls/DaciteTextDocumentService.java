@@ -104,42 +104,31 @@ public class DaciteTextDocumentService
 
     // TODO: use analysis result
     var defUseVariableMap = DefUseAnalysisProvider.getUniqueDefUseVariables(packageName, className);
+    // First use grouping by line number...
     defUseVariableMap.forEach((lineNumber, defUseVariables) -> {
-      // TODO: compare positions to defUseVariables and match them in correct order
-      // var positions = codeAnalyser.extractVariablePositionsAtLine(lineNumber, defUseVariable.getVariableName());
+      // ...then group by variable name and try to match with positions obtained from parsing
+      DefUseAnalysisProvider.groupByVariableNamesAndSort(defUseVariables)
+          .forEach((variableName, groupedDefUseVariables) -> {
+            var positions = codeAnalyser.extractVariablePositionsAtLine(lineNumber, variableName);
+            int i = 0;
 
-      defUseVariables.forEach(defUseVariable -> {
-        var label = defUseVariable.getRole() == DefUseVariableRole.DEFINITION ? "Def" : "Use";
+            logger.info("{} -> {} vs. {}", variableName, groupedDefUseVariables.size(), positions.size());
 
-        //label += " -> " + defUseVariables.size();
+            while (i < groupedDefUseVariables.size() && i < positions.size()) {
+              var defUseVariable = groupedDefUseVariables.get(i);
+              var position = positions.get(i);
 
-        var positions = codeAnalyser.extractVariablePositionsAtLine(lineNumber, defUseVariable.getVariableName());
-        if (positions.size() == 1) {
-          var hint = new InlayHint(new Position(positions.get(0).line - 1, positions.get(0).column - 1), Either.forLeft(label));
-          hint.setPaddingLeft(true);
-          hint.setPaddingRight(true);
-          inlayHints.add(hint);
-        } else {
-          var hint = new InlayHint(new Position(lineNumber - 1, 1), Either.forLeft(label));
-          hint.setPaddingLeft(true);
-          hint.setPaddingRight(true);
-          inlayHints.add(hint);
-        }
-      });
+              var label = defUseVariable.getRole() == DefUseVariableRole.DEFINITION ? "Def" : "Use";
+
+              var hint = new InlayHint(new Position(position.line - 1, position.column - 1),
+                  Either.forLeft(label));
+              hint.setPaddingLeft(true);
+              hint.setPaddingRight(true);
+              inlayHints.add(hint);
+              i++;
+            }
+          });
     });
-
-    /*
-    compilationUnit.findAll(MethodDeclaration.class).forEach(methodDeclaration -> {
-      methodDeclaration.getName().getRange().ifPresent(range -> {
-        var hint = new InlayHint(new Position(range.begin.line - 1, range.begin.column - 1), Either.forLeft("Usage"));
-        hint.setPaddingLeft(true);
-        hint.setPaddingRight(true);
-        hint.setTooltip(
-            new MarkupContent(MarkupKind.MARKDOWN, "# This is a test heading\n" + "This *is* **formatted** text."));
-        inlayHints.add(hint);
-      });
-    });
-     */
 
     logger.info("hints {}", inlayHints);
 

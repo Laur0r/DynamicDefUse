@@ -9,6 +9,7 @@ import java.io.StringReader;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
@@ -96,6 +97,26 @@ public class DefUseAnalysisProvider {
       defUseVariables.add(defUseVariable);
       defUseVariableMap.put(defUseVariable.getLinenumber(), defUseVariables);
     }
+  }
+
+  public static HashMap<String, List<DefUseVariable>> groupByVariableNamesAndSort(List<DefUseVariable> defUseVariables) {
+    HashMap<String, List<DefUseVariable>> defUseVariableMap = new HashMap<>();
+
+    defUseVariables.forEach(defUseVariable -> {
+      if (defUseVariableMap.containsKey(defUseVariable.getVariableName())) {
+        var groupedDefUseVariables = defUseVariableMap.get(defUseVariable.getVariableName());
+        groupedDefUseVariables.add(defUseVariable);
+
+        Comparator<DefUseVariable> byVariableIndex = Comparator.comparingInt(DefUseVariable::getVariableIndex);
+        groupedDefUseVariables.sort(byVariableIndex);
+      } else {
+        List<DefUseVariable> groupedDefUseVariables = new ArrayList<>();
+        groupedDefUseVariables.add(defUseVariable);
+        defUseVariableMap.put(defUseVariable.getVariableName(), groupedDefUseVariables);
+      }
+    });
+
+    return defUseVariableMap;
   }
 
   public static List<DefUseVariable> getDefUseVariables(String packageName, String className) {
