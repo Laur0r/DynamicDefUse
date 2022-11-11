@@ -108,7 +108,7 @@ public class DaciteTextDocumentService
     var className = codeAnalyser.extractClassName();
     var packageName = codeAnalyser.extractPackageName();
 
-    var defUseVariableMap = DefUseAnalysisProvider.getUniqueDefUseVariables(packageName, className);
+    var defUseVariableMap = DefUseAnalysisProvider.getUniqueDefUseVariablesByLine(packageName, className);
     // First use grouping by line number...
     defUseVariableMap.forEach((lineNumber, defUseVariables) -> {
       // ...then group by variable name and try to match with positions obtained from parsing

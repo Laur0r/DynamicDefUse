@@ -33,20 +33,6 @@ public class DefUseAnalysisProvider {
 
   private static List<DefUseChain> defUseChains = new ArrayList<>();
 
-  public static List<DefUseChain> getDefUseChains() {
-    return defUseChains;
-  }
-
-  public static ArrayList<DefUseClass> getDefUseClasses() {
-    var defUseClasses = transformDefUse(defUseChains);
-    for (DefUseClass cl : defUseClasses) {
-      logger.info(cl.toString());
-    }
-    logger.info(defUseClasses.toString());
-
-    return defUseClasses;
-  }
-
   public static void processXmlFile(String path) throws JAXBException, IOException {
     JAXBContext jaxbContext = JAXBContext.newInstance(DefUseChains.class);
     Unmarshaller jaxbUnmarshaller = jaxbContext.createUnmarshaller();
@@ -66,19 +52,72 @@ public class DefUseAnalysisProvider {
       // Set role
       def.setRole(DefUseVariableRole.DEFINITION);
       use.setRole(DefUseVariableRole.USAGE);
+    });
 
+    getDefUseMapping().forEach((def, uses) -> {
       // Set random color
       Random random = new Random();
       var color = new Color(random.nextInt(256), random.nextInt(256), random.nextInt(256));
       def.setColor(color);
-      use.setColor(color);
+      uses.forEach(it -> it.setColor(color));
     });
   }
 
-  public static HashMap<Integer, List<DefUseVariable>> getUniqueDefUseVariables(String packageName, String className) {
+  public static List<DefUseChain> getDefUseChains() {
+    return defUseChains;
+  }
+
+  public static ArrayList<DefUseClass> getDefUseClasses() {
+    var defUseClasses = transformDefUse(defUseChains);
+    for (DefUseClass cl : defUseClasses) {
+      logger.info(cl.toString());
+    }
+    logger.info(defUseClasses.toString());
+
+    return defUseClasses;
+  }
+
+  public static List<DefUseVariable> getDefUseVariables() {
+    final List<DefUseVariable> defUseVariables = new ArrayList<>();
+    for (DefUseChain defUseChain : defUseChains) {
+      defUseVariables.add(defUseChain.getDef());
+      defUseVariables.add(defUseChain.getUse());
+    }
+    return defUseVariables;
+  }
+
+  public static List<DefUseVariable> getUniqueDefUseVariables() {
+    List<DefUseVariable> uniqueDefUseVariables = new ArrayList<>();
+    var defUseMapping = getDefUseMapping();
+    uniqueDefUseVariables.addAll(defUseMapping.keySet());
+    uniqueDefUseVariables.addAll(defUseMapping.values().stream().flatMap(List::stream).collect(Collectors.toList()));
+    return uniqueDefUseVariables;
+  }
+
+  public static List<DefUseVariable> getUniqueDefUseVariables(String packageName, String className) {
+    return getUniqueDefUseVariables().stream()
+        .filter(it -> it.getPackageName().equals(packageName) && it.getClassName().equals(className))
+        .collect(Collectors.toList());
+  }
+
+  public static HashMap<DefUseVariable, List<DefUseVariable>> getDefUseMapping() {
+    HashMap<DefUseVariable, List<DefUseVariable>> defUseMapping = new HashMap<>();
+
+    var defUseVars = getDefUseVariables();
+    var defs = defUseVars.stream().filter(it -> it.getRole() == DefUseVariableRole.DEFINITION)
+        .collect(Collectors.toSet());
+    var uses = defUseVars.stream().filter(it -> it.getRole() == DefUseVariableRole.USAGE).collect(Collectors.toSet());
+
+    defs.forEach(def -> defUseMapping.put(def,
+        uses.stream().filter(use -> use.getChain().getDef().equals(def)).collect(Collectors.toList())));
+
+    return defUseMapping;
+  }
+
+  public static HashMap<Integer, List<DefUseVariable>> getUniqueDefUseVariablesByLine(String packageName, String className) {
     HashMap<Integer, List<DefUseVariable>> uniqueDefUseVariablesByLine = new HashMap<>();
 
-    getDefUseVariables(packageName, className).forEach(
+    getUniqueDefUseVariables(packageName, className).forEach(
         defUseVariable -> addDefUseVariable(uniqueDefUseVariablesByLine, defUseVariable));
 
     return uniqueDefUseVariablesByLine;
@@ -99,7 +138,8 @@ public class DefUseAnalysisProvider {
     }
   }
 
-  public static HashMap<String, List<DefUseVariable>> groupByVariableNamesAndSort(List<DefUseVariable> defUseVariables) {
+  public static HashMap<String, List<DefUseVariable>> groupByVariableNamesAndSort(
+      List<DefUseVariable> defUseVariables) {
     HashMap<String, List<DefUseVariable>> defUseVariableMap = new HashMap<>();
 
     defUseVariables.forEach(defUseVariable -> {
@@ -117,21 +157,6 @@ public class DefUseAnalysisProvider {
     });
 
     return defUseVariableMap;
-  }
-
-  public static List<DefUseVariable> getDefUseVariables(String packageName, String className) {
-    return getDefUseVariables().stream()
-        .filter(it -> it.getPackageName().equals(packageName) && it.getClassName().equals(className))
-        .collect(Collectors.toList());
-  }
-
-  public static List<DefUseVariable> getDefUseVariables() {
-    final List<DefUseVariable> defUseVariables = new ArrayList<>();
-    for (DefUseChain defUseChain : defUseChains) {
-      defUseVariables.add(defUseChain.getDef());
-      defUseVariables.add(defUseChain.getUse());
-    }
-    return defUseVariables;
   }
 
   public static ArrayList<DefUseClass> transformDefUse(List<DefUseChain> chains) {

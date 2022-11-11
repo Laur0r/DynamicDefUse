@@ -118,6 +118,6 @@ public class DefUseVariable {
 
   @Override
   public int hashCode() {
-    return Objects.hash(linenumber, method, instruction, variableIndex, variableName, role, color, chain);
+    return Objects.hash(linenumber, method, instruction, variableIndex, variableName, role);
   }
 }
