@@ -2,7 +2,7 @@
 
 import * as path from 'path';
 import * as os from 'os';
-import { ExtensionContext, commands, ProgressLocation, window, workspace, StatusBarAlignment, TextEditor, StatusBarItem } from 'vscode';
+import { ExtensionContext, window, workspace, StatusBarAlignment, TextEditor, StatusBarItem } from 'vscode';
 
 import {
   LanguageClient,
@@ -70,13 +70,6 @@ export async function activate(context: ExtensionContext) {
 		console.log(error);
   }
 
-  commands.registerCommand('dacite.analyze.proxy', async () => {
-    console.log("Running command...");
-    console.log((await commands.getCommands()).filter(it => it.includes('analyze')));
-    const returnVal = await commands.executeCommand("dacite.analyze", window.activeTextEditor?.document.uri.toString());
-    console.log(`Received return value "${returnVal}" from language server.`);
-  });
-
   treeViews = startTreeView(languageClient, languageClient.outputChannel, context, ['defUseChains']);
   context.subscriptions.concat(treeViews.disposables);
 
@@ -97,25 +90,4 @@ function toggleItem(editor: TextEditor | undefined, statusBarItem: StatusBarItem
 	} else{
 		statusBarItem.hide();
 	}
-}
-
-function generate(command: string, ...additionalParameters: any[]): (...args: any[]) => any {
-    return async (...args: any[]) => {
-        console.log("Starting command");
-        if ((await commands.getCommands()).filter(it => it === command).length === 0) {
-            window.showWarningMessage(`The language server is not ready yet. Please wait a few seconds and try again.`);
-            return;
-        }
-
-        await window.withProgress({
-            location: ProgressLocation.Notification,
-            title: 'Executing...',
-            cancellable: false
-        },
-        async () => {
-            console.log(`Sending command "${command}" to language server.`);
-            const returnVal: string = await commands.executeCommand(command, window.activeTextEditor?.document.uri.toString(), additionalParameters);
-            console.log(`Received return value "${returnVal}" from language server.`);
-        });
-    };
 }
