@@ -13,7 +13,7 @@
   <extensions defaultExtensionNs="com.intellij">
     <!-- Custom extensions -->
     <runLineMarkerContributor language="JAVA"
-                              implementationClass="dacite.intellij.DaciteRunLineMarkerContributor"/>
+                              implementationClass="dacite.intellij.visualisation.DaciteRunLineMarkerContributor"/>
     <!--<codeInsight.inlayProvider language="JAVA" implementationClass="dacite.intellij.visualisation.DaciteInlayHint"/>-->
 
     <!-- lsp4intellij extensions (currently in use) -->

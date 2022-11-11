@@ -80,7 +80,7 @@ public class DaciteAnalysisToolWindow {
         DefaultMutableTreeNode top =
                 new DefaultMutableTreeNode(root);
         createTreeViewChildren(top);
-        Tree tree2 = new DefUseTree(top);
+        Tree tree2 = new Tree(top);
         ((DefaultTreeModel)tree2.getModel()).setAsksAllowsChildren(true);
         tree2.setCellRenderer(new TreeViewCellRenderer());
         TreeViewCellEditor editor = new TreeViewCellEditor();
@@ -108,23 +108,6 @@ public class DaciteAnalysisToolWindow {
 
     public JPanel getContent() {
         return myToolWindowContent;
-    }
-
-    public void iterateTree(DefaultMutableTreeNode node){
-        for (int i = 0; i < node.getChildCount(); i++) {
-            DefaultMutableTreeNode childNode = (DefaultMutableTreeNode) node.getChildAt(i);
-            if (childNode.getChildCount() > 0) {
-                iterateTree(childNode);
-            } else if(childNode instanceof DefUseNode){
-                DefUseData[] data = ((DefUseNode) childNode).getUserObject();
-                System.out.println("found DefUSeNode");
-                for(int k=0; k<data.length;k++){
-                    if(!data[k].isChecked()){
-                        data[k].setChecked(true);
-                    }
-                }
-            }
-        }
     }
 
     public void updateChildrenNodes(DefaultMutableTreeNode node){

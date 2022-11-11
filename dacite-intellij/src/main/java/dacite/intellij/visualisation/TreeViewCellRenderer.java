@@ -12,14 +12,16 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTree;
 import javax.swing.tree.DefaultMutableTreeNode;
+import javax.swing.tree.DefaultTreeCellRenderer;
 
-public class TreeViewCellRenderer extends DefUseCellRenderer{
+public class TreeViewCellRenderer extends DefaultTreeCellRenderer {
 
     JLabel number = new JLabel();
     JLabel defLabel = new JLabel("Def: ");
     JLabel useLabel = new JLabel("Use: ");
     JLabel def = new JLabel();
     JLabel use = new JLabel();
+    JLabel name = new JLabel();
 
     JBCheckBox box = new JBCheckBox();
     boolean defuse;
@@ -90,7 +92,7 @@ public class TreeViewCellRenderer extends DefUseCellRenderer{
 
         }
         if (returnValue == null) {
-            returnValue = defaultRenderer.getTreeCellRendererComponent(tree, value, selected, expanded,
+            returnValue = super.getTreeCellRendererComponent(tree, value, selected, expanded,
                     leaf, row, hasFocus);
         }
         return returnValue;

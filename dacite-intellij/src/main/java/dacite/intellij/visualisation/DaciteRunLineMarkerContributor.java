@@ -1,4 +1,4 @@
-package dacite.intellij;
+package dacite.intellij.visualisation;
 
 import static org.wso2.lsp4intellij.requests.Timeout.getTimeout;
 import static org.wso2.lsp4intellij.requests.Timeouts.REFERENCES;

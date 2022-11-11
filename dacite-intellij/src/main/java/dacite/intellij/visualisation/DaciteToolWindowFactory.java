@@ -19,16 +19,7 @@ import dacite.lsp.defUseData.DefUseClass;
 
 public class DaciteToolWindowFactory implements ToolWindowFactory {
 
-    private ArrayList<DefUseClass> data;
 
-    public DaciteToolWindowFactory(){
-
-    }
-
-    public DaciteToolWindowFactory(ArrayList<DefUseClass> data){
-        super();
-        this.data = data;
-    }
     /**
      * Create the tool window content.
      *
