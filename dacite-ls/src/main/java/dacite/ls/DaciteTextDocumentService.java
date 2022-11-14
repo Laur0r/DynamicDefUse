@@ -75,7 +75,7 @@ public class DaciteTextDocumentService
 
   @Override
   public CompletableFuture<List<? extends CodeLens>> codeLens(CodeLensParams params) {
-    logger.info("codeLens {}", params);
+    //logger.info("codeLens {}", params);
 
     List<CodeLens> codeLenses = new ArrayList<>();
 
@@ -99,7 +99,7 @@ public class DaciteTextDocumentService
 
   @Override
   public CompletableFuture<List<InlayHint>> inlayHint(InlayHintParams params) {
-    logger.info("inlayHint {}", params);
+    //logger.info("inlayHint {}", params);
 
     List<InlayHint> inlayHints = new ArrayList<>();
     highlightedDefUseVariables = new HashMap<>();
@@ -114,6 +114,9 @@ public class DaciteTextDocumentService
       // ...then group by variable name and try to match with positions obtained from parsing
       DefUseAnalysisProvider.groupByVariableNamesAndSort(defUseVariables)
           .forEach((variableName, groupedDefUseVariables) -> {
+            if(variableName.contains(".")){
+              variableName = variableName.substring(variableName.indexOf(".")+1);
+            }
             var positions = codeAnalyser.extractVariablePositionsAtLine(lineNumber, variableName);
             int i = 0;
 
@@ -142,14 +145,14 @@ public class DaciteTextDocumentService
           });
     });
 
-    logger.info("hints {}", inlayHints);
+    //logger.info("hints {}", inlayHints);
 
     return CompletableFuture.completedFuture(inlayHints);
   }
 
   @Override
   public CompletableFuture<InlayHintDecoration> inlayHintDecoration(InlayHintDecorationParams params) {
-    logger.info("inlayHintDecoration {}", params);
+    //logger.info("inlayHintDecoration {}", params);
 
     var font = Font.SERIF;
     var color = new int[] { 255, 0, 0, 255 };
@@ -167,7 +170,7 @@ public class DaciteTextDocumentService
 
   @Override
   public CompletableFuture<TreeViewChildrenResult> treeViewChildren(TreeViewChildrenParams params) {
-    logger.info("experimental/treeViewChildren: {}", params);
+    //logger.info("experimental/treeViewChildren: {}", params);
 
     var nodeUri = params.getNodeUri();
     nodeUri = nodeUri == null ? "" : nodeUri;
@@ -229,14 +232,14 @@ public class DaciteTextDocumentService
     }
 
     var result = new TreeViewChildrenResult(nodes.toArray(new TreeViewNode[0]));
-    logger.info("children: {}", result);
+    //logger.info("children: {}", result);
 
     return CompletableFuture.completedFuture(result);
   }
 
   @Override
   public CompletableFuture<TreeViewParentResult> treeViewParent(TreeViewParentParams params) {
-    logger.info("experimental/treeViewParent: {}", params);
+    //logger.info("experimental/treeViewParent: {}", params);
 
     var nodeUri = params.getNodeUri();
     nodeUri = nodeUri == null ? "" : nodeUri;

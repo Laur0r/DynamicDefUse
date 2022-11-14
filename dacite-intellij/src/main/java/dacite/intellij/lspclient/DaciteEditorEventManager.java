@@ -116,8 +116,8 @@ public class DaciteEditorEventManager extends EditorEventManager {
                             @Override
                             public void paint(@NotNull Inlay inlay, @NotNull Graphics g, @NotNull Rectangle targetRegion, @NotNull TextAttributes textAttributes) {
                                 Graphics2D gr = (Graphics2D) g;
-                                    //gr.setColor(JBColor.LIGHT_GRAY);
-                                    //gr.fillRect(targetRegion.x-3, targetRegion.y+1, calcWidthInPixels(inlay)+3, calcHeightInPixels(inlay)+3);
+                                gr.setColor(new Color(238,238,238));
+                                gr.fillRect(targetRegion.x-3, targetRegion.y+1, calcWidthInPixels(inlay)+3, calcHeightInPixels(inlay)+3);
                                 gr.setFont(finalFont);
                                 gr.setColor(finalColor);
                                 gr.drawString(finalHintWord, targetRegion.x, targetRegion.y+ editor.getAscent());
