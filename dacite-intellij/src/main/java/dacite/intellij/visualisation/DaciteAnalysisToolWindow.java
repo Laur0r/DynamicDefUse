@@ -17,13 +17,8 @@ import com.intellij.openapi.wm.ToolWindow;
 import com.intellij.ui.JBColor;
 import com.intellij.ui.components.JBScrollPane;
 import com.intellij.ui.treeStructure.Tree;
-import dacite.intellij.lspclient.DaciteLSPRequestManager;
-import dacite.lsp.InlayHintDecoration;
-import dacite.lsp.InlayHintDecorationParams;
-import dacite.lsp.tvp.TreeViewChildrenParams;
-import dacite.lsp.tvp.TreeViewChildrenResult;
-import dacite.lsp.tvp.TreeViewNode;
 
+import org.eclipse.lsp4j.ExecuteCommandParams;
 import org.eclipse.lsp4j.InlayHint;
 import org.eclipse.lsp4j.InlayHintLabelPart;
 import org.eclipse.lsp4j.InlayHintParams;
@@ -36,10 +31,6 @@ import org.jetbrains.annotations.NotNull;
 import org.wso2.lsp4intellij.client.languageserver.requestmanager.RequestManager;
 
 import java.awt.BorderLayout;
-import javax.swing.tree.DefaultMutableTreeNode;
-import javax.swing.tree.DefaultTreeModel;
-import javax.swing.tree.TreeNode;
-import javax.swing.tree.TreePath;
 import java.awt.Color;
 import java.awt.Font;
 import java.awt.Graphics;
@@ -56,15 +47,21 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import javax.swing.BoxLayout;
-import javax.swing.JButton;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.event.CellEditorListener;
 import javax.swing.event.ChangeEvent;
-import javax.swing.event.TreeExpansionEvent;
-import javax.swing.event.TreeExpansionListener;
-import dacite.lsp.defUseData.DefUseClass;
-import dacite.lsp.defUseData.DefUseData;
+import javax.swing.tree.DefaultMutableTreeNode;
+import javax.swing.tree.DefaultTreeModel;
+import javax.swing.tree.TreeNode;
+
+import dacite.intellij.lspclient.DaciteLSPRequestManager;
+import dacite.lsp.InlayHintDecoration;
+import dacite.lsp.InlayHintDecorationParams;
+import dacite.lsp.tvp.TreeViewChildrenParams;
+import dacite.lsp.tvp.TreeViewChildrenResult;
+import dacite.lsp.tvp.TreeViewCommand;
+import dacite.lsp.tvp.TreeViewNode;
 
 public class DaciteAnalysisToolWindow {
     private JPanel myToolWindowContent;
@@ -90,8 +87,20 @@ public class DaciteAnalysisToolWindow {
                 DefaultMutableTreeNode node = (DefaultMutableTreeNode) changeEvent.getSource();
                 updateChildrenNodes(node);
 
-                //Todo sind inlays schon synchronisiert?
-                addInlays();
+                TreeViewNode iniView = (TreeViewNode) node.getUserObject();
+                TreeViewCommand command = iniView.getCommand();
+                if (command != null) {
+                    // Tell server to make corresponding inlay hints visible
+                    var args = new ArrayList<>(command.getArguments());
+                    args.add(iniView.isEditorHighlight());
+                    requestManager.executeCommand(new ExecuteCommandParams(
+                        command.getCommand(),
+                        args
+                    ));
+
+                    // Retrieve new inlay hints from server
+                    addInlays();
+                }
             }
 
             @Override

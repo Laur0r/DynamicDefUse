@@ -28,4 +28,41 @@ public class TreeViewCommand {
    */
   private List<Object> arguments;
 
+  public TreeViewCommand(String title, String command, List<Object> arguments) {
+    this.title = title;
+    this.command = command;
+    this.arguments = arguments;
+  }
+
+  public String getTitle() {
+    return title;
+  }
+
+  public void setTitle(String title) {
+    this.title = title;
+  }
+
+  public String getCommand() {
+    return command;
+  }
+
+  public void setCommand(String command) {
+    this.command = command;
+  }
+
+  public String getTooltip() {
+    return tooltip;
+  }
+
+  public void setTooltip(String tooltip) {
+    this.tooltip = tooltip;
+  }
+
+  public List<Object> getArguments() {
+    return arguments;
+  }
+
+  public void setArguments(List<Object> arguments) {
+    this.arguments = arguments;
+  }
 }

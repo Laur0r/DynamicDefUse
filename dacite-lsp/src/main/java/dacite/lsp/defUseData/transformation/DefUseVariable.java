@@ -66,6 +66,8 @@ public class DefUseVariable {
 
   private DefUseChain chain;
 
+  private boolean editorHighlight;
+
   public DefUseVariableRole getRole() {
     return role;
   }
@@ -90,6 +92,14 @@ public class DefUseVariable {
     this.chain = chain;
   }
 
+  public boolean isEditorHighlight() {
+    return editorHighlight;
+  }
+
+  public void setEditorHighlight(boolean editorHighlight) {
+    this.editorHighlight = editorHighlight;
+  }
+
   // Helper methods
   public String getMethodName() {
     return this.method.substring(this.method.lastIndexOf(".") + 1);
@@ -101,6 +111,10 @@ public class DefUseVariable {
 
   public String getPackageName() {
     return method.substring(0, Math.max(method.lastIndexOf("/"), 0)).replace("/", ".");
+  }
+
+  public boolean matchesPackageClass(String packageClass) {
+    return (getPackageName().replace(".", "/") + "/" + getClassName()).equals(packageClass);
   }
 
   @Override

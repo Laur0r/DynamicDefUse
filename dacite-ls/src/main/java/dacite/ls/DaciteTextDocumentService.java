@@ -4,6 +4,7 @@ import com.github.javaparser.ParseProblemException;
 import com.github.javaparser.StaticJavaParser;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
+import com.google.gson.JsonObject;
 
 import dacite.lsp.InlayHintDecorationParams;
 import dacite.lsp.defUseData.DefUseClass;
@@ -114,6 +115,7 @@ public class DaciteTextDocumentService
       // ...then group by variable name and try to match with positions obtained from parsing
       DefUseAnalysisProvider.groupByVariableNamesAndSort(defUseVariables)
           .forEach((variableName, groupedDefUseVariables) -> {
+            // TODO: move the following fix into DefUseVariable class?
             if(variableName.contains(".")){
               variableName = variableName.substring(variableName.indexOf(".")+1);
             }
@@ -121,25 +123,26 @@ public class DaciteTextDocumentService
             int i = 0;
 
             while (i < groupedDefUseVariables.size() && i < positions.size()) {
-              var defUseVariable = groupedDefUseVariables.get(i);
-              var parserPosition = positions.get(i);
+              if(groupedDefUseVariables.get(i).isEditorHighlight()) {
+                var defUseVariable = groupedDefUseVariables.get(i);
+                var parserPosition = positions.get(i);
 
-              var label = defUseVariable.getRole() == DefUseVariableRole.DEFINITION ? "Def" : "Use";
+                var label = defUseVariable.getRole() == DefUseVariableRole.DEFINITION ? "Def" : "Use";
 
-              var lspPos = new Position(parserPosition.line - 1, parserPosition.column - 1);
-              var hint = new InlayHint(lspPos, Either.forLeft(label));
-              hint.setPaddingLeft(true);
-              hint.setPaddingRight(true);
-              inlayHints.add(hint);
+                var lspPos = new Position(parserPosition.line - 1, parserPosition.column - 1);
+                var hint = new InlayHint(lspPos, Either.forLeft(label));
+                hint.setPaddingLeft(true);
+                hint.setPaddingRight(true);
+                inlayHints.add(hint);
 
-              if (highlightedDefUseVariables.containsKey(params.getTextDocument())) {
-                highlightedDefUseVariables.get(params.getTextDocument()).put(lspPos, defUseVariable);
-              } else {
-                HashMap<Position, DefUseVariable> newMap = new HashMap<>();
-                newMap.put(lspPos, defUseVariable);
-                highlightedDefUseVariables.put(params.getTextDocument(), newMap);
+                if (highlightedDefUseVariables.containsKey(params.getTextDocument())) {
+                  highlightedDefUseVariables.get(params.getTextDocument()).put(lspPos, defUseVariable);
+                } else {
+                  HashMap<Position, DefUseVariable> newMap = new HashMap<>();
+                  newMap.put(lspPos, defUseVariable);
+                  highlightedDefUseVariables.put(params.getTextDocument(), newMap);
+                }
               }
-
               i++;
             }
           });
@@ -185,6 +188,11 @@ public class DaciteTextDocumentService
               cl.getName() + " " + cl.getNumberChains() + " chains");
           node.setCollapseState("collapsed");
           node.setIcon("class");
+
+          var commandArg = new JsonObject();
+          commandArg.addProperty("packageClass", cl.getName());
+          node.setCommand(new TreeViewCommand("Highlight", "dacite.highlight", List.of(commandArg)));
+
           nodes.add(node);
         }
       } else {
@@ -195,6 +203,12 @@ public class DaciteTextDocumentService
                   m.getName() + " " + m.getNumberChains() + " chains");
               node.setCollapseState("collapsed");
               node.setIcon("method");
+
+              var commandArg = new JsonObject();
+              commandArg.addProperty("packageClass", cl.getName());
+              commandArg.addProperty("method", m.getName());
+              node.setCommand(new TreeViewCommand("Highlight", "dacite.highlight", List.of(commandArg)));
+
               nodes.add(node);
             }
             break;
@@ -207,6 +221,13 @@ public class DaciteTextDocumentService
                       var.getName() + " " + var.getNumberChains() + " chains");
                   node.setCollapseState("collapsed");
                   node.setIcon("variable");
+
+                  var commandArg = new JsonObject();
+                  commandArg.addProperty("packageClass", cl.getName());
+                  commandArg.addProperty("method", m.getName());
+                  commandArg.addProperty("variable", var.getName());
+                  node.setCommand(new TreeViewCommand("Highlight", "dacite.highlight", List.of(commandArg)));
+
                   nodes.add(node);
                 }
                 break;
@@ -219,6 +240,17 @@ public class DaciteTextDocumentService
                               + data.getUseLocation(),
                           data.getName() + " " + data.getDefLocation() + " - " + data.getUseLocation());
                       node.setCollapseState("collapsed");
+
+                      var commandArg = new JsonObject();
+                      commandArg.addProperty("packageClass", cl.getName());
+                      commandArg.addProperty("method", m.getName());
+                      commandArg.addProperty("variable", var.getName());
+                      commandArg.addProperty("defLocation", data.getDefLocation());
+                      commandArg.addProperty("useLocation", data.getUseLocation());
+                      commandArg.addProperty("index", data.getIndex());
+                      commandArg.addProperty("instruction", data.getInstruction());
+                      node.setCommand(new TreeViewCommand("Highlight", "dacite.highlight", List.of(commandArg)));
+
                       nodes.add(node);
                     }
                     break;

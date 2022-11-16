@@ -5,6 +5,7 @@ public class DefUseData {
     private String defLocation;
     private String useLocation;
     private int index;
+    private int instruction;
     private boolean checked;
 
     public DefUseData(String name, String defLocation, String useLocation){
@@ -27,6 +28,14 @@ public class DefUseData {
 
     public void setIndex(int index) {
         this.index = index;
+    }
+
+    public int getInstruction() {
+        return instruction;
+    }
+
+    public void setInstruction(int instruction) {
+        this.instruction = instruction;
     }
 
     public String getDefLocation() {

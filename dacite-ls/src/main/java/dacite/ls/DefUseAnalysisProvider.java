@@ -1,5 +1,7 @@
 package dacite.ls;
 
+import com.google.gson.JsonObject;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -54,6 +56,10 @@ public class DefUseAnalysisProvider {
       // Set role
       def.setRole(DefUseVariableRole.DEFINITION);
       use.setRole(DefUseVariableRole.USAGE);
+
+      // Set visibility of highlights
+      def.setEditorHighlight(false);
+      use.setEditorHighlight(false);
     });
 
     getDefUseMapping().forEach((def, uses) -> {
@@ -96,6 +102,48 @@ public class DefUseAnalysisProvider {
         .collect(Collectors.toList());
   }
 
+  public static void changeDefUseEditorHighlighting(JsonObject nodeProperties, boolean newIsEditorHighlight) {
+    getDefUseVariables().forEach(defUseVariable -> {
+      var affected = false;
+
+      // class level filter
+      if (nodeProperties.has("packageClass")) {
+        var packageClass = nodeProperties.get("packageClass").getAsString();
+        affected = defUseVariable.matchesPackageClass(packageClass);
+      }
+      // method level filter
+      if (nodeProperties.has("method")) {
+        var method = nodeProperties.get("method").getAsString();
+
+        affected = affected && defUseVariable.getMethodName().equals(method);
+      }
+      // variable level filter
+      if (nodeProperties.has("variable")) {
+        var variable = nodeProperties.get("variable").getAsString();
+
+        affected = affected && defUseVariable.getVariableName().equals(variable);
+      }
+      // def use level filter
+      if (defUseVariable.getRole() == DefUseVariableRole.DEFINITION && nodeProperties.has("defLocation")) {
+        var defLocation = Integer.parseInt(nodeProperties.get("defLocation").getAsString().substring(1));
+
+        affected = affected && defUseVariable.getLinenumber() == defLocation;
+      } else if (defUseVariable.getRole() == DefUseVariableRole.USAGE && nodeProperties.has("defLocation")
+          && nodeProperties.has("useLocation") && nodeProperties.has("index")) {
+        var useLocation = Integer.parseInt(nodeProperties.get("useLocation").getAsString().substring(1));
+        var index = nodeProperties.get("index").getAsInt();
+        var instruction = nodeProperties.get("instruction").getAsInt();
+
+        affected = affected && defUseVariable.getLinenumber() == useLocation
+            && defUseVariable.getVariableIndex() == index && defUseVariable.getInstruction() == instruction;
+      }
+
+      if (affected) {
+        defUseVariable.setEditorHighlight(newIsEditorHighlight);
+      }
+    });
+  }
+
   public static HashMap<DefUseVariable, List<DefUseVariable>> getDefUseMapping() {
     HashMap<DefUseVariable, List<DefUseVariable>> defUseMapping = new HashMap<>();
 
@@ -110,7 +158,8 @@ public class DefUseAnalysisProvider {
     return defUseMapping;
   }
 
-  public static HashMap<Integer, List<DefUseVariable>> getUniqueDefUseVariablesByLine(String packageName, String className) {
+  public static HashMap<Integer, List<DefUseVariable>> getUniqueDefUseVariablesByLine(String packageName,
+      String className) {
     HashMap<Integer, List<DefUseVariable>> uniqueDefUseVariablesByLine = new HashMap<>();
 
     getUniqueDefUseVariables(packageName, className).forEach(
@@ -197,7 +246,8 @@ public class DefUseAnalysisProvider {
         var = new DefUseVar(varName);
       }
       DefUseData data = new DefUseData(varName, defLocation, useLocation);
-      data.setIndex(use.getInstruction());
+      data.setIndex(use.getVariableIndex());
+      data.setInstruction(use.getInstruction());
       // if output already contains class, add data to existing class instance
       if (output.contains(defUseClass)) {
         DefUseClass instance = output.get(output.indexOf(defUseClass));
