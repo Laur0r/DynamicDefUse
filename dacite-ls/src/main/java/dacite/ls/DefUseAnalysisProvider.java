@@ -102,7 +102,7 @@ public class DefUseAnalysisProvider {
         .collect(Collectors.toList());
   }
 
-  public static void changeDefUseEditorHighlighting(JsonObject nodeProperties, boolean newIsEditorHighlight) {
+  public static void changeDefUseEditorHighlighting(JsonObject nodeProperties, Boolean newIsEditorHighlight) {
     getDefUseVariables().forEach(defUseVariable -> {
       var affected = false;
 
@@ -134,12 +134,16 @@ public class DefUseAnalysisProvider {
         var index = nodeProperties.get("index").getAsInt();
         var instruction = nodeProperties.get("instruction").getAsInt();
 
-        affected = affected && defUseVariable.getLinenumber() == useLocation
-            && defUseVariable.getVariableIndex() == index && defUseVariable.getInstruction() == instruction;
+        affected =
+            affected && defUseVariable.getLinenumber() == useLocation && defUseVariable.getVariableIndex() == index
+                && defUseVariable.getInstruction() == instruction;
       }
 
       if (affected) {
-        defUseVariable.setEditorHighlight(newIsEditorHighlight);
+        defUseVariable.setEditorHighlight(
+            // Standard implementations of the Tree View Protocol do not provide the additional parameter
+            // for newIsEditorHighlight. If it is null, we just toggle the boolean value of affected nodes
+            newIsEditorHighlight == null ? !defUseVariable.isEditorHighlight() : newIsEditorHighlight);
       }
     });
   }

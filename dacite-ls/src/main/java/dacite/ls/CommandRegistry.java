@@ -110,9 +110,12 @@ public class CommandRegistry {
         return CompletableFuture.completedFuture(null);
       case highlight:
         try {
-          if (args.size() == 2) {
+          if (args.size() > 0) {
             var nodeProperties = (JsonObject) args.get(0);
-            var newIsEditorHighlight = ((JsonPrimitive) args.get(1)).getAsBoolean();
+            Boolean newIsEditorHighlight = null;
+            if (args.size() == 2) {
+              newIsEditorHighlight = ((JsonPrimitive) args.get(1)).getAsBoolean();
+            }
             DefUseAnalysisProvider.changeDefUseEditorHighlighting(nodeProperties, newIsEditorHighlight);
           }
         } catch (Exception e) {

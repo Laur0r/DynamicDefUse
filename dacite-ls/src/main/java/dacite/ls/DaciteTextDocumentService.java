@@ -237,9 +237,8 @@ public class DaciteTextDocumentService
                     for (DefUseData data : var.getData()) {
                       TreeViewNode node = new TreeViewNode("defUseChains",
                           cl.getName() + "." + m.getName() + " " + var.getName() + " " + data.getDefLocation() + " - "
-                              + data.getUseLocation(),
+                              + data.getUseLocation() + " " + data.getIndex() + " " + data.getInstruction(),
                           data.getName() + " " + data.getDefLocation() + " - " + data.getUseLocation());
-                      node.setCollapseState("collapsed");
 
                       var commandArg = new JsonObject();
                       commandArg.addProperty("packageClass", cl.getName());
