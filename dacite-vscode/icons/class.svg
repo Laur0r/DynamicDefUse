@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:xl="http://www.w3.org/1999/xlink" viewBox="197 124 384 384" width="384" height="384">
+  <defs/>
+  <g id="Canvas_1" stroke-dasharray="none" stroke-opacity="1" fill="none" fill-opacity="1" stroke="none">
+    <title>Canvas 1</title>
+    <g id="Canvas_1_Layer_1">
+      <title>Layer 1</title>
+      <g id="Graphic_2">
+        <circle cx="389" cy="316" r="192.000306797164" fill="#8cd3ec"/>
+        <text transform="translate(236.56 125.47055)" fill="black">
+          <tspan font-family="Monaco" font-size="280" fill="black" x="64.586334" y="280">c</tspan>
+        </text>
+      </g>
+    </g>
+  </g>
+</svg>
