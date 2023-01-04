@@ -3,9 +3,14 @@ package dacite.core.defuse;
 
 import java.util.ArrayList;
 
+/**
+ * Class mapping all aliases for one object
+ */
 public class AliasAlloc {
 
+    // names of different aliases
     public ArrayList<String> varNames;
+    //indexes for aliases
     public ArrayList<Integer> varIndexes;
 
     public AliasAlloc(String vn1, String vn2, int vi1, int vi2){

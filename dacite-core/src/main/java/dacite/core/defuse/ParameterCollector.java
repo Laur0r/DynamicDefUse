@@ -1,5 +1,8 @@
 package dacite.core.defuse;
 
+/**
+ * Class necessary to collect a list of parameters for a method invocation.
+ */
 public class ParameterCollector {
     private static Object[] parameter;
     private String[] types;

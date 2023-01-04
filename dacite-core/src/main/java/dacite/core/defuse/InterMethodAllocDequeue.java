@@ -2,6 +2,10 @@ package dacite.core.defuse;
 
 import java.util.ArrayDeque;
 
+/**
+ * Class representing list of allocations. These are saved as Deque so that the most recent allocation is at the
+ * beginning of the list.
+ */
 public class InterMethodAllocDequeue {
     public ArrayDeque<InterMethodAlloc> interMethodAllocs = new ArrayDeque<>();
 

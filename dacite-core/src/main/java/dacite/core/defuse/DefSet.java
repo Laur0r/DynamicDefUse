@@ -2,15 +2,28 @@ package dacite.core.defuse;
 
 import java.util.ArrayDeque;
 
+/**
+ * Class representing all identified definitions
+ */
 public class DefSet {
 
+    // all definitions as a Deque so that the most recent definition is at the beginning
     public ArrayDeque<DefUseVariable> defs = new ArrayDeque<>();
 
+    /**
+     * Get most recent variable definition for characteristics.
+     * @param index of defined variable
+     * @param method name where the variable was defined
+     * @param value of defined variable
+     * @param name of defined variable
+     * @return existing variable definition otherwise null
+     */
     public DefUseVariable getLastDefinition(int index, String method, Object value, String name){
         DefUseVariable output = null;
         for(DefUseVariable def : defs){
             if(def.getVariableIndex() == index && def.getMethod().equals(method)
                     && !(def instanceof DefUseField)){
+                // to be able to compare integer and Integer due to transformer boxing
                 if(def.getValue() == value || value != null && DefUseAnalyser.isPrimitiveOrWrapper(value) && value.equals(def.getValue())
                         && def.getVariableName().equals(name)) {
                     output = def;
@@ -21,6 +34,14 @@ public class DefSet {
         return output;
     }
 
+    /**
+     * Get most recent array element or field definition for characteristics.
+     * @param index of defined element
+     * @param varname name of the defined element
+     * @param value of the defined element
+     * @param fieldInstance class instance of corresponding class or array the element was defined for
+     * @return existing variable definition otherwise null
+     */
     public DefUseVariable getLastDefinitionFields(int index, String varname, Object value, Object fieldInstance){
         DefUseVariable output = null;
         for(DefUseVariable def : defs){
@@ -28,6 +49,7 @@ public class DefSet {
                 DefUseField field = (DefUseField) def;
                 if(field.getVariableIndex() == index && (varname.equals(field.getVariableName()) || varname.equals(""))
                         && (fieldInstance == null || field.getInstance()== fieldInstance)){
+                    // to be able to compare integer and Integer due to transformer boxing
                     if(def.getValue() == value || value != null && DefUseAnalyser.isPrimitiveOrWrapper(value) && value.equals(field.getValue())){
                         output = def;
                         break;
@@ -38,10 +60,18 @@ public class DefSet {
         return output;
     }
 
+    /**
+     * Get most recent definition of variable defining the same object
+     * @param index of alias
+     * @param varname of alias
+     * @param value of alias object
+     * @return existing alias definition otherwise null
+     */
     public DefUseVariable getAliasDef(int index, String varname, Object value){
         DefUseVariable output = null;
         for(DefUseVariable def : defs){
             if(def.getVariableIndex() == index && def.getVariableName().equals(varname)){
+                // to be able to compare integer and Integer due to transformer boxing
                 if(def.getValue() == value || value != null && DefUseAnalyser.isPrimitiveOrWrapper(value) && value.equals(def.getValue())) {
                     output = def;
                     break;
@@ -51,6 +81,12 @@ public class DefSet {
         return output;
     }
 
+    /**
+     * Check whether there exists an alias for this variable definition, i.e. a definition of a variable pointing to the same
+     * object instance.
+     * @param newDef given variable definition
+     * @return existing alias definition otherwise null
+     */
     public DefUseVariable hasAlias(DefUseVariable newDef){
         DefUseVariable output = null;
         for(DefUseVariable def : defs){
@@ -67,8 +103,15 @@ public class DefSet {
         return output;
     }
 
-    public void addDef(DefUseVariable def){defs.addFirst(def);}
-
+    /**
+     * Check whether a variable definition with the given characteristics already exists.
+     * @param value of defined variable
+     * @param index of defined variable
+     * @param ln line number where variable was defined in the source code
+     * @param ins integer helping to differentiating instructions within a line
+     * @param method name where the variable was defined
+     * @return existing variable definition otherwise null
+     */
     public DefUseVariable contains(Object value, int index, int ln, int ins, String method){
         for(DefUseVariable d: defs){
             if(d.getMethod().equals(method) && d.getVariableIndex() == index
@@ -81,6 +124,16 @@ public class DefSet {
         return null;
     }
 
+    /**
+     * Check whether an array element or field definition with the given characteristics already exists.
+     * @param value of defined variable
+     * @param index of defined variable
+     * @param varname of defined variable
+     * @param ln line number where variable was defined in the source code
+     * @param ins integer helping to differentiating instructions within a line
+     * @param instance class instance of array or object for which an element or field was defined
+     * @return existing definition otherwise null
+     */
     public DefUseVariable containsField(Object value, int index, String varname, int ln, int ins, Object instance){
         for(DefUseVariable d: defs){
             if(d instanceof DefUseField){
@@ -96,10 +149,11 @@ public class DefSet {
         return null;
     }
 
-    public void removeDef(DefUseVariable def){
-        defs.remove(def);
-    }
-
+    /**
+     * Set name for all array element definitions to "arrayname[" as they do not have an own name as fields or variables.
+     * @param array instance
+     * @param varname name of array
+     */
     public void setArrayName(Object array, String varname){
         for(DefUseVariable d: defs) {
             if (d instanceof DefUseField) {
@@ -111,4 +165,18 @@ public class DefSet {
             }
         }
     }
+
+    /**
+     * Remove definition from set
+     * @param def removed definition
+     */
+    public void removeDef(DefUseVariable def){
+        defs.remove(def);
+    }
+
+    /**
+     * Add definition to set
+     * @param def added definition
+     */
+    public void addDef(DefUseVariable def){defs.addFirst(def);}
 }

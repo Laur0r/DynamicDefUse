@@ -2,8 +2,13 @@ package dacite.core.defuse;
 
 import jakarta.xml.bind.annotation.XmlElement;
 
+/**
+ * Class representing a DefUseChain (DUC)
+ */
 public class DefUseChain {
+    // the definition
     private DefUseVariable def;
+    // the usage
     private DefUseVariable use;
 
     public DefUseChain(DefUseVariable def, DefUseVariable use){
