@@ -62,12 +62,14 @@ public class DefUseAnalysisProvider {
       use.setEditorHighlight(false);
     });
 
-    getDefUseMapping().forEach((def, uses) -> {
+    getVariableMapping().forEach((name, defuse) -> {
       // Set random color
       Random random = new Random();
       var color = new Color(random.nextInt(256), random.nextInt(256), random.nextInt(256));
-      def.setColor(color);
-      uses.forEach(it -> it.setColor(color));
+      defuse.forEach((def, uses) -> {
+        def.setColor(color);
+        uses.forEach(it -> it.setColor(color));
+      });
     });
   }
 
@@ -114,29 +116,33 @@ public class DefUseAnalysisProvider {
       // method level filter
       if (nodeProperties.has("method")) {
         var method = nodeProperties.get("method").getAsString();
-
         affected = affected && defUseVariable.getMethodName().equals(method);
       }
       // variable level filter
       if (nodeProperties.has("variable")) {
         var variable = nodeProperties.get("variable").getAsString();
-
         affected = affected && defUseVariable.getVariableName().equals(variable);
       }
       // def use level filter
       if (defUseVariable.getRole() == DefUseVariableRole.DEFINITION && nodeProperties.has("defLocation")) {
         var defLocation = Integer.parseInt(nodeProperties.get("defLocation").getAsString().substring(1));
-
         affected = affected && defUseVariable.getLinenumber() == defLocation;
       } else if (defUseVariable.getRole() == DefUseVariableRole.USAGE && nodeProperties.has("defLocation")
           && nodeProperties.has("useLocation") && nodeProperties.has("index")) {
-        var useLocation = Integer.parseInt(nodeProperties.get("useLocation").getAsString().substring(1));
-        var index = nodeProperties.get("index").getAsInt();
-        var instruction = nodeProperties.get("instruction").getAsInt();
-
-        affected =
-            affected && defUseVariable.getLinenumber() == useLocation && defUseVariable.getVariableIndex() == index
-                && defUseVariable.getInstruction() == instruction;
+        int index = nodeProperties.get("index").getAsInt();
+        int instruction = nodeProperties.get("instruction").getAsInt();
+        if(nodeProperties.get("useLocation").getAsString().contains(" ")){
+          String useLocation = nodeProperties.get("useLocation").getAsString();
+          String method = useLocation.substring(0,useLocation.indexOf(" "));
+          int ln = Integer.parseInt(useLocation.substring(useLocation.indexOf(" ")+2));
+          affected = defUseVariable.getMethod().equals(method) && defUseVariable.getLinenumber() == ln
+                  && defUseVariable.getVariableIndex() == index && defUseVariable.getInstruction() == instruction;
+        } else {
+          int useLocation = Integer.parseInt(nodeProperties.get("useLocation").getAsString().substring(1));
+          affected =
+                  affected && defUseVariable.getLinenumber() == useLocation && defUseVariable.getVariableIndex() == index
+                          && defUseVariable.getInstruction() == instruction;
+        }
       }
 
       if (affected) {
@@ -160,6 +166,32 @@ public class DefUseAnalysisProvider {
         uses.stream().filter(use -> use.getChain().getDef().equals(def)).collect(Collectors.toList())));
 
     return defUseMapping;
+  }
+
+  public static HashMap<String, HashMap<DefUseVariable,List<DefUseVariable>>> getVariableMapping() {
+    HashMap<String, HashMap<DefUseVariable,List<DefUseVariable>>> variableMapping = new HashMap<>();
+
+    var defUseVars = getDefUseVariables();
+    var defs = defUseVars.stream().filter(it -> it.getRole() == DefUseVariableRole.DEFINITION)
+            .collect(Collectors.toSet());
+    var uses = defUseVars.stream().filter(it -> it.getRole() == DefUseVariableRole.USAGE).collect(Collectors.toSet());
+
+    for(DefUseVariable def: defs){
+      List<DefUseVariable> sameVar = new ArrayList<>();
+      sameVar.add(def);
+      for(DefUseVariable def2: defs){
+        if(def.getVariableName().equals(def2.getVariableName()) && (def.getVariableIndex() == def2.getVariableIndex())){
+          sameVar.add(def2);
+        }
+      }
+      HashMap<DefUseVariable,List<DefUseVariable>> mapVar = new HashMap<>();
+      for(DefUseVariable var :sameVar){
+        mapVar.put(var, uses.stream().filter(use -> use.getChain().getDef().equals(var)).collect(Collectors.toList()));
+      }
+      variableMapping.put(sameVar.get(0).getMethod()+"."+sameVar.get(0).getVariableName(),mapVar);
+    }
+
+    return variableMapping;
   }
 
   public static HashMap<Integer, List<DefUseVariable>> getUniqueDefUseVariablesByLine(String packageName,

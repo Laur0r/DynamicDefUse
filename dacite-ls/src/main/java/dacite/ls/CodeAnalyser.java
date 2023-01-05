@@ -7,7 +7,10 @@ import com.github.javaparser.ast.Node;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.Parameter;
 import com.github.javaparser.ast.expr.NameExpr;
+import com.github.javaparser.ast.expr.SimpleName;
 import com.github.javaparser.ast.expr.VariableDeclarationExpr;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -18,6 +21,8 @@ import java.util.stream.Collectors;
 public class CodeAnalyser {
 
   CompilationUnit compilationUnit;
+
+  private static final Logger logger = LoggerFactory.getLogger(CodeAnalyser.class);
 
   public CodeAnalyser(String code) {
     this.compilationUnit = StaticJavaParser.parse(code);
@@ -61,6 +66,13 @@ public class CodeAnalyser {
         var nameExpr = ((NameExpr) node);
         if (nameExpr.getName().asString().equals(variableName)) {
           nameExpr.getName().getRange().ifPresent(range -> positions.add(range.begin));
+        }
+      } else if (node instanceof SimpleName){
+        SimpleName name = (SimpleName) node;
+        if(name.asString().equals(variableName)){
+          if(name.getParentNode().isPresent() && name.getParentNode().get().getRange().isPresent() && !positions.contains(name.getParentNode().get().getRange().get().begin)){
+            name.getParentNode().get().getRange().ifPresent(range -> positions.add(range.begin));
+          }
         }
       }
     });

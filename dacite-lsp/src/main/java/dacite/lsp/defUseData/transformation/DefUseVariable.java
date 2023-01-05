@@ -13,6 +13,12 @@ public class DefUseVariable {
   private int variableIndex;
   private String variableName;
 
+  // Additional attributes used after parsing XML
+  private DefUseVariableRole role;
+  private Color color;
+  private DefUseChain chain;
+  private boolean editorHighlight;
+
   @XmlElement
   public int getLinenumber() {
     return linenumber;
@@ -57,16 +63,6 @@ public class DefUseVariable {
   public void setVariableName(String variableName) {
     this.variableName = variableName;
   }
-
-  // Additional attributes used after parsing XML
-
-  private DefUseVariableRole role;
-
-  private Color color;
-
-  private DefUseChain chain;
-
-  private boolean editorHighlight;
 
   public DefUseVariableRole getRole() {
     return role;
@@ -133,5 +129,10 @@ public class DefUseVariable {
   @Override
   public int hashCode() {
     return Objects.hash(linenumber, method, instruction, variableIndex, variableName, role);
+  }
+
+  @Override
+  public String toString(){
+    return "name: " + variableName + ", ln: "+linenumber + ", method: "+ method;
   }
 }
