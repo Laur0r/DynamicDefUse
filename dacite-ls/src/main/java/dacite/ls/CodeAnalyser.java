@@ -51,6 +51,9 @@ public class CodeAnalyser {
   public List<Position> extractVariablePositionsAtLine(int lineNumber, String variableName) {
     List<Position> positions = new ArrayList<>();
     extractNodesAtLine(lineNumber).forEach(node -> {
+      if(lineNumber == 9){
+        logger.info("{} {}",String.valueOf(node),node.getClass().getName());
+      }
       if (node instanceof VariableDeclarationExpr) {
         // Example: int n = fibonacci(5)
         ((VariableDeclarationExpr) node).getVariables().stream().filter(v -> Objects.equals(v.getName().asString(),
@@ -70,7 +73,7 @@ public class CodeAnalyser {
       } else if (node instanceof SimpleName){
         SimpleName name = (SimpleName) node;
         if(name.asString().equals(variableName)){
-          if(name.getParentNode().isPresent() && name.getParentNode().get().getRange().isPresent() && !positions.contains(name.getParentNode().get().getRange().get().begin)){
+          if(name.getParentNode().isPresent() && name.getRange().isPresent() && !positions.contains(name.getRange().get().begin)){
             name.getParentNode().get().getRange().ifPresent(range -> positions.add(range.begin));
           }
         }
