@@ -134,6 +134,7 @@ public class Transformer implements ClassFileTransformer {
 				}
 				// Register method Parameter for DefUse by aligning first local variables with parameter types
 				InsnList methodStart = new InsnList();
+				InsnList methodintermediate = new InsnList();
 				Type[] types = Type.getArgumentTypes(mnode.desc);
 				int typeindex = 0;
 				for(int i =0; i< mnode.localVariables.size()*2; i++) {
@@ -149,17 +150,23 @@ public class Transformer implements ClassFileTransformer {
 					}
 
 					if (localVariable != null && Type.getType(localVariable.desc).equals(types[typeindex])) {
-						boxing(types[typeindex], localVariable.index, methodStart, true);
-						methodStart.add(new LdcInsnNode(localVariable.index));
-						methodStart.add(new LdcInsnNode(firstLinenumber));
-						methodStart.add(new LdcInsnNode(classname+"."+mnode.name));
-						methodStart.add(new LdcInsnNode(localVariable.name));
-						methodStart.add(new IntInsnNode(Opcodes.BIPUSH, typeindex));
-						methodStart.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/defuse/DefUseAnalyser", "visitParameter", "(Ljava/lang/Object;IILjava/lang/String;Ljava/lang/String;I)V", false));
+						boxing(types[typeindex], localVariable.index, methodintermediate, true);
+						methodintermediate.add(new LdcInsnNode(localVariable.index));
+						methodintermediate.add(new LdcInsnNode(firstLinenumber));
+						methodintermediate.add(new LdcInsnNode(classname+"."+mnode.name));
+						methodintermediate.add(new LdcInsnNode(localVariable.name));
+						methodintermediate.add(new IntInsnNode(Opcodes.BIPUSH, typeindex));
+						methodintermediate.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/defuse/DefUseAnalyser", "visitParameter", "(Ljava/lang/Object;IILjava/lang/String;Ljava/lang/String;I)V", false));
 						if(types[typeindex] == Type.DOUBLE_TYPE || types[typeindex] == Type.LONG_TYPE){
 							i++;
 						}
 						typeindex++;
+						if(methodStart.size() == 0){
+							methodStart.insert(methodintermediate);
+						} else {
+							methodStart.insertBefore(methodStart.get(0), methodintermediate);
+						}
+						methodintermediate.clear();
 					}
 				}
 				insns.insertBefore(firstIns, methodStart);
@@ -181,7 +188,7 @@ public class Transformer implements ClassFileTransformer {
 				e.printStackTrace();
 			}
 			*/
-			logger.info("Transformer has class written");
+			//logger.info("Transformer has class written");
 			return writer.toByteArray();
 		}
 

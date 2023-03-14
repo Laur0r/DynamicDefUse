@@ -105,51 +105,86 @@ public class DefUseAnalysisProvider {
   }
 
   public static void changeDefUseEditorHighlighting(JsonObject nodeProperties, Boolean newIsEditorHighlight) {
-    getDefUseVariables().forEach(defUseVariable -> {
+    defUseChains.forEach(chain -> {
+      DefUseVariable def = chain.getDef();
+      DefUseVariable use = chain.getUse();
       var affected = false;
 
       // class level filter
       if (nodeProperties.has("packageClass")) {
         var packageClass = nodeProperties.get("packageClass").getAsString();
-        affected = defUseVariable.matchesPackageClass(packageClass);
+        affected = def.matchesPackageClass(packageClass);
+        if(def.getLinenumber()==55 && def.getVariableName().contains("a")){
+          logger.info("def package "+affected);
+        }
       }
       // method level filter
       if (nodeProperties.has("method")) {
         var method = nodeProperties.get("method").getAsString();
-        affected = affected && defUseVariable.getMethodName().equals(method);
+        affected = affected && def.getMethodName().equals(method);
+        if(def.getLinenumber()==55 && def.getVariableName().contains("a")){
+          logger.info("def method "+def.getMethodName() +" "+affected);
+        }
       }
       // variable level filter
       if (nodeProperties.has("variable")) {
         var variable = nodeProperties.get("variable").getAsString();
-        affected = affected && defUseVariable.getVariableName().equals(variable);
+        if(variable.contains("[")){
+          //logger.info(variable+" defuse: "+defUseVariable.getVariableName()+defUseVariable.getVariableIndex()+"]");
+          affected = affected && variable.equals(def.getVariableName()+def.getVariableIndex()+"]");
+        } else {
+          affected = affected && variable.equals(def.getVariableName());
+        }
+        if(def.getLinenumber()==55 && def.getVariableName().contains("a")){
+          logger.info("def "+affected);
+        }
+
       }
       // def use level filter
-      if (defUseVariable.getRole() == DefUseVariableRole.DEFINITION && nodeProperties.has("defLocation")) {
+      if (nodeProperties.has("defLocation")) {
         var defLocation = Integer.parseInt(nodeProperties.get("defLocation").getAsString().substring(1));
-        affected = affected && defUseVariable.getLinenumber() == defLocation;
-      } else if (defUseVariable.getRole() == DefUseVariableRole.USAGE && nodeProperties.has("defLocation")
-          && nodeProperties.has("useLocation") && nodeProperties.has("index")) {
+        affected = affected && def.getLinenumber() == defLocation;
+        if(def.getLinenumber()==55 && def.getVariableName().contains("a")){
+          logger.info("def defLocation "+affected);
+        }
+      }
+
+      if (nodeProperties.has("useLocation") && nodeProperties.has("index")) {
         int index = nodeProperties.get("index").getAsInt();
         int instruction = nodeProperties.get("instruction").getAsInt();
         if(nodeProperties.get("useLocation").getAsString().contains(" ")){
           String useLocation = nodeProperties.get("useLocation").getAsString();
           String method = useLocation.substring(0,useLocation.indexOf(" "));
           int ln = Integer.parseInt(useLocation.substring(useLocation.indexOf(" ")+2));
-          affected = defUseVariable.getMethod().equals(method) && defUseVariable.getLinenumber() == ln
-                  && defUseVariable.getVariableIndex() == index && defUseVariable.getInstruction() == instruction;
+          if(use.getLinenumber()==41 && use.getVariableName().contains("a")){
+            logger.info("use useLocation "+useLocation+" method "+method+" ln "+ln);
+            logger.info(use.toString());
+          }
+          affected = affected && use.getMethodName().equals(method) && use.getLinenumber() == ln
+                  && use.getVariableIndex() == index && use.getInstruction() == instruction;
+          if(use.getLinenumber()==41 && use.getVariableName().contains("a")){
+            logger.info("use useLocation"+affected);
+          }
         } else {
           int useLocation = Integer.parseInt(nodeProperties.get("useLocation").getAsString().substring(1));
           affected =
-                  affected && defUseVariable.getLinenumber() == useLocation && defUseVariable.getVariableIndex() == index
-                          && defUseVariable.getInstruction() == instruction;
+                  affected && use.getLinenumber() == useLocation && use.getVariableIndex() == index
+                          && use.getInstruction() == instruction;
+          //logger.info("use "+ use.toString()+" affected "+affected);
         }
+
       }
 
       if (affected) {
-        defUseVariable.setEditorHighlight(
+        logger.info(chain.toString());
+        def.setEditorHighlight(
             // Standard implementations of the Tree View Protocol do not provide the additional parameter
             // for newIsEditorHighlight. If it is null, we just toggle the boolean value of affected nodes
-            newIsEditorHighlight == null ? !defUseVariable.isEditorHighlight() : newIsEditorHighlight);
+            newIsEditorHighlight == null ? !def.isEditorHighlight() : newIsEditorHighlight);
+        use.setEditorHighlight(
+                // Standard implementations of the Tree View Protocol do not provide the additional parameter
+                // for newIsEditorHighlight. If it is null, we just toggle the boolean value of affected nodes
+                newIsEditorHighlight == null ? !use.isEditorHighlight() : newIsEditorHighlight);
       }
     });
   }
@@ -224,16 +259,25 @@ public class DefUseAnalysisProvider {
     HashMap<String, List<DefUseVariable>> defUseVariableMap = new HashMap<>();
 
     defUseVariables.forEach(defUseVariable -> {
-      if (defUseVariableMap.containsKey(defUseVariable.getVariableName())) {
-        var groupedDefUseVariables = defUseVariableMap.get(defUseVariable.getVariableName());
+      String name = defUseVariable.getVariableName();
+      if(defUseVariable.getObjectName() != null ){
+        if(!name.contains("[")) {
+          name = defUseVariable.getObjectName() + "." + name.substring(name.indexOf(".") + 1);
+        } else {
+          name = name + defUseVariable.getVariableIndex()+"]";
+        }
+      }
+
+      if (defUseVariableMap.containsKey(name)) {
+        var groupedDefUseVariables = defUseVariableMap.get(name);
         groupedDefUseVariables.add(defUseVariable);
 
-        Comparator<DefUseVariable> byVariableIndex = Comparator.comparingInt(DefUseVariable::getVariableIndex);
+        Comparator<DefUseVariable> byVariableIndex = Comparator.comparingInt(DefUseVariable::getInstruction);
         groupedDefUseVariables.sort(byVariableIndex);
       } else {
         List<DefUseVariable> groupedDefUseVariables = new ArrayList<>();
         groupedDefUseVariables.add(defUseVariable);
-        defUseVariableMap.put(defUseVariable.getVariableName(), groupedDefUseVariables);
+        defUseVariableMap.put(name, groupedDefUseVariables);
       }
     });
 

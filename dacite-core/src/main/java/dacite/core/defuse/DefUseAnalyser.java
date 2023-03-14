@@ -188,6 +188,9 @@ public class DefUseAnalyser {
         DefUseField use = new DefUseField(linenumber, instruction, index, value, method, arrayName+"[", array, arrayName);
         // get most recent field definition for this usage
         DefUseVariable def = defs.getLastDefinitionFields(index, "", value, array);
+        if(def.variableName.equals("")){
+            def.variableName = arrayName+"[";
+        }
         registerUse(def, use, index, "", method);
     }
 

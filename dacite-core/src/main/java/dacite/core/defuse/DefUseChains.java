@@ -1,6 +1,7 @@
 package dacite.core.defuse;
 
 import java.util.ArrayList;
+import java.util.ListIterator;
 
 import jakarta.xml.bind.annotation.XmlElement;
 import jakarta.xml.bind.annotation.XmlRootElement;
@@ -74,7 +75,10 @@ public class DefUseChains {
      * @return variable usage
      */
     public DefUseVariable findUse(String method, int linenumber, Object value, boolean removed){
-        for(DefUseChain chain : defUseChains){
+        ListIterator iterator = defUseChains.listIterator(defUseChains.size());
+        while (iterator.hasPrevious()){
+            DefUseChain chain = (DefUseChain) iterator.previous();
+        //for(DefUseChain chain : defUseChains){
             DefUseVariable use = chain.getUse();
             if(use.getLinenumber() == linenumber && use.getMethod().equals(method) &&
                     (use.getValue() == value || value != null && DefUseAnalyser.isPrimitiveOrWrapper(value) && value.equals(use.getValue()))){

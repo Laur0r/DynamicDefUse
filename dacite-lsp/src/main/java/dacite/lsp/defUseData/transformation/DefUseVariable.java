@@ -13,6 +13,8 @@ public class DefUseVariable {
   private int variableIndex;
   private String variableName;
 
+  private String objectName;
+
   // Additional attributes used after parsing XML
   private DefUseVariableRole role;
   private Color color;
@@ -62,6 +64,15 @@ public class DefUseVariable {
 
   public void setVariableName(String variableName) {
     this.variableName = variableName;
+  }
+
+  @XmlElement
+  public String getObjectName() {
+    return objectName;
+  }
+
+  public void setObjectName(String name) {
+    this.objectName = name;
   }
 
   public DefUseVariableRole getRole() {
@@ -133,6 +144,6 @@ public class DefUseVariable {
 
   @Override
   public String toString(){
-    return "name: " + variableName + ", ln: "+linenumber + ", method: "+ method;
+    return "name: " + variableName + ", ln: "+linenumber + ", method: "+ method + ", isEditorHighlight: "+isEditorHighlight();
   }
 }

@@ -23,4 +23,11 @@ public class DefUseChain {
     public void setUse(DefUseVariable use) {
         this.use = use;
     }
+
+    public String toString(){
+        String output = "";
+        output += "   DefUse var "+use.getVariableIndex()+": Def name="+def.getVariableName()+" Method "+def.getMethod()+" ln=" + def.getLinenumber()+" ins="+def.getInstruction() +" --> Use: Method "+use.getMethod()+" ln=" + use.getLinenumber()+" ins="+use.getInstruction()+
+                " name="+use.getVariableName();
+        return output;
+    }
 }
