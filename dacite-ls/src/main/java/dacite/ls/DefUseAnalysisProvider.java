@@ -10,11 +10,7 @@ import java.io.IOException;
 import java.io.StringReader;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import dacite.lsp.defUseData.DefUseClass;
@@ -68,9 +64,10 @@ public class DefUseAnalysisProvider {
       var color = new Color(random.nextInt(256), random.nextInt(256), random.nextInt(256));
       defuse.forEach((def, uses) -> {
         def.setColor(color);
-        uses.forEach(it -> it.setColor(color));
+        uses.forEach(it -> {it.setColor(color); it.getChain().getDef().setColor(color);});
       });
     });
+    logger.info(defUseChains.toString());
   }
 
   public static List<DefUseChain> getDefUseChains() {
@@ -114,17 +111,11 @@ public class DefUseAnalysisProvider {
       if (nodeProperties.has("packageClass")) {
         var packageClass = nodeProperties.get("packageClass").getAsString();
         affected = def.matchesPackageClass(packageClass);
-        if(def.getLinenumber()==55 && def.getVariableName().contains("a")){
-          logger.info("def package "+affected);
-        }
       }
       // method level filter
       if (nodeProperties.has("method")) {
         var method = nodeProperties.get("method").getAsString();
         affected = affected && def.getMethodName().equals(method);
-        if(def.getLinenumber()==55 && def.getVariableName().contains("a")){
-          logger.info("def method "+def.getMethodName() +" "+affected);
-        }
       }
       // variable level filter
       if (nodeProperties.has("variable")) {
@@ -135,48 +126,34 @@ public class DefUseAnalysisProvider {
         } else {
           affected = affected && variable.equals(def.getVariableName());
         }
-        if(def.getLinenumber()==55 && def.getVariableName().contains("a")){
-          logger.info("def "+affected);
-        }
 
       }
       // def use level filter
-      if (nodeProperties.has("defLocation")) {
+      if (nodeProperties.has("defLocation") && nodeProperties.has("defInstruction")) {
         var defLocation = Integer.parseInt(nodeProperties.get("defLocation").getAsString().substring(1));
-        affected = affected && def.getLinenumber() == defLocation;
-        if(def.getLinenumber()==55 && def.getVariableName().contains("a")){
-          logger.info("def defLocation "+affected);
-        }
+        int instruction = nodeProperties.get("defInstruction").getAsInt();
+        affected = affected && def.getLinenumber() == defLocation && def.getInstruction() == instruction;
       }
 
       if (nodeProperties.has("useLocation") && nodeProperties.has("index")) {
         int index = nodeProperties.get("index").getAsInt();
-        int instruction = nodeProperties.get("instruction").getAsInt();
+        int instruction = nodeProperties.get("useInstruction").getAsInt();
         if(nodeProperties.get("useLocation").getAsString().contains(" ")){
           String useLocation = nodeProperties.get("useLocation").getAsString();
           String method = useLocation.substring(0,useLocation.indexOf(" "));
           int ln = Integer.parseInt(useLocation.substring(useLocation.indexOf(" ")+2));
-          if(use.getLinenumber()==41 && use.getVariableName().contains("a")){
-            logger.info("use useLocation "+useLocation+" method "+method+" ln "+ln);
-            logger.info(use.toString());
-          }
           affected = affected && use.getMethodName().equals(method) && use.getLinenumber() == ln
                   && use.getVariableIndex() == index && use.getInstruction() == instruction;
-          if(use.getLinenumber()==41 && use.getVariableName().contains("a")){
-            logger.info("use useLocation"+affected);
-          }
         } else {
           int useLocation = Integer.parseInt(nodeProperties.get("useLocation").getAsString().substring(1));
           affected =
                   affected && use.getLinenumber() == useLocation && use.getVariableIndex() == index
                           && use.getInstruction() == instruction;
-          //logger.info("use "+ use.toString()+" affected "+affected);
         }
 
       }
 
       if (affected) {
-        logger.info(chain.toString());
         def.setEditorHighlight(
             // Standard implementations of the Tree View Protocol do not provide the additional parameter
             // for newIsEditorHighlight. If it is null, we just toggle the boolean value of affected nodes
@@ -192,10 +169,26 @@ public class DefUseAnalysisProvider {
   public static HashMap<DefUseVariable, List<DefUseVariable>> getDefUseMapping() {
     HashMap<DefUseVariable, List<DefUseVariable>> defUseMapping = new HashMap<>();
 
-    var defUseVars = getDefUseVariables();
-    var defs = defUseVars.stream().filter(it -> it.getRole() == DefUseVariableRole.DEFINITION)
-        .collect(Collectors.toSet());
-    var uses = defUseVars.stream().filter(it -> it.getRole() == DefUseVariableRole.USAGE).collect(Collectors.toSet());
+    List<DefUseVariable> defUseVars = getDefUseVariables();
+    Set<DefUseVariable> defs = new HashSet<>();
+    Set<DefUseVariable> uses = new HashSet<>();
+    for(DefUseVariable var:defUseVars){
+      if(var.getRole() == DefUseVariableRole.DEFINITION) {
+        if (defs.contains(var) && var.isEditorHighlight()) {
+          defs.remove(var);
+          defs.add(var);
+        } else if(!defs.contains(var)){
+          defs.add(var);
+        }
+      } else {
+        if (uses.contains(var) && var.isEditorHighlight()) {
+          uses.remove(var);
+          uses.add(var);
+        } else if(!uses.contains(var)){
+          uses.add(var);
+        }
+      }
+    }
 
     defs.forEach(def -> defUseMapping.put(def,
         uses.stream().filter(use -> use.getChain().getDef().equals(def)).collect(Collectors.toList())));
@@ -207,9 +200,15 @@ public class DefUseAnalysisProvider {
     HashMap<String, HashMap<DefUseVariable,List<DefUseVariable>>> variableMapping = new HashMap<>();
 
     var defUseVars = getDefUseVariables();
-    var defs = defUseVars.stream().filter(it -> it.getRole() == DefUseVariableRole.DEFINITION)
-            .collect(Collectors.toSet());
-    var uses = defUseVars.stream().filter(it -> it.getRole() == DefUseVariableRole.USAGE).collect(Collectors.toSet());
+    List<DefUseVariable> defs = new ArrayList<>();
+    List<DefUseVariable> uses = new ArrayList<>();
+    for(DefUseVariable var:defUseVars){
+      if(var.getRole() == DefUseVariableRole.DEFINITION) {
+        defs.add(var);
+      } else {
+        uses.add(var);
+      }
+    }
 
     for(DefUseVariable def: defs){
       List<DefUseVariable> sameVar = new ArrayList<>();
@@ -223,7 +222,19 @@ public class DefUseAnalysisProvider {
       for(DefUseVariable var :sameVar){
         mapVar.put(var, uses.stream().filter(use -> use.getChain().getDef().equals(var)).collect(Collectors.toList()));
       }
-      variableMapping.put(sameVar.get(0).getMethod()+"."+sameVar.get(0).getVariableName(),mapVar);
+      if(variableMapping.containsKey(sameVar.get(0).getMethod()+"."+sameVar.get(0).getVariableName())){
+        String name = sameVar.get(0).getMethod()+"."+sameVar.get(0).getVariableName();
+        HashMap<DefUseVariable, List<DefUseVariable>> defuses = variableMapping.get(name);
+        mapVar.forEach((def2, uses2) -> {
+          if(!defuses.containsKey(def2)){
+            defuses.put(def2,uses2);
+          }
+        });
+        defuses.putAll(mapVar);
+        variableMapping.put(name, defuses);
+      } else {
+        variableMapping.put(sameVar.get(0).getMethod()+"."+sameVar.get(0).getVariableName(),mapVar);
+      }
     }
 
     return variableMapping;
@@ -327,7 +338,8 @@ public class DefUseAnalysisProvider {
       }
       DefUseData data = new DefUseData(varName, defLocation, useLocation);
       data.setIndex(use.getVariableIndex());
-      data.setInstruction(use.getInstruction());
+      data.setUseInstruction(use.getInstruction());
+      data.setDefInstruction(def.getInstruction());
       // if output already contains class, add data to existing class instance
       if (output.contains(defUseClass)) {
         DefUseClass instance = output.get(output.indexOf(defUseClass));

@@ -26,8 +26,8 @@ public class DefUseChain {
 
     public String toString(){
         String output = "";
-        output += "   DefUse var "+use.getVariableIndex()+": Def name="+def.getVariableName()+" Method "+def.getMethod()+" ln=" + def.getLinenumber()+" ins="+def.getInstruction() +" --> Use: Method "+use.getMethod()+" ln=" + use.getLinenumber()+" ins="+use.getInstruction()+
-                " name="+use.getVariableName();
+        output += "   DefUse var "+use.getVariableIndex()+": Def name="+def.getVariableName()+" Method "+def.getMethod()+" ln=" + def.getLinenumber()+" ins="+def.getInstruction()+" color="+def.getColor() +" --> Use: Method "+use.getMethod()+" ln=" + use.getLinenumber()+" ins="+use.getInstruction()+
+                " name="+use.getVariableName() +" color="+use.getColor();
         return output;
     }
 }

@@ -144,6 +144,6 @@ public class DefUseVariable {
 
   @Override
   public String toString(){
-    return "name: " + variableName + ", ln: "+linenumber + ", method: "+ method + ", isEditorHighlight: "+isEditorHighlight();
+    return "name: " + variableName + ", ln: "+linenumber + ", method: "+ method + " ins "+instruction+", isEditorHighlight: "+isEditorHighlight();
   }
 }

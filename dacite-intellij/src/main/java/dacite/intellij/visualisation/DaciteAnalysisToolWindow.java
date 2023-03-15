@@ -196,7 +196,7 @@ public class DaciteAnalysisToolWindow {
                             String finalHintWord = hintWord;
                             Font finalFont = font;
                             Color finalColor = color;
-                            eachEditor.getInlayModel().getInlineElementsInRange(offset,offset+4).forEach(inlay -> {inlay.dispose();});
+                            eachEditor.getInlayModel().getInlineElementsInRange(offset,offset+3).forEach(inlay -> {inlay.dispose();});
                             eachEditor.getInlayModel().addInlineElement(offset, new EditorCustomElementRenderer() {
                                 @Override
                                 public int calcWidthInPixels(@NotNull Inlay inlay) {

@@ -34,8 +34,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.awt.*;
-import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.*;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
@@ -109,6 +108,7 @@ public class DaciteTextDocumentService
     var className = codeAnalyser.extractClassName();
     var packageName = codeAnalyser.extractPackageName();
 
+    Set<com.github.javaparser.Position> globalDefPositions = new HashSet<>();
     var defUseVariableMap = DefUseAnalysisProvider.getUniqueDefUseVariablesByLine(packageName, className);
     // First use grouping by line number...
     defUseVariableMap.forEach((lineNumber, defUseVariables) -> {
@@ -130,15 +130,19 @@ public class DaciteTextDocumentService
                 uses.add(var);
               }
             }
+            List<com.github.javaparser.Position> defPositions = new ArrayList<>();
             //List<Position> defPos = codeAnalyser.extractVariablePositionsAtLine(lineNumber, variableName);
             if(defs.size() != 0){
-              var defPositions = codeAnalyser.extractVariablePositionsAtLine(lineNumber, variableName, true);
+              defPositions = codeAnalyser.extractVariablePositionsAtLine(lineNumber, variableName, true).get(0);
+              globalDefPositions.addAll(defPositions);
               //logger.info("defPositions: "+defPositions.size());
               int i = 0;
               while (i < defs.size() && i < defPositions.size()) {
-                //logger.info(groupedDefUseVariables.get(i).toString());
+                /*if(lineNumber == 39){
+                  logger.info("defPositions: "+defPositions.size());
+                  logger.info("def "+defs.get(i).toString());
+                }*/
                 if(defs.get(i).isEditorHighlight()) {
-                  logger.info(defs.get(i).getVariableName()+"is highlighted");
                   var defUseVariable = defs.get(i);
                   var parserPosition = defPositions.get(i);
                   var label = defUseVariable.getRole() == DefUseVariableRole.DEFINITION ? "Def" : "Use";
@@ -162,13 +166,29 @@ public class DaciteTextDocumentService
             }
 
             if(uses.size() != 0){
-              var usePositions = codeAnalyser.extractVariablePositionsAtLine(lineNumber, variableName, false);
-              //logger.info("usePositions: "+usePositions.size());
+              var pos = codeAnalyser.extractVariablePositionsAtLine(lineNumber, variableName, false);
+              var usePositionsDup = pos.get(0);
+              var unaryPosition = pos.get(1);
+              if(lineNumber == 15 & variableName.contains("number")){
+                logger.info("uses "+uses.get(0));
+                logger.info("usePositionsDup: "+usePositionsDup.size());
+              }
+              List<com.github.javaparser.Position> usePositions = new ArrayList<>();
+              for(com.github.javaparser.Position p:usePositionsDup){
+                if(!globalDefPositions.contains(p) || unaryPosition.contains(p)){
+                  usePositions.add(p);
+                }
+              }
+              if(lineNumber == 15 & variableName.contains("number")){
+                logger.info("usePositions: "+usePositions.size());
+              }
               int i = 0;
               while (i < uses.size() && i < usePositions.size()) {
-                //logger.info(groupedDefUseVariables.get(i).toString());
+                if(lineNumber == 15 & variableName.contains("number")){
+                  logger.info("usePositions: "+usePositions.size());
+                  logger.info("use "+uses.get(i).toString());
+                }
                 if(uses.get(i).isEditorHighlight()) {
-                  logger.info(uses.get(i).getVariableName()+"is highlighted");
                   var defUseVariable = uses.get(i);
                   var parserPosition = usePositions.get(i);
                   var label = defUseVariable.getRole() == DefUseVariableRole.DEFINITION ? "Def" : "Use";
@@ -282,7 +302,7 @@ public class DaciteTextDocumentService
                     for (DefUseData data : var.getData()) {
                       TreeViewNode node = new TreeViewNode("defUseChains",
                           cl.getName() + "." + m.getName() + " " + var.getName() + " " + data.getDefLocation() + " - "
-                              + data.getUseLocation() + " " + data.getIndex() + " " + data.getInstruction(),
+                              + data.getUseLocation() + " " + data.getIndex() + " " + data.getUseInstruction(),
                           data.getName() + " " + data.getDefLocation() + " - " + data.getUseLocation());
 
                       var commandArg = new JsonObject();
@@ -290,9 +310,10 @@ public class DaciteTextDocumentService
                       commandArg.addProperty("method", m.getName());
                       commandArg.addProperty("variable", var.getName());
                       commandArg.addProperty("defLocation", data.getDefLocation());
+                      commandArg.addProperty("defInstruction", data.getDefInstruction());
                       commandArg.addProperty("useLocation", data.getUseLocation());
                       commandArg.addProperty("index", data.getIndex());
-                      commandArg.addProperty("instruction", data.getInstruction());
+                      commandArg.addProperty("useInstruction", data.getUseInstruction());
                       node.setCommand(new TreeViewCommand("Highlight", "dacite.highlight", List.of(commandArg)));
 
                       nodes.add(node);

@@ -6,14 +6,12 @@ import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.Node;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.Parameter;
+import com.github.javaparser.ast.body.VariableDeclarator;
 import com.github.javaparser.ast.expr.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class CodeAnalyser {
@@ -46,12 +44,19 @@ public class CodeAnalyser {
     return null;
   }
 
-  public List<Position> extractVariablePositionsAtLine(int lineNumber, String variableName, boolean def) {
+  public List<List<Position>> extractVariablePositionsAtLine(int lineNumber, String variableName, boolean def) {
+    List<Position> unaryPosition = new ArrayList();
     List<Position> positions = new ArrayList<>();
+    List<List<Position>> output = new ArrayList<>();
     List<Node> nodes = extractNodesAtLine(lineNumber);
-    //logger.info("ln: "+lineNumber+" name: "+variableName);
+    if(lineNumber == 15){
+      logger.info("ln: "+lineNumber+" name: "+variableName);
+    }
     for(int i=0; i<nodes.size();i++){
       Node node = nodes.get(i);
+      if(lineNumber == 15){
+        logger.info(node.toString() + " " + node.getClass().getSimpleName());
+      }
       if (node instanceof AssignExpr) {
         // Expression = Expression
         Expression e;
@@ -61,6 +66,48 @@ public class CodeAnalyser {
           e = ((AssignExpr) node).getValue();
         }
         //logger.info(e.toString() +" "+e.getClass().getSimpleName());
+        if(e instanceof NameExpr){
+          NameExpr nameExpr = ((NameExpr) e);
+          if (nameExpr.getName().asString().equals(variableName)) {
+            nameExpr.getName().getRange().ifPresent(range -> positions.add(range.begin));
+          }
+        } else if(e instanceof ArrayAccessExpr){
+          NameExpr nameExpr = (NameExpr)((ArrayAccessExpr) e).getName();
+          if (nameExpr.getName().asString().equals(variableName)) {
+            nameExpr.getName().getRange().ifPresent(range -> positions.add(range.begin));
+          }
+        } else if(e instanceof FieldAccessExpr) {
+          FieldAccessExpr name = (FieldAccessExpr) e;
+          if (name.toString().equals(variableName)) {
+            name.getRange().ifPresent(range -> positions.add(range.begin));
+          }
+        } else {
+          List<Position> pos = extractVariablePositionFromNode(e.getChildNodes(), variableName);
+          positions.addAll(pos);
+        }
+      } else if (node instanceof VariableDeclarator) {
+        // Example: int n = fibonacci(5)
+        if(def){
+          SimpleName name = ((VariableDeclarator) node).getName();
+          if(name.asString().equals(variableName)){
+            name.getRange().ifPresent(range -> positions.add(range.begin));
+          }
+        } else {
+          Optional<Expression> expr = ((VariableDeclarator) node).getInitializer();
+          if(expr.isPresent()){
+            List<Position> pos = extractVariablePositionFromNode(expr.get().getChildNodes(), variableName);
+            positions.addAll(pos);
+          }
+        }
+      } else if (node instanceof Parameter) {
+        // Example: method(int n)
+        var parameter = (Parameter) node;
+        if (parameter.getName().asString().equals(variableName)) {
+          parameter.getName().getRange().ifPresent(range -> positions.add(range.begin));
+        }
+      } else if(node instanceof UnaryExpr){
+        // Example: i++
+        Expression e = ((UnaryExpr)node).getExpression();
         NameExpr nameExpr;
         if(e instanceof NameExpr){
           nameExpr = ((NameExpr) e);
@@ -73,32 +120,30 @@ public class CodeAnalyser {
           positions.addAll(pos);
         }
         if (nameExpr != null && nameExpr.getName().asString().equals(variableName)) {
-          nameExpr.getName().getRange().ifPresent(range -> positions.add(range.begin));
+          nameExpr.getName().getRange().ifPresent(range -> {positions.add(range.begin); unaryPosition.add(range.begin);});
         }
-      } else if (node instanceof VariableDeclarationExpr) {
-        // Example: int n = fibonacci(5)
-        ((VariableDeclarationExpr) node).getVariables().stream().filter(v -> Objects.equals(v.getName().asString(),
-                variableName)).forEach(v -> v.getRange().ifPresent(range -> positions.add(range.begin)));
-      } else if (node instanceof Parameter) {
-        // Example: method(int n)
-        var parameter = (Parameter) node;
-        if (parameter.getName().asString().equals(variableName)) {
-          parameter.getName().getRange().ifPresent(range -> positions.add(range.begin));
+      } else if (!def){
+        if(node instanceof NameExpr) {
+          var nameExpr = ((NameExpr) node);
+          if (nameExpr.getName().asString().equals(variableName)) {
+            nameExpr.getName().getRange().ifPresent(range -> positions.add(range.begin));
+          }
         }
-      } else if (node instanceof NameExpr) {
-        // Example: if(n == 0)
-        var nameExpr = ((NameExpr) node);
-        if (nameExpr.getName().asString().equals(variableName)) {
-          nameExpr.getName().getRange().ifPresent(range -> positions.add(range.begin));
-        }
-      } else if (node instanceof FieldAccessExpr){
-        FieldAccessExpr name = (FieldAccessExpr) node;
-        if(name.toString().equals(variableName)){
-          name.getRange().ifPresent(range -> positions.add(range.begin));
+        else if(node instanceof FieldAccessExpr) {
+          FieldAccessExpr name = (FieldAccessExpr) node;
+          if (name.toString().equals(variableName)) {
+            name.getRange().ifPresent(range -> positions.add(range.begin));
+          }
         }
       }
     }
-    return positions;
+    // Sort
+    Comparator<Position> byColumn = Comparator.comparingInt(it -> it.column);
+    positions.sort(byColumn);
+    output.add(positions);
+    output.add(unaryPosition);
+
+    return output;
   }
 
   public List<Position> extractVariablePositionFromNode(List<Node> nodes, String variableName){
