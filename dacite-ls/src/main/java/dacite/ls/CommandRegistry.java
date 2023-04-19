@@ -83,7 +83,8 @@ public class CommandRegistry {
                 // Classpath
                 "-classpath", fullClassPath,
                 // Main class in dacite-core
-                "dacite.core.DefUseMain",
+                "dacite.core.DaciteLauncher",
+                "dacite",
                 // Class to be analyzed
                 packageName + "." + className);
 

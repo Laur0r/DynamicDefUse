@@ -34,7 +34,7 @@ public class DefUseMain {
 
 	static Logger logger = Logger.getLogger(Logger.GLOBAL_LOGGER_NAME);
 
-	public static void main(String[] args) throws Exception {
+	public static void exec(String[] args) throws Exception {
 		if(args.length > 1){
 			throw new IllegalArgumentException("More than one argument for main method detected");
 		} else if(args.length == 0){
