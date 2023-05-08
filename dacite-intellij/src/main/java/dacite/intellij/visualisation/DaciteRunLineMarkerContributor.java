@@ -5,6 +5,7 @@ import static org.wso2.lsp4intellij.requests.Timeouts.REFERENCES;
 
 import com.intellij.execution.lineMarker.RunLineMarkerContributor;
 import com.intellij.openapi.actionSystem.ActionManager;
+import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.editor.Document;
 import com.intellij.openapi.editor.LogicalPosition;
 import com.intellij.psi.PsiDocumentManager;
@@ -21,6 +22,8 @@ import org.wso2.lsp4intellij.client.languageserver.requestmanager.RequestManager
 import org.wso2.lsp4intellij.client.languageserver.wrapper.LanguageServerWrapper;
 import org.wso2.lsp4intellij.utils.FileUtils;
 
+import javax.swing.*;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -72,12 +75,16 @@ public class DaciteRunLineMarkerContributor extends RunLineMarkerContributor {
             }
             return null;
         } else {
+            List<AnAction> actions = new ArrayList<>();
             for (CodeLens lens : codeLens) {
                 LogicalPosition position = new LogicalPosition(lens.getRange().getStart().getLine() + 1, lens.getRange().getStart().getCharacter());
                 if (position.equals(elemPos)) {
-                    return new Info(null, null,
-                            ActionManager.getInstance().getAction(lens.getCommand().getCommand()));
+                    actions.add(ActionManager.getInstance().getAction(lens.getCommand().getCommand()));
+                    //return new Info(null,null,ActionManager.getInstance().getAction(lens.getCommand().getCommand()));
                 }
+            }
+            if(actions.size() !=0){
+                return new Info(null,null, actions.toArray(AnAction[]::new));
             }
             return null;
         }

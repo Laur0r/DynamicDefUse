@@ -1,13 +1,15 @@
 package dacite.ls;
 
-import org.eclipse.lsp4j.DidChangeConfigurationParams;
-import org.eclipse.lsp4j.DidChangeWatchedFilesParams;
-import org.eclipse.lsp4j.ExecuteCommandParams;
+import org.eclipse.lsp4j.*;
+import org.eclipse.lsp4j.jsonrpc.services.JsonRequest;
+import org.eclipse.lsp4j.services.LanguageClient;
 import org.eclipse.lsp4j.services.WorkspaceService;
 
 import java.util.concurrent.CompletableFuture;
 
 public class DaciteWorkspaceService implements WorkspaceService {
+
+  private LanguageClient client;
 
   @Override
   public void didChangeConfiguration(DidChangeConfigurationParams params) {
@@ -19,7 +21,9 @@ public class DaciteWorkspaceService implements WorkspaceService {
 
   @Override
   public CompletableFuture<Object> executeCommand(ExecuteCommandParams params) {
-    return CommandRegistry.execute(params);
+    return CommandRegistry.execute(params, client);
   }
+
+  public void setClient(LanguageClient client){ this.client = client;}
 
 }

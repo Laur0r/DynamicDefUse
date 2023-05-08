@@ -50,13 +50,13 @@ public class DaciteTextDocumentService
 
   @Override
   public void didOpen(DidOpenTextDocumentParams params) {
-    logger.info("didOpen {}", params);
+    //logger.info("didOpen {}", params);
     TextDocumentItemProvider.add(params.getTextDocument());
   }
 
   @Override
   public void didChange(DidChangeTextDocumentParams params) {
-    logger.info("didChange {}", params);
+    //logger.info("didChange {}", params);
     List<TextDocumentContentChangeEvent> contentChanges = params.getContentChanges();
     if (!contentChanges.isEmpty()) {
       TextDocumentItemProvider.get(params.getTextDocument()).setText(contentChanges.get(0).getText());
@@ -65,7 +65,7 @@ public class DaciteTextDocumentService
 
   @Override
   public void didClose(DidCloseTextDocumentParams params) {
-    logger.info("didClose {}", params);
+    //logger.info("didClose {}", params);
     TextDocumentItemProvider.remove(params.getTextDocument());
   }
 
@@ -89,11 +89,14 @@ public class DaciteTextDocumentService
             codeLenses.add(new CodeLens(new Range(new Position(range.begin.line - 1, range.begin.column - 1),
                 new Position(range.end.line - 1, range.end.column)),
                 new Command("Run Analysis", "dacite.analyze", List.of(params.getTextDocument().getUri())), null));
+            codeLenses.add(new CodeLens(new Range(new Position(range.begin.line - 1, range.begin.column - 1),
+                    new Position(range.end.line - 1, range.end.column)),
+                    new Command("Run Symbolic Analysis", "dacite.analyzeSymbolic", List.of(params.getTextDocument().getUri())), null));
           }));
     } catch (ParseProblemException e) {
       logger.error("Document {} could not be parsed successfully: {}", params.getTextDocument().getUri(), e);
     }
-
+    //logger.info("codeLens {}", codeLenses);
     return CompletableFuture.completedFuture(codeLenses);
   }
 
@@ -213,7 +216,7 @@ public class DaciteTextDocumentService
           });
     });
 
-    logger.info("hints {}", inlayHints);
+    //logger.info("hints {}", inlayHints);
 
     return CompletableFuture.completedFuture(inlayHints);
   }

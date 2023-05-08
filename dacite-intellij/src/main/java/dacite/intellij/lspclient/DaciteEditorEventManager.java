@@ -1,20 +1,17 @@
 package dacite.intellij.lspclient;
 
-import com.intellij.openapi.editor.Editor;
-import com.intellij.openapi.editor.EditorCustomElementRenderer;
-import com.intellij.openapi.editor.Inlay;
-import com.intellij.openapi.editor.LogicalPosition;
+import com.intellij.openapi.editor.*;
 import com.intellij.openapi.editor.colors.EditorFontType;
 import com.intellij.openapi.editor.event.DocumentListener;
+import com.intellij.openapi.editor.event.EditorMouseEvent;
 import com.intellij.openapi.editor.event.EditorMouseListener;
 import com.intellij.openapi.editor.event.EditorMouseMotionListener;
 import com.intellij.openapi.editor.markup.TextAttributes;
-import com.intellij.openapi.fileEditor.FileEditor;
-import com.intellij.openapi.fileEditor.FileEditorManager;
-import com.intellij.openapi.fileEditor.impl.text.PsiAwareTextEditorImpl;
+import com.intellij.openapi.fileEditor.FileDocumentManager;
 import com.intellij.ui.JBColor;
 import dacite.lsp.InlayHintDecoration;
 import dacite.lsp.InlayHintDecorationParams;
+import org.apache.commons.lang3.StringUtils;
 import org.eclipse.lsp4j.*;
 import org.eclipse.lsp4j.jsonrpc.JsonRpcException;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
@@ -24,11 +21,14 @@ import org.wso2.lsp4intellij.client.languageserver.requestmanager.RequestManager
 import org.wso2.lsp4intellij.client.languageserver.wrapper.LanguageServerWrapper;
 import org.wso2.lsp4intellij.editor.EditorEventManager;
 import org.wso2.lsp4intellij.listeners.LSPCaretListenerImpl;
+import org.wso2.lsp4intellij.utils.DocumentUtils;
 
 import java.awt.*;
 import java.awt.Color;
+import java.awt.event.KeyEvent;
 import java.awt.font.FontRenderContext;
 import java.awt.geom.AffineTransform;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -41,8 +41,10 @@ import static org.wso2.lsp4intellij.requests.Timeouts.REFERENCES;
 public class DaciteEditorEventManager extends EditorEventManager {
 
     private boolean inlays;
+    private boolean pressedEscaped;
     public DaciteEditorEventManager(Editor editor, DocumentListener documentListener, EditorMouseListener mouseListener, EditorMouseMotionListener mouseMotionListener, LSPCaretListenerImpl caretListener, RequestManager requestmanager, ServerOptions serverOptions, LanguageServerWrapper wrapper) {
         super(editor, documentListener, mouseListener, mouseMotionListener, caretListener, requestmanager, serverOptions, wrapper);
+        registerKey();
     }
 
     @Override
@@ -57,6 +59,33 @@ public class DaciteEditorEventManager extends EditorEventManager {
         if(!inlays){
             addInlays();
         }
+    }
+
+    @Override
+    public void mouseClicked(EditorMouseEvent e) {
+        super.mouseClicked(e);
+        if(pressedEscaped){
+            System.out.println("Yay!");
+            LanguageServerWrapper  wrapper = LanguageServerWrapper.forEditor(editor);
+            RequestManager requestManager = wrapper.getRequestManager();
+            CompletableFuture<Object> result = requestManager.executeCommand(new ExecuteCommandParams("dacite.analyzeSymbolic", List.of(getIdentifier().getUri())));
+        }
+    }
+
+    public void registerKey(){
+        KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher((KeyEvent e) -> {
+            int eventId = e.getID();
+            if (eventId == KeyEvent.KEY_PRESSED) {
+                if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
+                    this.pressedEscaped = true;
+                }
+            } else if (eventId == KeyEvent.KEY_RELEASED) {
+                if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
+                    this.pressedEscaped = false;
+                }
+            }
+            return false;
+        });
     }
 
     /**
@@ -130,5 +159,80 @@ public class DaciteEditorEventManager extends EditorEventManager {
                 e.printStackTrace();
             }
         }
+    }
+
+    @Override
+    public Runnable getEditsRunnable(int version, List<Either<TextEdit, InsertReplaceEdit>> edits, String name, boolean setCaret) {
+        if (version < this.documentEventManager.getDocumentVersion()) {
+            LOG.warn(String.format("Edit version %d is older than current version %d", version, this.documentEventManager.getDocumentVersion()));
+            return null;
+        }
+        if (edits == null) {
+            LOG.warn("Received edits list is null.");
+            return null;
+        }
+        if (editor.isDisposed()) {
+            LOG.warn("Text edits couldn't be applied as the editor is already disposed.");
+            return null;
+        }
+        Document document = editor.getDocument();
+        if (!document.isWritable()) {
+            LOG.warn("Document is not writable");
+            return null;
+        }
+
+        return () -> {
+            // Creates a sorted edit list based on the insertion position and the edits will be applied from the bottom
+            // to the top of the document. Otherwise all the other edit ranges will be invalid after the very first edit,
+            // since the document is changed.
+            List<TextEdit> lspEdits = new ArrayList<>();
+            edits.forEach(edit -> {
+                int start = 0;
+                int end = 0;
+                String text = "";
+                if(edit.isLeft()) {
+                    text = edit.getLeft().getNewText();
+                    Range range = edit.getLeft().getRange();
+                    if (range != null) {
+                        start = editor.logicalPositionToOffset(new LogicalPosition(range.getStart().getLine(),range.getStart().getCharacter()));
+                        end = editor.logicalPositionToOffset(new LogicalPosition(range.getEnd().getLine(),range.getEnd().getCharacter()));
+                    }
+                } else if(edit.isRight()) {
+                    text = edit.getRight().getNewText();
+                    Range range = edit.getRight().getInsert();
+
+                    if (range != null) {
+                        start = editor.logicalPositionToOffset(new LogicalPosition(range.getStart().getLine(),range.getStart().getCharacter()));
+                        end = editor.logicalPositionToOffset(new LogicalPosition(range.getEnd().getLine(),range.getEnd().getCharacter()));
+                    } else if ((range = edit.getRight().getReplace()) != null) {
+                        start = editor.logicalPositionToOffset(new LogicalPosition(range.getStart().getLine(),range.getStart().getCharacter()));
+                        end = editor.logicalPositionToOffset(new LogicalPosition(range.getEnd().getLine(),range.getEnd().getCharacter()));
+                    }
+                }
+                if (StringUtils.isEmpty(text)) {
+                    document.deleteString(start, end);
+                    if (setCaret) {
+                        editor.getCaretModel().moveToOffset(start);
+                    }
+                } else {
+                    text = text.replace(DocumentUtils.WIN_SEPARATOR, DocumentUtils.LINUX_SEPARATOR);
+                    if (end >= 0) {
+                        if (end - start <= 0) {
+                            document.insertString(start, text);
+                        } else {
+                            document.replaceString(start, end, text);
+                        }
+                    } else if (start == 0) {
+                        document.setText(text);
+                    } else if (start > 0) {
+                        document.insertString(start, text);
+                    }
+                    if (setCaret) {
+                        editor.getCaretModel().moveToOffset(start + text.length());
+                    }
+                }
+                FileDocumentManager.getInstance().saveDocument(editor.getDocument());
+            });
+        };
     }
 }
