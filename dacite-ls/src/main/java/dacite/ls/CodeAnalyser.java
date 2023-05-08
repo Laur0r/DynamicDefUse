@@ -4,6 +4,7 @@ import com.github.javaparser.Position;
 import com.github.javaparser.StaticJavaParser;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.Node;
+import com.github.javaparser.ast.body.AnnotationDeclaration;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.Parameter;
 import com.github.javaparser.ast.body.VariableDeclarator;
@@ -11,6 +12,7 @@ import com.github.javaparser.ast.expr.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.annotation.Annotation;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -161,51 +163,29 @@ public class CodeAnalyser {
     return positions;
   }
 
-  /*public List<Position> extractVariablePositionsAtLine(int lineNumber, String variableName) {
-    List<Position> positions = new ArrayList<>();
-    extractNodesAtLine(lineNumber).forEach(node -> {
-      logger.info(node.toString() +" "+node.getClass().getSimpleName());
-
-      if (node instanceof VariableDeclarationExpr) {
-        // Example: int n = fibonacci(5)
-        ((VariableDeclarationExpr) node).getVariables().stream().filter(v -> Objects.equals(v.getName().asString(),
-            variableName)).forEach(v -> v.getRange().ifPresent(range -> positions.add(range.begin)));
-      } else if (node instanceof Parameter) {
-        // Example: method(int n)
-        var parameter = (Parameter) node;
-        if (parameter.getName().asString().equals(variableName)) {
-          parameter.getName().getRange().ifPresent(range -> positions.add(range.begin));
-        }
-      } else if (node instanceof NameExpr) {
-        // Example: if(n == 0)
-        var nameExpr = ((NameExpr) node);
-        if (nameExpr.getName().asString().equals(variableName)) {
-          nameExpr.getName().getRange().ifPresent(range -> positions.add(range.begin));
-        }
-      } else if (node instanceof FieldAccessExpr){
-        FieldAccessExpr name = (FieldAccessExpr) node;
-        if(name.toString().equals(variableName)){
-            name.getRange().ifPresent(range -> positions.add(range.begin));
-        }
-      } else if(node instanceof AssignExpr){
-
-      }
-    });
-    if(variableName.equals("a") && lineNumber == 41) {
-      //logger.info(positions.toString());
-    }
-    // Sort
-    Comparator<Position> byColumn = Comparator.comparingInt(it -> it.column);
-    positions.sort(byColumn);
-
-    return positions;
-  }*/
-
   public List<Node> extractNodesAtLine(int lineNumber) {
     return compilationUnit.findAll(Node.class).stream().filter(it -> {
       var range = it.getRange().orElse(null);
       return range != null && range.begin.line == lineNumber;
     }).collect(Collectors.toList());
+  }
+
+  public List<MarkerAnnotationExpr> extractJUnitAnnotation(){
+    return compilationUnit.findAll(MarkerAnnotationExpr.class);
+  }
+
+  public void extractJUnitMethods(){
+    List<MarkerAnnotationExpr> annotations = extractJUnitAnnotation();
+    for(MarkerAnnotationExpr anno: annotations){
+      logger.info(anno.getClass() + ": " + anno);
+      if(anno.getParentNode().isPresent()){
+        Node parent = anno.getParentNode().get();
+        logger.info(parent.getClass()+": "+parent);
+        for(Node node: parent.getChildNodes()){
+          logger.info(node.getClass() + ": " + node);
+        }
+      }
+    }
   }
 
 }

@@ -1,16 +1,17 @@
 package dacite.core;
 
-import dacite.core.defuse.DefUseAnalyser;
-import dacite.core.defuse.DefUseChain;
 import dacite.core.defuse.DefUseField;
 import dacite.core.defuse.DefUseVariable;
-import org.junit.runner.JUnitCore;
+import de.wwu.mulib.Mulib;
+import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Type;
+import org.objectweb.asm.tree.*;
 import org.w3c.dom.Document;
 import org.xml.sax.InputSource;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.stream.XMLOutputFactory;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
 import javax.xml.transform.Source;
@@ -19,7 +20,9 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import java.io.*;
+import java.util.*;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 public class SymbolicExec {
 
@@ -31,10 +34,16 @@ public class SymbolicExec {
         } else if(args.length == 0){
             throw new IllegalArgumentException("Required to specify analysisJunittest to analyse data-flow");
         }
-        long startTime = System.nanoTime();
-        JUnitCore junitCore = new JUnitCore();
+        //long startTime = System.nanoTime();
+        //JUnitCore junitCore = new JUnitCore();
         String classname = args[0];
-        try {
+        //List<String> sr = generateSearchRegions(classname);
+        //for(String s:sr){
+            logger.info("In Symbolic Exec!!!!!!!!!!!!!!!!!!!!!!!!1");
+        //}
+        //Mulib.executeMulib(...)
+
+        /*try {
             junitCore.run(Class.forName(classname));
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
@@ -70,7 +79,7 @@ public class SymbolicExec {
         }
         catch (Exception e) {
             logger.info("Unable to write the file: " + e.getMessage());
-        }
+        }*/
 
     }
 
@@ -124,6 +133,98 @@ public class SymbolicExec {
             logger.info(e.getMessage());
             e.printStackTrace();
         }
+    }
+
+    private static List<String> generateSearchRegions(String classname) throws IOException {
+        List<String> output = new ArrayList<>();
+        String packageName = classname.substring(0, classname.lastIndexOf("."));
+        ClassReader reader = new ClassReader(classname);
+        ClassNode node = new ClassNode();
+        reader.accept(node, 0);
+        Map<String, List<String>> invokedMethods = new HashMap<>();
+        for(MethodNode mnode : node.methods) {
+            logger.info(mnode.name);
+            if (mnode.visibleAnnotations != null) {
+                for (AnnotationNode an : mnode.visibleAnnotations) {
+                    if (an.desc.equals("Lorg/junit/Test;")) {
+                        InsnList insns = mnode.instructions;
+                        Iterator<AbstractInsnNode> j = insns.iterator();
+                        while (j.hasNext()) {
+                            AbstractInsnNode in = j.next();
+                            if (in instanceof MethodInsnNode) {
+                                MethodInsnNode methodins = (MethodInsnNode) in;
+                                if(methodins.owner.contains(packageName) && !methodins.name.equals("<init>")){
+                                    String name = methodins.owner + "." + methodins.name;
+                                    if(methodins.owner.contains("/")){
+                                        name = methodins.owner.substring(methodins.owner.lastIndexOf("/")+1)+"." + methodins.name;
+                                    }
+                                    Type[] types = Type.getArgumentTypes(methodins.desc);
+                                    List<String> list = new ArrayList<>();
+                                    if(methodins.getOpcode() == Opcodes.INVOKESTATIC){
+                                        list.add("static");
+                                    } else if(methodins.getOpcode() == Opcodes.INVOKEINTERFACE){
+                                        list.add("interface");
+                                    } else {
+                                        list.add("object");
+                                    }
+                                    String returnType = Type.getReturnType(methodins.desc).getClassName();
+                                    list.add(returnType);
+                                    List<String> list2 = Arrays.stream(types).map(Type::getClassName).collect(Collectors.toList());
+                                    list.addAll(list2);
+                                    invokedMethods.put(name, list);
+                                }
+                                logger.info(methodins.owner + "." + methodins.name);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        for (Map.Entry<String, List<String>> entry : invokedMethods.entrySet()) {
+            List<String> parameters = entry.getValue().subList(2,entry.getValue().size());
+            String returnType = entry.getValue().get(1);
+            String staticRef = entry.getValue().get(0);
+            String method = entry.getKey();
+            StringBuilder searchRegion = new StringBuilder("public static "+returnType+" driver(){" + System.getProperty("line.separator"));
+            for(int i=0; i<parameters.size();i++){
+                searchRegion.append(parameters.get(i)).append(" a").append(i);
+                switch (parameters.get(i)){
+                    case "int":searchRegion.append("= Mulib.namedFreeInt(").append("\"a").append(i).append("\");");break;
+                    case "double":searchRegion.append("= Mulib.namedFreeDouble(").append("\"a").append(i).append("\");");break;
+                    case "byte":searchRegion.append("= Mulib.namedFreeByte(").append("\"a").append(i).append("\");");break;
+                    case "boolean":searchRegion.append("= Mulib.namedFreeBoolean(").append("\"a").append(i).append("\");");break;
+                    case "short":searchRegion.append("= Mulib.namedFreeShort(").append("\"a").append(i).append("\");");break;
+                    case "long":searchRegion.append("= Mulib.namedFreeLong(").append("\"a").append(i).append("\");");break;
+                    default: searchRegion.append("= Mulib.namedFreeObject(").append("\"a").append(i).append("\", ")
+                            .append(parameters.get(i)).append(".class);");
+                }
+                searchRegion.append(System.getProperty("line.separator"));
+            }
+            if(staticRef.equals("object") && method.contains(".")){
+                String namedClass = method.substring(0,method.indexOf("."));
+                searchRegion.append(namedClass).append(" obj = new ").append(namedClass).append("();");
+                searchRegion.append(System.getProperty("line.separator"));
+                method = "obj."+method.substring(method.indexOf(".")+1);
+            }
+            if(!returnType.equals("void")){
+                searchRegion.append(returnType).append(" r0 = ");
+            }
+
+            searchRegion.append(method).append("(");
+            for(int i=0; i<parameters.size();i++){
+                searchRegion.append("a").append(i).append(",");
+            }
+            if(parameters.size()!=0){
+                searchRegion.deleteCharAt(searchRegion.length()-1);
+            }
+            searchRegion.append(");").append(System.getProperty("line.separator"));
+            if(!returnType.equals("void")){
+                searchRegion.append("return r0;");
+            }
+            searchRegion.append("}");
+            output.add(searchRegion.toString());
+        }
+        return output;
     }
 
 

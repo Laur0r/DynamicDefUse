@@ -24,7 +24,7 @@ public class DaciteLSPRequestManager extends DefaultRequestManager
 
   private final Logger LOG = Logger.getInstance(DaciteLSPRequestManager.class);
 
-  private final LanguageServerWrapper languageServerWrapper;
+  public final LanguageServerWrapper languageServerWrapper;
   private final DaciteExtendedTextDocumentService extendedTextDocumentService;
   private final DaciteTreeViewService treeViewService;
 
