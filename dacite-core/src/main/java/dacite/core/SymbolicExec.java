@@ -10,6 +10,8 @@ import org.objectweb.asm.tree.*;
 import org.w3c.dom.Document;
 import org.xml.sax.InputSource;
 
+import javax.print.DocFlavor;
+import javax.tools.*;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.stream.XMLStreamException;
@@ -20,6 +22,10 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import java.io.*;
+import java.net.URL;
+import java.net.URLClassLoader;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.*;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -29,18 +35,45 @@ public class SymbolicExec {
     static Logger logger = Logger.getLogger(Logger.GLOBAL_LOGGER_NAME);
 
     public static void exec(String[] args) throws Exception {
-        if(args.length > 1){
-            throw new IllegalArgumentException("More than one argument for main method detected");
-        } else if(args.length == 0){
-            throw new IllegalArgumentException("Required to specify analysisJunittest to analyse data-flow");
+        if(args.length != 3){
+            throw new IllegalArgumentException("Not the expected amount of arguments given for SymbolicExec.exec()");
         }
-        //long startTime = System.nanoTime();
-        //JUnitCore junitCore = new JUnitCore();
-        String classname = args[0];
-        //List<String> sr = generateSearchRegions(classname);
-        //for(String s:sr){
-            logger.info("In Symbolic Exec!!!!!!!!!!!!!!!!!!!!!!!!1");
-        //}
+
+        String projectpath = args[0];
+        String packagename = args[1];
+        String classname = args[2];
+        File file = new File(projectpath+packagename+classname);
+        logger.info("file1 "+file.getPath()+" "+file.exists());
+
+        //logger.info(dir);
+        File packagedir = new File(projectpath+packagename);
+        URL url = null;
+        for(File f: packagedir.listFiles()){
+            if(!f.isDirectory() && !f.getName().contains("DaciteSymbolicDriver")){
+                String name = f.getName().substring(0,f.getName().lastIndexOf("."));
+                url = Class.forName(packagename.replace("/",".")+name).getResource("");
+                break;
+            }
+        }
+
+        String sourcePath = url.getPath().substring(0,url.getPath().indexOf(packagename));
+
+
+        // Compile source file.
+        JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
+        List<File> sourceFileList = new ArrayList<File>();
+        sourceFileList.add(file);
+        StandardJavaFileManager fileManager = compiler.getStandardFileManager( null, null, null );
+        Iterable<? extends JavaFileObject> javaSource = fileManager.getJavaFileObjectsFromFiles( sourceFileList );
+        Iterable<String> options = Arrays.asList("-d", sourcePath);
+        JavaCompiler.CompilationTask task = compiler.getTask(null, fileManager, null, options, null, javaSource);
+        task.call();
+
+        // Load and instantiate compiled class.
+        Class<?> cls = Class.forName(packagename.replace("/",".")+"DaciteSymbolicDriver");
+        Object instance = cls.getDeclaredConstructor().newInstance();
+        logger.info(instance.toString());
+
         //Mulib.executeMulib(...)
 
         /*try {

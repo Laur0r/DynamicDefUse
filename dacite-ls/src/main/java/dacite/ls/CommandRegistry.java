@@ -127,7 +127,7 @@ public class CommandRegistry {
             // Extract package and class name
             var analyser = new CodeAnalyser(TextDocumentItemProvider.get(textDocumentUri).getText());
             String className = analyser.extractClassName();
-            String packageName = analyser.extractPackageName();
+            String packageName = analyser.extractPackageName().replace(".", "/");
 
             // Construct class path
             // * dacite-core (and thus the agent) is a dependency of dacite-ls and is thus contained in the class path
@@ -152,14 +152,18 @@ public class CommandRegistry {
                     // Java binary
                     System.getProperty("java.home") + File.separator + "bin" + File.separator + "java",
                     // Java agent
-                    "-javaagent:" + javaAgentJar + "=" + packageName.replace(".", "/"),
+                    "-javaagent:" + javaAgentJar + "=" + packageName,
                     // Classpath
                     "-classpath", fullClassPath,
                     // Main class in dacite-core
                     "dacite.core.DaciteLauncher",
                     "symbolic",
-                    // Class to be analyzed
-                    packageName + "." + className);
+                    // Projectpath
+                    projectDir + "src/",
+                    // Packagename
+                    packageName +"/",
+                    // Classname
+                    className+".java");
 
             // Start process in project's root directory
             ProcessBuilder pb = (new ProcessBuilder(commandArgs)).redirectError(ProcessBuilder.Redirect.INHERIT)
@@ -193,7 +197,7 @@ public class CommandRegistry {
             String packageName = analyser.extractPackageName();
 
             String uri = textDocumentUri.substring(0,textDocumentUri.lastIndexOf("/"));
-            uri += "/SymbolicDriver.java";
+            uri += "/DaciteSymbolicDriver.java";
             logger.info(uri);
             CreateFile createFile = new CreateFile(uri, new CreateFileOptions(true,false));
             List<TextEdit> edits = new ArrayList<>();//generateSearchRegions(packageName+"."+className);
@@ -206,7 +210,7 @@ public class CommandRegistry {
             TextEdit textEdit = new TextEdit(range,packageHeader);
             edits.add(textEdit);
 
-            String classHeader = "public class SymbolicDriver {\n";
+            String classHeader = "public class DaciteSymbolicDriver {\n";
             Range range0 = new Range();
             range0.setStart(new Position(line,0));
             range0.setEnd(new Position(line, classHeader.length()));
@@ -225,17 +229,14 @@ public class CommandRegistry {
             Range range2 = new Range();
             range2.setStart(new Position(line,0));
             range2.setEnd(new Position(line, end.length()));
-            line++;
             TextEdit textEdit2 = new TextEdit(range2,end);
             edits.add(textEdit2);
-            logger.info("EDITS!!!!!!!!!!!!!!!!!!" + edits.toString());
             TextDocumentEdit documentEdit = new TextDocumentEdit(new VersionedTextDocumentIdentifier(uri,1), edits);
             List<Either<TextDocumentEdit, ResourceOperation>> changes = new ArrayList<>();
             changes.add(Either.forRight(createFile));
             changes.add(Either.forLeft(documentEdit));
             WorkspaceEdit edit = new WorkspaceEdit();
             edit.setDocumentChanges(changes);
-            logger.info("send output");
             client.applyEdit(new ApplyWorkspaceEditParams(edit));
             return CompletableFuture.completedFuture(null);
           }

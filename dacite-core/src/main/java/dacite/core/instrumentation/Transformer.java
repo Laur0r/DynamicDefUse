@@ -35,7 +35,7 @@ public class Transformer implements ClassFileTransformer {
 	public byte[] transform(ClassLoader loader, String className, Class<?> classBeingRedefined,
 			ProtectionDomain protectionDomain, byte[] classfileBuffer) throws IllegalClassFormatException {
 		Thread th = Thread.currentThread();
-		if (className.startsWith(dir)) {
+		if (className.startsWith(dir) && !className.contains("DaciteSymbolicDriver")) {
 			classname = className;
 			ClassReader reader = new ClassReader(classfileBuffer);
 			ClassNode node = new ClassNode();
