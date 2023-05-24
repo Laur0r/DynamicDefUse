@@ -15,7 +15,9 @@
     <runLineMarkerContributor language="JAVA"
                               implementationClass="dacite.intellij.visualisation.DaciteRunLineMarkerContributor"/>
     <!--<codeInsight.inlayProvider language="JAVA" implementationClass="dacite.intellij.visualisation.DaciteInlayHint"/>-->
-
+    <codeInsight.lineMarkerProvider
+            language="JAVA"
+            implementationClass="dacite.intellij.visualisation.DaciteLineMarkerProvider"/>
     <!-- lsp4intellij extensions (currently in use) -->
     <preloadingActivity implementation="dacite.intellij.LSPPreloadingClass"
                         id="dacite.dacite-intellij.LSPPreloadingClass"/>
@@ -50,7 +52,10 @@
     <action id="dacite.analyze" class="dacite.intellij.actions.DaciteAnalyzeAction"
             text="Run Dacite Analysis" description="Dynamic analysis of def-use chains" icon="AllIcons.Actions.StartMemoryProfile">
     </action>
-    <action id="dacite.analyzeSymbolic" class="dacite.intellij.actions.DaciteSymbolicAnalyzeAction"
+    <action id="dacite.analyzeTrigger" class="dacite.intellij.actions.DaciteSymbolicTriggerAction"
+            text="Run Dacite Symbolic Analysis" description="Symbolic analysis of def-use chains" icon="AllIcons.Actions.StartMemoryProfile">
+    </action>
+    <action id="dacite.analyzeSymbolic" class="dacite.intellij.actions.DaciteSymbolicAnalysisAction"
             text="Run Dacite Symbolic Analysis" description="Symbolic analysis of def-use chains" icon="AllIcons.Actions.StartMemoryProfile">
     </action>
   </actions>

@@ -1,20 +1,14 @@
 package dacite.intellij.actions;
 
-import com.intellij.icons.AllIcons;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.actionSystem.PlatformCoreDataKeys;
 import com.intellij.openapi.project.Project;
-import com.intellij.openapi.wm.RegisterToolWindowTask;
 import com.intellij.openapi.wm.ToolWindow;
-import com.intellij.openapi.wm.ToolWindowAnchor;
 import com.intellij.openapi.wm.ToolWindowManager;
 import com.intellij.psi.PsiFile;
 import dacite.intellij.visualisation.DaciteToolWindowFactory;
-import org.eclipse.lsp4j.ApplyWorkspaceEditParams;
 import org.eclipse.lsp4j.ExecuteCommandParams;
-import org.eclipse.lsp4j.WorkspaceEdit;
-import org.eclipse.lsp4j.jsonrpc.JsonRpcException;
 import org.jetbrains.annotations.NotNull;
 import org.wso2.lsp4intellij.IntellijLanguageClient;
 import org.wso2.lsp4intellij.client.languageserver.requestmanager.RequestManager;
@@ -24,14 +18,8 @@ import org.wso2.lsp4intellij.utils.FileUtils;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
-import static org.wso2.lsp4intellij.requests.Timeout.getTimeout;
-import static org.wso2.lsp4intellij.requests.Timeouts.REFERENCES;
-
-public class DaciteSymbolicAnalyzeAction extends AnAction {
+public class DaciteSymbolicAnalysisAction extends AnAction {
 
   @Override
   public void update(AnActionEvent e) {
@@ -49,17 +37,7 @@ public class DaciteSymbolicAnalyzeAction extends AnAction {
     if (wrapper.size() == 1) {
       requestManager = wrapper.iterator().next().getRequestManager();
     }
-    CompletableFuture<Object> result = requestManager.executeCommand(new ExecuteCommandParams("dacite.symbolicTrigger", List.of(file.getVirtualFile().getUrl())));
-    /*if(result != null){
-      try {
-        //Object edit = result.get(getTimeout(REFERENCES), TimeUnit.MILLISECONDS);
-        //System.out.println(edit.getClass().toString());
-        //requestManager.applyEdit(new ApplyWorkspaceEditParams(edit));
-      }
-      catch (TimeoutException | InterruptedException | JsonRpcException | ExecutionException ex) {
-        ex.printStackTrace();
-      }
-    }*/
+    CompletableFuture<Object> result = requestManager.executeCommand(new ExecuteCommandParams("dacite.analyzeSymbolic", List.of(file.getVirtualFile().getUrl())));
 
     ToolWindowManager toolWindowManager = ToolWindowManager.getInstance(project);
     ToolWindow toolWindow = toolWindowManager.getToolWindow("DaciteAnalysisToolWindow");
