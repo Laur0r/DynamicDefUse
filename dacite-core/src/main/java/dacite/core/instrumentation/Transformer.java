@@ -17,12 +17,18 @@ import org.objectweb.asm.tree.LocalVariableNode;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
 import org.objectweb.asm.tree.VarInsnNode;
+import org.objectweb.asm.commons.*;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
 import java.security.ProtectionDomain;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.logging.Logger;
 
 public class Transformer implements ClassFileTransformer {
@@ -36,163 +42,187 @@ public class Transformer implements ClassFileTransformer {
 			ProtectionDomain protectionDomain, byte[] classfileBuffer) throws IllegalClassFormatException {
 		Thread th = Thread.currentThread();
 		if (className.startsWith(dir) && !className.contains("DaciteSymbolicDriver")) {
+			logger.info("transformed "+className);
 			classname = className;
 			ClassReader reader = new ClassReader(classfileBuffer);
 			ClassNode node = new ClassNode();
 			reader.accept(node, 0);
-			for(MethodNode mnode : node.methods){
-				int linenumber = 0;
-				InsnList insns = mnode.instructions;
-				if (insns.size() == 0) {
-					continue;
-				}
-				if (mnode.name.equals("<init>")) {
-					//continue;
-				}
 
-				AbstractInsnNode firstIns = insns.getFirst();
-				Iterator<AbstractInsnNode> j = insns.iterator();
-				int index = 0;
-				int firstLinenumber = 0;
-				while (j.hasNext()) {
-					AbstractInsnNode in = j.next();
-					int op = in.getOpcode();
-					if (in instanceof VarInsnNode) {
-						VarInsnNode varins = (VarInsnNode) in;
-						String varname = "";
-						for(LocalVariableNode lvariable :mnode.localVariables){
-							if(lvariable.index == varins.var){
-								varname = lvariable.name;
-								break;
-							}
-						}
-						InsnList il = instrumentVarInsn(varins, mnode, varname, op, linenumber, index);
-						index++;
-						if(il != null){
-							insns.insert(in, il);
-						}
-					} else if(in instanceof InsnNode) {
-						InsnList[] ilarray = instrumentInsn(mnode, op, linenumber, index);
-						if(ilarray[0] != null) {
-							insns.insertBefore(in, ilarray[0]);
-						}
-						if(ilarray[1] != null) {
-							insns.insert(in, ilarray[1]);
-						}
-						index++;
-					} else if (in instanceof FieldInsnNode) {
-						FieldInsnNode fieldins = (FieldInsnNode) in;
-						InsnList[] ilarray = instrumentFieldInsn(fieldins, classname+"."+mnode.name, op, linenumber, index);
-						if(ilarray[0] != null) {
-							insns.insertBefore(in, ilarray[0]);
-						}
-						if(ilarray[1] != null) {
-							insns.insert(in, ilarray[1]);
-						}
-						index++;
-					} else if(in instanceof IincInsnNode){
-						IincInsnNode incIns = (IincInsnNode) in;
-						InsnList il = new InsnList();
-						String varname = "";
-						for(LocalVariableNode lvariable :mnode.localVariables){
-							if(lvariable.index == incIns.var){
-								varname = lvariable.name;
-								break;
-							}
-						}
-						boxing(Type.INT_TYPE, incIns.var, il, true);
-						il.add(new LdcInsnNode(incIns.var));
-						il.add(new LdcInsnNode(linenumber));
-						il.add(new LdcInsnNode(index));
-						il.add(new LdcInsnNode(classname+"."+mnode.name));
-						il.add(new LdcInsnNode(varname));
-						il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/defuse/DefUseAnalyser", "visitUse", "(Ljava/lang/Object;IIILjava/lang/String;Ljava/lang/String;)V", false));
-						insns.insertBefore(in, il);
-						boxing(Type.INT_TYPE, incIns.var, il, true);
-						il.add(new LdcInsnNode(incIns.var));
-						il.add(new LdcInsnNode(linenumber));
-						il.add(new LdcInsnNode(index));
-						il.add(new LdcInsnNode(classname+"."+mnode.name));
-						il.add(new LdcInsnNode(varname));
-						il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/defuse/DefUseAnalyser", "visitDef", "(Ljava/lang/Object;IIILjava/lang/String;Ljava/lang/String;)V", false));
-						insns.insert(in, il);
-						index++;
-					} else if(in instanceof LineNumberNode){
-						LineNumberNode lineins = (LineNumberNode) in;
-						linenumber = lineins.line;
-						if(firstLinenumber == 0){
-							firstLinenumber = linenumber-1;
-						}
-						index = 0;
-					} else if(in instanceof MethodInsnNode) {
-						MethodInsnNode methodins = (MethodInsnNode) in;
-						InsnList il = instrumentMethodInsn(methodins, mnode, linenumber);
-						if(il != null){
-							insns.insertBefore(in, il);
-						}
-					}
-				}
-				// Register method Parameter for DefUse by aligning first local variables with parameter types
-				InsnList methodStart = new InsnList();
-				InsnList methodintermediate = new InsnList();
-				Type[] types = Type.getArgumentTypes(mnode.desc);
-				int typeindex = 0;
-				for(int i =0; i< mnode.localVariables.size()*2; i++) {
-					if (mnode.localVariables.size() < i || typeindex >= types.length) {
-						break;
-					}
-					LocalVariableNode localVariable = null;
-					for(LocalVariableNode lv: mnode.localVariables){
-						if(lv.index == i){
-							localVariable = lv;
-							break;
-						}
-					}
+			node = transformBasis(node, reader);
 
-					if (localVariable != null && Type.getType(localVariable.desc).equals(types[typeindex])) {
-						boxing(types[typeindex], localVariable.index, methodintermediate, true);
-						methodintermediate.add(new LdcInsnNode(localVariable.index));
-						methodintermediate.add(new LdcInsnNode(firstLinenumber));
-						methodintermediate.add(new LdcInsnNode(classname+"."+mnode.name));
-						methodintermediate.add(new LdcInsnNode(localVariable.name));
-						methodintermediate.add(new IntInsnNode(Opcodes.BIPUSH, typeindex));
-						methodintermediate.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/defuse/DefUseAnalyser", "visitParameter", "(Ljava/lang/Object;IILjava/lang/String;Ljava/lang/String;I)V", false));
-						if(types[typeindex] == Type.DOUBLE_TYPE || types[typeindex] == Type.LONG_TYPE){
-							i++;
-						}
-						typeindex++;
-						if(methodStart.size() == 0){
-							methodStart.insert(methodintermediate);
-						} else {
-							methodStart.insertBefore(methodStart.get(0), methodintermediate);
-						}
-						methodintermediate.clear();
-					}
-				}
-				insns.insertBefore(firstIns, methodStart);
-			}
+			byte[] output = null;
 			ClassWriter writer = new ClassWriter(reader, ClassWriter.COMPUTE_FRAMES);
 			try{
 				node.accept(writer);
+				output = writer.toByteArray();
 			} catch(Exception e){
 				e.printStackTrace();
 			}
-			/*
-			File outputfile = new File("/home/l_troo01/Development/Forschung/ByteCode/"+node.name.substring(node.name.lastIndexOf("/")+1)+".class");
-			try{
-				OutputStream fos = new FileOutputStream(outputfile);
-				fos.write(writer.toByteArray());
-				fos.flush();
-				fos.close();
-			} catch (Exception e){
-				e.printStackTrace();
-			}
-			*/
+
 			//logger.info("Transformer has class written");
-			return writer.toByteArray();
+			return output;
 		}
 
 		return null;
+	}
+
+	public void transformSymbolic(String input, Map<String, String> remap, String path) throws IOException {
+		ClassReader reader = new ClassReader(input);
+		ClassNode node = new ClassNode();
+		reader.accept(node, 0);
+
+		node = transformBasis(node, reader);
+
+		ClassWriter writer = new ClassWriter(reader, ClassWriter.COMPUTE_FRAMES);
+		String newName = node.name.substring(0,node.name.lastIndexOf("/")) + "/dacite_"+node.name.substring(node.name.lastIndexOf("/")+1);
+		SimpleRemapper mapper = new SimpleRemapper(remap);
+		ClassRemapper remapper = new ClassRemapper(writer, mapper);
+		File outputfile = new File(path+newName+".class");
+		try{
+			node.accept(remapper);
+			OutputStream fos = new FileOutputStream(outputfile);
+			fos.write(writer.toByteArray());
+			fos.flush();
+			fos.close();
+		} catch (Exception e){
+			e.printStackTrace();
+		}
+	}
+
+	protected ClassNode transformBasis(ClassNode node, ClassReader reader){
+		for(MethodNode mnode : node.methods){
+			int linenumber = 0;
+			InsnList insns = mnode.instructions;
+			if (insns.size() == 0) {
+				continue;
+			}
+			if (mnode.name.equals("<init>")) {
+				//continue;
+			}
+
+			AbstractInsnNode firstIns = insns.getFirst();
+			Iterator<AbstractInsnNode> j = insns.iterator();
+			int index = 0;
+			int firstLinenumber = 0;
+			while (j.hasNext()) {
+				AbstractInsnNode in = j.next();
+				int op = in.getOpcode();
+				if (in instanceof VarInsnNode) {
+					VarInsnNode varins = (VarInsnNode) in;
+					String varname = "";
+					for(LocalVariableNode lvariable :mnode.localVariables){
+						if(lvariable.index == varins.var){
+							varname = lvariable.name;
+							break;
+						}
+					}
+					InsnList il = instrumentVarInsn(varins, mnode, varname, op, linenumber, index);
+					index++;
+					if(il != null){
+						insns.insert(in, il);
+					}
+				} else if(in instanceof InsnNode) {
+					InsnList[] ilarray = instrumentInsn(mnode, op, linenumber, index);
+					if(ilarray[0] != null) {
+						insns.insertBefore(in, ilarray[0]);
+					}
+					if(ilarray[1] != null) {
+						insns.insert(in, ilarray[1]);
+					}
+					index++;
+				} else if (in instanceof FieldInsnNode) {
+					FieldInsnNode fieldins = (FieldInsnNode) in;
+					InsnList[] ilarray = instrumentFieldInsn(fieldins, classname+"."+mnode.name, op, linenumber, index);
+					if(ilarray[0] != null) {
+						insns.insertBefore(in, ilarray[0]);
+					}
+					if(ilarray[1] != null) {
+						insns.insert(in, ilarray[1]);
+					}
+					index++;
+				} else if(in instanceof IincInsnNode){
+					IincInsnNode incIns = (IincInsnNode) in;
+					InsnList il = new InsnList();
+					String varname = "";
+					for(LocalVariableNode lvariable :mnode.localVariables){
+						if(lvariable.index == incIns.var){
+							varname = lvariable.name;
+							break;
+						}
+					}
+					boxing(Type.INT_TYPE, incIns.var, il, true);
+					il.add(new LdcInsnNode(incIns.var));
+					il.add(new LdcInsnNode(linenumber));
+					il.add(new LdcInsnNode(index));
+					il.add(new LdcInsnNode(classname+"."+mnode.name));
+					il.add(new LdcInsnNode(varname));
+					il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/defuse/DefUseAnalyser", "visitUse", "(Ljava/lang/Object;IIILjava/lang/String;Ljava/lang/String;)V", false));
+					insns.insertBefore(in, il);
+					boxing(Type.INT_TYPE, incIns.var, il, true);
+					il.add(new LdcInsnNode(incIns.var));
+					il.add(new LdcInsnNode(linenumber));
+					il.add(new LdcInsnNode(index));
+					il.add(new LdcInsnNode(classname+"."+mnode.name));
+					il.add(new LdcInsnNode(varname));
+					il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/defuse/DefUseAnalyser", "visitDef", "(Ljava/lang/Object;IIILjava/lang/String;Ljava/lang/String;)V", false));
+					insns.insert(in, il);
+					index++;
+				} else if(in instanceof LineNumberNode){
+					LineNumberNode lineins = (LineNumberNode) in;
+					linenumber = lineins.line;
+					if(firstLinenumber == 0){
+						firstLinenumber = linenumber-1;
+					}
+					index = 0;
+				} else if(in instanceof MethodInsnNode) {
+					MethodInsnNode methodins = (MethodInsnNode) in;
+					InsnList il = instrumentMethodInsn(methodins, mnode, linenumber);
+					if(il != null){
+						insns.insertBefore(in, il);
+					}
+				}
+			}
+			// Register method Parameter for DefUse by aligning first local variables with parameter types
+			InsnList methodStart = new InsnList();
+			InsnList methodintermediate = new InsnList();
+			Type[] types = Type.getArgumentTypes(mnode.desc);
+			int typeindex = 0;
+			for(int i =0; i< mnode.localVariables.size()*2; i++) {
+				if (mnode.localVariables.size() < i || typeindex >= types.length) {
+					break;
+				}
+				LocalVariableNode localVariable = null;
+				for(LocalVariableNode lv: mnode.localVariables){
+					if(lv.index == i){
+						localVariable = lv;
+						break;
+					}
+				}
+
+				if (localVariable != null && Type.getType(localVariable.desc).equals(types[typeindex])) {
+					boxing(types[typeindex], localVariable.index, methodintermediate, true);
+					methodintermediate.add(new LdcInsnNode(localVariable.index));
+					methodintermediate.add(new LdcInsnNode(firstLinenumber));
+					methodintermediate.add(new LdcInsnNode(classname+"."+mnode.name));
+					methodintermediate.add(new LdcInsnNode(localVariable.name));
+					methodintermediate.add(new IntInsnNode(Opcodes.BIPUSH, typeindex));
+					methodintermediate.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/defuse/DefUseAnalyser", "visitParameter", "(Ljava/lang/Object;IILjava/lang/String;Ljava/lang/String;I)V", false));
+					if(types[typeindex] == Type.DOUBLE_TYPE || types[typeindex] == Type.LONG_TYPE){
+						i++;
+					}
+					typeindex++;
+					if(methodStart.size() == 0){
+						methodStart.insert(methodintermediate);
+					} else {
+						methodStart.insertBefore(methodStart.get(0), methodintermediate);
+					}
+					methodintermediate.clear();
+				}
+			}
+			insns.insertBefore(firstIns, methodStart);
+		}
+
+		return node;
 	}
 
 	/**
@@ -287,7 +317,7 @@ public class Transformer implements ClassFileTransformer {
 				op == Opcodes.DLOAD || op == Opcodes.ALOAD ||// && !mnode.name.equals("<init>")) ||
 				op == Opcodes.ISTORE || op == Opcodes.LSTORE || op == Opcodes.FSTORE ||
 				op == Opcodes.DSTORE || op == Opcodes.ASTORE)) {
-			if(op == Opcodes.ALOAD && mnode.name.equals("<init>") && variableName.equals("this")){
+			if(op == Opcodes.ALOAD && mnode.name.equals("<init>") && (variableName.equals("this") || variableName.equals(""))){
 				return null;
 			}
 			String methodName = classname+"."+mnode.name;

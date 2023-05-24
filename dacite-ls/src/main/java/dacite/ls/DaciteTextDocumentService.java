@@ -172,25 +172,25 @@ public class DaciteTextDocumentService
               var pos = codeAnalyser.extractVariablePositionsAtLine(lineNumber, variableName, false);
               var usePositionsDup = pos.get(0);
               var unaryPosition = pos.get(1);
-              if(lineNumber == 15 & variableName.contains("number")){
+              /*if(lineNumber == 15 & variableName.contains("number")){
                 logger.info("uses "+uses.get(0));
                 logger.info("usePositionsDup: "+usePositionsDup.size());
-              }
+              }*/
               List<com.github.javaparser.Position> usePositions = new ArrayList<>();
               for(com.github.javaparser.Position p:usePositionsDup){
                 if(!globalDefPositions.contains(p) || unaryPosition.contains(p)){
                   usePositions.add(p);
                 }
               }
-              if(lineNumber == 15 & variableName.contains("number")){
+              /*if(lineNumber == 15 & variableName.contains("number")){
                 logger.info("usePositions: "+usePositions.size());
-              }
+              }*/
               int i = 0;
               while (i < uses.size() && i < usePositions.size()) {
-                if(lineNumber == 15 & variableName.contains("number")){
+                /*if(lineNumber == 15 & variableName.contains("number")){
                   logger.info("usePositions: "+usePositions.size());
                   logger.info("use "+uses.get(i).toString());
-                }
+                }*/
                 if(uses.get(i).isEditorHighlight()) {
                   var defUseVariable = uses.get(i);
                   var parserPosition = usePositions.get(i);
@@ -216,7 +216,7 @@ public class DaciteTextDocumentService
           });
     });
 
-    //logger.info("hints {}", inlayHints);
+    logger.info("hints {}", inlayHints);
 
     return CompletableFuture.completedFuture(inlayHints);
   }

@@ -1,8 +1,13 @@
 package dacite.core;
 
+import dacite.core.defuse.DefUseAnalyser;
 import dacite.core.defuse.DefUseField;
 import dacite.core.defuse.DefUseVariable;
+import dacite.core.defuse.ParameterCollector;
+import dacite.core.instrumentation.Transformer;
 import de.wwu.mulib.Mulib;
+import de.wwu.mulib.MulibConfig;
+import de.wwu.mulib.examples.sac22_mulib_benchmark.NQueens;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
@@ -17,7 +22,6 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
 import javax.xml.transform.Source;
-import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
@@ -29,6 +33,7 @@ import java.nio.file.Files;
 import java.util.*;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class SymbolicExec {
 
@@ -45,36 +50,53 @@ public class SymbolicExec {
         File file = new File(projectpath+packagename+classname);
         logger.info("file1 "+file.getPath()+" "+file.exists());
 
+        InputStream stream = ClassLoader.getSystemResourceAsStream("dacite_Sort.class");
+
         //logger.info(dir);
         File packagedir = new File(projectpath+packagename);
         URL url = null;
+        Transformer transformer = new Transformer();
+        Map<String,String> remap = new HashMap<>();
         for(File f: packagedir.listFiles()){
-            if(!f.isDirectory() && !f.getName().contains("DaciteSymbolicDriver")){
+            if(!f.isDirectory()){
                 String name = f.getName().substring(0,f.getName().lastIndexOf("."));
-                url = Class.forName(packagename.replace("/",".")+name).getResource("");
-                break;
+                remap.put(packagename+name, packagename+"dacite_"+name);
+                if(!f.getName().contains("DaciteSymbolicDriver") && url == null){
+                    url = Class.forName(packagename.replace("/",".")+name).getResource(name+".class");
+                }
             }
         }
-
         String sourcePath = url.getPath().substring(0,url.getPath().indexOf(packagename));
+        for(File f: packagedir.listFiles()){
+            if(!f.isDirectory()){
+                String name = f.getName().substring(0,f.getName().lastIndexOf("."));
+                transformer.transformSymbolic(packagename.replace("/",".")+name, remap, sourcePath);
+            }
+        }
 
 
         // Compile source file.
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
-        List<File> sourceFileList = new ArrayList<File>();
+        /*List<File> sourceFileList = new ArrayList<File>();
         sourceFileList.add(file);
         StandardJavaFileManager fileManager = compiler.getStandardFileManager( null, null, null );
         Iterable<? extends JavaFileObject> javaSource = fileManager.getJavaFileObjectsFromFiles( sourceFileList );
         Iterable<String> options = Arrays.asList("-d", sourcePath);
         JavaCompiler.CompilationTask task = compiler.getTask(null, fileManager, null, options, null, javaSource);
-        task.call();
+        task.call();*/
 
         // Load and instantiate compiled class.
-        Class<?> cls = Class.forName(packagename.replace("/",".")+"DaciteSymbolicDriver");
+        Class<?> cls = Class.forName(packagename.replace("/",".")+"dacite_DaciteSymbolicDriver");
         Object instance = cls.getDeclaredConstructor().newInstance();
         logger.info(instance.toString());
 
-        //Mulib.executeMulib(...)
+        MulibConfig.MulibConfigBuilder builder = MulibConfig.builder().setTRANSF_WRITE_TO_FILE(true).setTRANSF_GENERATED_CLASSES_PATH(sourcePath);
+        List<Class<?>> classes = new ArrayList<>(){};
+        classes.add(DefUseAnalyser.class);
+        classes.add(ParameterCollector.class);
+        builder.setTRANSF_IGNORE_CLASSES(classes);
+        Mulib.executeMulib("driver", cls, builder);
+
 
         /*try {
             junitCore.run(Class.forName(classname));
@@ -152,7 +174,7 @@ public class SymbolicExec {
             Document document = builder.parse(new InputSource(new InputStreamReader(new FileInputStream(file))));
 
             // Gets a new transformer instance
-            Transformer xformer = TransformerFactory.newInstance().newTransformer();
+            javax.xml.transform.Transformer xformer = TransformerFactory.newInstance().newTransformer();
             // Sets XML formatting
             //xformer.setOutputProperty(OutputKeys.METHOD, "xml");
             // Sets indent

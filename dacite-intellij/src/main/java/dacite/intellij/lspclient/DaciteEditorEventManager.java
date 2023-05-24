@@ -186,6 +186,9 @@ public class DaciteEditorEventManager extends EditorEventManager {
             // to the top of the document. Otherwise all the other edit ranges will be invalid after the very first edit,
             // since the document is changed.
             List<TextEdit> lspEdits = new ArrayList<>();
+            if(!document.getText().isEmpty()){
+                document.setText("");
+            }
             edits.forEach(edit -> {
                 int start = 0;
                 int end = 0;
