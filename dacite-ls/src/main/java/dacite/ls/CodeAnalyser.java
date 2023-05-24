@@ -4,11 +4,13 @@ import com.github.javaparser.Position;
 import com.github.javaparser.StaticJavaParser;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.Node;
-import com.github.javaparser.ast.body.AnnotationDeclaration;
-import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
-import com.github.javaparser.ast.body.Parameter;
-import com.github.javaparser.ast.body.VariableDeclarator;
+import com.github.javaparser.ast.NodeList;
+import com.github.javaparser.ast.body.*;
 import com.github.javaparser.ast.expr.*;
+import com.github.javaparser.ast.stmt.BlockStmt;
+import com.github.javaparser.ast.visitor.VoidVisitorAdapter;
+import com.github.javaparser.printer.YamlPrinter;
+import org.objectweb.asm.MethodVisitor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -24,6 +26,8 @@ public class CodeAnalyser {
 
   public CodeAnalyser(String code) {
     this.compilationUnit = StaticJavaParser.parse(code);
+    /*YamlPrinter printer = new YamlPrinter(true);
+    logger.info(printer.output(compilationUnit));*/
   }
 
   public CompilationUnit getCompilationUnit() {
@@ -51,7 +55,6 @@ public class CodeAnalyser {
     List<Position> positions = new ArrayList<>();
     List<List<Position>> output = new ArrayList<>();
     List<Node> nodes = extractNodesAtLine(lineNumber);
-
     for(int i=0; i<nodes.size();i++){
       Node node = nodes.get(i);
       if (node instanceof AssignExpr) {
@@ -169,23 +172,4 @@ public class CodeAnalyser {
       return range != null && range.begin.line == lineNumber;
     }).collect(Collectors.toList());
   }
-
-  public List<MarkerAnnotationExpr> extractJUnitAnnotation(){
-    return compilationUnit.findAll(MarkerAnnotationExpr.class);
-  }
-
-  public void extractJUnitMethods(){
-    List<MarkerAnnotationExpr> annotations = extractJUnitAnnotation();
-    for(MarkerAnnotationExpr anno: annotations){
-      logger.info(anno.getClass() + ": " + anno);
-      if(anno.getParentNode().isPresent()){
-        Node parent = anno.getParentNode().get();
-        logger.info(parent.getClass()+": "+parent);
-        for(Node node: parent.getChildNodes()){
-          logger.info(node.getClass() + ": " + node);
-        }
-      }
-    }
-  }
-
 }

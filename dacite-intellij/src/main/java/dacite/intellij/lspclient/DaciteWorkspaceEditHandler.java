@@ -13,6 +13,7 @@ import com.intellij.openapi.fileEditor.OpenFileDescriptor;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.project.ProjectManager;
 import com.intellij.openapi.project.ProjectUtil;
+import com.intellij.openapi.util.io.FileUtil;
 import com.intellij.openapi.vfs.LocalFileSystem;
 import com.intellij.openapi.vfs.VfsUtil;
 import com.intellij.openapi.vfs.VirtualFile;
@@ -21,6 +22,7 @@ import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.eclipse.lsp4j.*;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.wso2.lsp4intellij.IntellijLanguageClient;
 import org.wso2.lsp4intellij.client.languageserver.requestmanager.RequestManager;
 import org.wso2.lsp4intellij.client.languageserver.wrapper.LanguageServerWrapper;
@@ -35,6 +37,7 @@ import org.wso2.lsp4intellij.utils.ApplicationUtils;
 import org.wso2.lsp4intellij.utils.FileUtils;
 
 import java.io.File;
+import java.io.PrintWriter;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -78,6 +81,7 @@ public class DaciteWorkspaceEditHandler extends WorkspaceEditHandler {
                         EditorEventManager manager = EditorEventManagerBase.forUri(uri);
                         if (manager != null) {
                             curProject[0] = manager.editor.getProject();
+                            version = manager.documentEventManager.getDocumentVersion();
                             toApply.add(manager.getEditsRunnable(version, toEither(textEdit.getEdits()), newName, true));
                         } else {
                             toApply.add(
@@ -98,6 +102,16 @@ public class DaciteWorkspaceEditHandler extends WorkspaceEditHandler {
                                 .map(ImmutablePair::getRight).findFirst().orElse(projects[0]);
                         String uri = FileUtils.sanitizeURI(create.getUri());
                         String fileName = VfsUtil.extractFileName(uri);
+                        try {
+                            File file = new File((new URI(uri)).getPath());
+                            if(file.exists()){
+                                //PrintWriter pw = new PrintWriter(file);
+                                //pw.close();
+                                //FileUtil.delete(file);
+                            }
+                        } catch (Exception e) {
+                            LOG.warn(e);
+                        }
                         Application application = ApplicationManager.getApplication();
                         Runnable run = new Runnable() {
                             @Override

@@ -9,6 +9,7 @@ dependencies {
     implementation project(':mulib')
     implementation 'org.ow2.asm:asm:7.0'
     implementation 'org.ow2.asm:asm-util:7.0'
+    implementation 'org.ow2.asm:asm-commons:7.0'
     implementation 'junit:junit:4.13.2'
     implementation 'jakarta.xml.bind:jakarta.xml.bind-api:3.0.0'
     implementation 'com.sun.xml.bind:jaxb-impl:3.0.0'
