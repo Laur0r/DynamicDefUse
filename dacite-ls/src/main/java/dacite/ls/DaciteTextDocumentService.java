@@ -91,7 +91,7 @@ public class DaciteTextDocumentService
                 new Command("Run Analysis", "dacite.analyze", List.of(params.getTextDocument().getUri())), null));
             codeLenses.add(new CodeLens(new Range(new Position(range.begin.line - 1, range.begin.column - 1),
                     new Position(range.end.line - 1, range.end.column)),
-                    new Command("Run Symbolic Analysis", "dacite.analyzeSymbolic", List.of(params.getTextDocument().getUri())), null));
+                    new Command("Run Symbolic Analysis", "dacite.analyzeTrigger", List.of(params.getTextDocument().getUri())), null));
           }));
     } catch (ParseProblemException e) {
       logger.error("Document {} could not be parsed successfully: {}", params.getTextDocument().getUri(), e);
@@ -216,7 +216,7 @@ public class DaciteTextDocumentService
           });
     });
 
-    logger.info("hints {}", inlayHints);
+    //logger.info("hints {}", inlayHints);
 
     return CompletableFuture.completedFuture(inlayHints);
   }

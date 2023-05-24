@@ -102,16 +102,6 @@ public class DaciteWorkspaceEditHandler extends WorkspaceEditHandler {
                                 .map(ImmutablePair::getRight).findFirst().orElse(projects[0]);
                         String uri = FileUtils.sanitizeURI(create.getUri());
                         String fileName = VfsUtil.extractFileName(uri);
-                        try {
-                            File file = new File((new URI(uri)).getPath());
-                            if(file.exists()){
-                                //PrintWriter pw = new PrintWriter(file);
-                                //pw.close();
-                                //FileUtil.delete(file);
-                            }
-                        } catch (Exception e) {
-                            LOG.warn(e);
-                        }
                         Application application = ApplicationManager.getApplication();
                         Runnable run = new Runnable() {
                             @Override

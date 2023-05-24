@@ -61,17 +61,6 @@ public class DaciteEditorEventManager extends EditorEventManager {
         }
     }
 
-    @Override
-    public void mouseClicked(EditorMouseEvent e) {
-        super.mouseClicked(e);
-        if(pressedEscaped){
-            System.out.println("Yay!");
-            LanguageServerWrapper  wrapper = LanguageServerWrapper.forEditor(editor);
-            RequestManager requestManager = wrapper.getRequestManager();
-            CompletableFuture<Object> result = requestManager.executeCommand(new ExecuteCommandParams("dacite.analyzeSymbolic", List.of(getIdentifier().getUri())));
-        }
-    }
-
     public void registerKey(){
         KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher((KeyEvent e) -> {
             int eventId = e.getID();

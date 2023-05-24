@@ -212,7 +212,6 @@ public class CommandRegistry {
 
             String uri = textDocumentUri.substring(0,textDocumentUri.lastIndexOf("/"));
             uri += "/DaciteSymbolicDriver.java";
-            logger.info(uri);
             CreateFile createFile = new CreateFile(uri, new CreateFileOptions(true,false));
             List<TextEdit> edits = generateSearchRegions(projectFile, packageName+"."+className);
             /*int line = 0;
@@ -286,18 +285,18 @@ public class CommandRegistry {
 
   private static List<TextEdit> generateSearchRegions(File project, String classname){
     List<String> output = new ArrayList<>();
-    String packageName = "";//classname.substring(0, classname.lastIndexOf("."));
+    String packageName = classname.substring(0, classname.lastIndexOf("."));
     ClassReader reader = null;
     try {
-      logger.info(classname);
+      //logger.info(classname);
       URL url = project.toURI().toURL();
-      logger.info(String.valueOf(url));
+      //logger.info(String.valueOf(url));
       URLClassLoader classLoader = new URLClassLoader(new URL[]{url});
-      logger.info(String.valueOf(classLoader.getURLs()[0]));
+      //logger.info(String.valueOf(classLoader.getURLs()[0]));
       //Class myclass = classLoader.loadClass(classname);
       //logger.info(myclass.getName());
       InputStream input = classLoader.getResourceAsStream(classname.replace('.', '/') + ".class");
-      logger.info(input.toString());
+      //logger.info(input.toString());
       reader = new ClassReader(input);
     } catch (Exception e) {
       throw new RuntimeException(e);
@@ -306,7 +305,7 @@ public class CommandRegistry {
     reader.accept(node, 0);
     Map<String, List<String>> invokedMethods = new HashMap<>();
     for(MethodNode mnode : node.methods) {
-      logger.info(mnode.name);
+      //logger.info(mnode.name);
       if (mnode.visibleAnnotations != null) {
         for (AnnotationNode an : mnode.visibleAnnotations) {
           if (an.desc.equals("Lorg/junit/Test;")) {
@@ -336,7 +335,7 @@ public class CommandRegistry {
                   list.addAll(list2);
                   invokedMethods.put(name, list);
                 }
-                logger.info(methodins.owner + "." + methodins.name);
+                //logger.info(methodins.owner + "." + methodins.name);
               }
             }
           }
@@ -345,37 +344,37 @@ public class CommandRegistry {
     }
     List<TextEdit> edits = new ArrayList<>();
     int line = 0;
+    String packageHeader = "package tryme;"+System.getProperty("line.separator")+"import de.wwu.mulib.Mulib;"+System.getProperty("line.separator");
+    Range range0 = new Range();
+    range0.setStart(new Position(line,0));
+    range0.setEnd(new Position(line, packageHeader.length()));
+    line++;
+    TextEdit textEdit0 = new TextEdit(range0,packageHeader);
+    edits.add(textEdit0);
+
+    String importHeader = "import de.wwu.mulib.Mulib;"+System.getProperty("line.separator");
+    Range importRange = new Range();
+    importRange.setStart(new Position(line,0));
+    importRange.setEnd(new Position(line, importHeader.length()));
+    line++;
+    TextEdit textEditImport = new TextEdit(importRange,importHeader);
+    edits.add(textEditImport);
+
+    String classHeader = "public class DaciteSymbolicDriver {"+System.getProperty("line.separator");
+    Range range = new Range();
+    range.setStart(new Position(line,0));
+    range.setEnd(new Position(line, classHeader.length()));
+    line++;
+    TextEdit textEdit = new TextEdit(range,classHeader);
+    edits.add(textEdit);
+    int counter = 0;
     for (Map.Entry<String, List<String>> entry : invokedMethods.entrySet()) {
       List<String> parameters = entry.getValue().subList(2,entry.getValue().size());
       String returnType = entry.getValue().get(1);
       String staticRef = entry.getValue().get(0);
       String method = entry.getKey();
 
-      String packageHeader = "package tryme;"+System.getProperty("line.separator")+"import de.wwu.mulib.Mulib;"+System.getProperty("line.separator");
-      Range range0 = new Range();
-      range0.setStart(new Position(line,0));
-      range0.setEnd(new Position(line, packageHeader.length()));
-      line++;
-      TextEdit textEdit0 = new TextEdit(range0,packageHeader);
-      edits.add(textEdit0);
-
-      String importHeader = "import de.wwu.mulib.Mulib;"+System.getProperty("line.separator");
-      Range importRange = new Range();
-      importRange.setStart(new Position(line,0));
-      importRange.setEnd(new Position(line, importHeader.length()));
-      line++;
-      TextEdit textEditImport = new TextEdit(importRange,importHeader);
-      edits.add(textEditImport);
-
-      String classHeader = "public class DaciteSymbolicDriver {"+System.getProperty("line.separator");
-      Range range = new Range();
-      range.setStart(new Position(line,0));
-      range.setEnd(new Position(line, classHeader.length()));
-      line++;
-      TextEdit textEdit = new TextEdit(range,classHeader);
-      edits.add(textEdit);
-
-      String m = "public static "+returnType+" driver(){"+System.getProperty("line.separator");
+      String m = " public static "+returnType+" driver"+counter+"(){"+System.getProperty("line.separator");
       Range range1 = new Range();
       range1.setStart(new Position(line,0));
       range1.setEnd(new Position(line, m.length()));
@@ -384,7 +383,7 @@ public class CommandRegistry {
       edits.add(textEdit1);
 
       for(int i=0; i<parameters.size();i++){
-        String p = parameters.get(i) + " a"+i;
+        String p = "  "+parameters.get(i) + " a"+i;
         switch (parameters.get(i)){
           case "int": p+="= Mulib.rememberedFreeInt(\"a"+i+"\");";break;
           case "double": p+="= Mulib.rememberedFreeDouble(\"a"+i+"\");";break;
@@ -403,8 +402,8 @@ public class CommandRegistry {
         edits.add(textEdit2);
       }
       if(staticRef.equals("object") && method.contains(".")){
-        String namedClass = method.substring(0,method.indexOf("."));
-        String object = namedClass+" obj = new "+namedClass+"();"+System.getProperty("line.separator");
+        String namedClass = ""+method.substring(0,method.indexOf("."));
+        String object = "  "+namedClass+" obj = new "+namedClass+"();"+System.getProperty("line.separator");
         Range range2 = new Range();
         range2.setStart(new Position(line,0));
         range2.setEnd(new Position(line, object.length()));
@@ -413,7 +412,7 @@ public class CommandRegistry {
         edits.add(textEdit2);
         method = "obj."+method.substring(method.indexOf(".")+1);
       }
-      String methodS = "";
+      String methodS = "  ";
       if(!returnType.equals("void")){
         methodS+=returnType+" r0 = ";
       }
@@ -435,15 +434,23 @@ public class CommandRegistry {
 
       String end = "";
       if(!returnType.equals("void")){
-        end = "return r0;";
+        end = "  return r0;";
       }
-      end += "}}"+System.getProperty("line.separator");
+      end += " }"+System.getProperty("line.separator");
       Range range3 = new Range();
       range3.setStart(new Position(line,0));
       range3.setEnd(new Position(line, end.length()));
+      line++;
       TextEdit textEdit3 = new TextEdit(range3,end);
       edits.add(textEdit3);
+      counter ++;
     }
+    String finalend = "}"+System.getProperty("line.separator");
+    Range range3 = new Range();
+    range3.setStart(new Position(line,0));
+    range3.setEnd(new Position(line, finalend.length()));
+    TextEdit textEdit3 = new TextEdit(range3,finalend);
+    edits.add(textEdit3);
     return edits;
   }
 
