@@ -1,6 +1,18 @@
 package dacite.core.defuse;
 
+import de.wwu.mulib.expressions.Sub;
+import de.wwu.mulib.solving.solvers.SolverManager;
+import de.wwu.mulib.substitutions.Conc;
+import de.wwu.mulib.substitutions.PartnerClass;
+import de.wwu.mulib.substitutions.Sarray;
+import de.wwu.mulib.substitutions.SubstitutedVar;
+import de.wwu.mulib.substitutions.primitives.ConcSnumber;
+import de.wwu.mulib.substitutions.primitives.Sint;
+import de.wwu.mulib.substitutions.primitives.Sprimitive;
+
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
 
@@ -15,6 +27,13 @@ public class DefUseAnalyser {
     public static DefUseChains chains;
     // all variable definitions that were passed so far
     protected static DefSet defs;
+
+    // all symbolic variable definitions that were passed so far
+    protected static DefSet symbolicDefs;
+
+    // all identified DUC that were passed so far
+    public static List<DefUseVariable> symbolicUsages;
+
     // allocation of variables over the boundary of methods
     protected static InterMethodAllocDequeue interMethods;
     // allocation of aliases
@@ -23,6 +42,8 @@ public class DefUseAnalyser {
     static{
         chains = new DefUseChains();
         defs = new DefSet();
+        symbolicDefs = new DefSet();
+        symbolicUsages = new ArrayList<>();
         interMethods = new InterMethodAllocDequeue();
         aliases = new HashMap<Object, AliasAlloc>();
     }
@@ -37,19 +58,29 @@ public class DefUseAnalyser {
      * @param varname name of the defined variable
      */
     public static void visitDef(Object value, int index, int linenumber, int instruction, String method, String varname){
-        DefUseVariable def = defs.contains(value, index, linenumber, instruction, method);
-        // if definition already exists, it is removed and added to the beginning to keep track of the most recent definition
-        if(def != null){
-            defs.removeDef(def);
+        if(value instanceof SubstitutedVar){
+            DefUseVariable symbolicDef = symbolicDefs.symbolicContains(value, index, linenumber, instruction, method);
+            if(symbolicDef != null){
+                defs.removeDef(symbolicDef);
+            } else {
+                symbolicDef = new DefUseVariable(linenumber, instruction, index, value, method, varname);
+            }
+            registerDef(symbolicDef);
         } else {
-            def = new DefUseVariable(linenumber, instruction, index, value, method, varname);
+            DefUseVariable def = defs.contains(value, index, linenumber, instruction, method);
+            // if definition already exists, it is removed and added to the beginning to keep track of the most recent definition
+            if(def != null){
+                defs.removeDef(def);
+            } else {
+                def = new DefUseVariable(linenumber, instruction, index, value, method, varname);
+            }
+            // if an array is defined, the array name is added to all element definitions
+            if(value.getClass().isArray()){
+                defs.setArrayName(value, varname);
+            }
+            // add definition to defs
+            registerDef(def);
         }
-        // if an array is defined, the array name is added to all element definitions
-        if(value.getClass().isArray()){
-            defs.setArrayName(value, varname);
-        }
-        // add definition to defs
-        registerDef(def);
     }
 
     /**
@@ -64,18 +95,40 @@ public class DefUseAnalyser {
     public static void visitUse(Object value, int index, int linenumber, int instruction, String method, String varname){
         DefUseVariable use = new DefUseVariable(linenumber, instruction, index, value, method, varname);
         // get most recent variable definition for this usage
-        DefUseVariable def = defs.getLastDefinition(index, method, value, varname);
-        // if there exists a definition and this is an alias, check whether alias definition was more recent
-        if(def != null && def.isAlias()){
-            AliasAlloc alloc = aliases.get(def.getValue());
-            for(int i = 0; i<alloc.varNames.size(); i++){
-                DefUseVariable alias = defs.getAliasDef(alloc.varIndexes.get(i), alloc.varNames.get(i), value);
-                if(alias.getLinenumber() > def.getLinenumber()){
-                    def = alias;
+        if(value instanceof SubstitutedVar){
+            // can be compared similar to concrete values
+            if(value instanceof ConcSnumber || (value instanceof PartnerClass && ((PartnerClass) value).__mulib__getId()
+                    instanceof Sint.ConcSint)){
+                DefUseVariable symbolicDef = symbolicDefs.getLastSymbolicDefinition(index, method, value, varname);
+                if(symbolicDef != null && symbolicDef.isAlias()){
+                    AliasAlloc alloc = aliases.get(symbolicDef.getValue());
+                    for(int i = 0; i<alloc.varNames.size(); i++){
+                        DefUseVariable alias = defs.getSymbolicAliasDef(alloc.varIndexes.get(i), alloc.varNames.get(i), value);
+                        if(alias.getLinenumber() > symbolicDef.getLinenumber()){
+                            symbolicDef = alias;
+                        }
+                    }
+                }
+                registerUse(symbolicDef, use, index,varname, method);
+            } else {
+                // Evaluation has to be made later when use.value has a concrete value
+                symbolicUsages.add(use);
+            }
+
+        } else {
+            DefUseVariable def = defs.getLastDefinition(index, method, value, varname);
+            // if there exists a definition and this is an alias, check whether alias definition was more recent
+            if(def != null && def.isAlias()){
+                AliasAlloc alloc = aliases.get(def.getValue());
+                for(int i = 0; i<alloc.varNames.size(); i++){
+                    DefUseVariable alias = defs.getAliasDef(alloc.varIndexes.get(i), alloc.varNames.get(i), value);
+                    if(alias.getLinenumber() > def.getLinenumber()){
+                        def = alias;
+                    }
                 }
             }
+            registerUse(def, use, index,varname, method);
         }
-        registerUse(def, use, index,varname, method);
     }
 
     /**
@@ -89,8 +142,13 @@ public class DefUseAnalyser {
      */
     public static void visitStaticFieldUse(Object value, String name, int linenumber, int instruction, String method, String classname){
         DefUseField use = new DefUseField(linenumber, instruction, -1, value, method, name, null, classname);
+        DefUseVariable def = null;
         // get most recent field definition for this usage
-        DefUseVariable def = defs.getLastDefinitionFields(-1, name, value, null);
+        if(value instanceof SubstitutedVar){
+            def = symbolicDefs.getLastSymbolicDefinitionFields(-1, name, value, null);
+        } else {
+            def = defs.getLastDefinitionFields(-1, name, value, null);
+        }
         registerUse(def, use, -1, name, method);
     }
 
@@ -104,12 +162,24 @@ public class DefUseAnalyser {
      * @param classname name of the static class
      */
     public static void visitStaticFieldDef(Object value, String name, int linenumber, int instruction, String method, String classname){
-        DefUseVariable def = defs.containsField(value, -1, name, linenumber, instruction,null);
-        // if definition already exists, it is removed and added to the beginning to keep track of the most recent definition
-        if(def != null){
-            defs.removeDef(def);
+        DefUseVariable def = null;
+        // TODO value oder instance SubstitutedVar? Oder geht immer nur beides oder nichts?
+        if(value instanceof SubstitutedVar){
+            def = symbolicDefs.containsSymbolicField(value, -1, name, linenumber, instruction,null);
+            // if definition already exists, it is removed and added to the beginning to keep track of the most recent definition
+            if(def != null){
+                symbolicDefs.removeDef(def);
+            } else {
+                def = new DefUseField(linenumber, instruction, -1, value, method, name, null, classname);
+            }
         } else {
-            def = new DefUseField(linenumber, instruction, -1, value, method, name, null, classname);
+            def = defs.containsField(value, -1, name, linenumber, instruction,null);
+            // if definition already exists, it is removed and added to the beginning to keep track of the most recent definition
+            if(def != null){
+                defs.removeDef(def);
+            } else {
+                def = new DefUseField(linenumber, instruction, -1, value, method, name, null, classname);
+            }
         }
         registerDef(def);
     }
@@ -129,12 +199,23 @@ public class DefUseAnalyser {
          for the field access. Thus, the identified chain using the class instance is removed.
          */
         String instanceName = chains.removeAload(instance, linenumber, method);
-        DefUseVariable def = defs.containsField(value, -1, name, linenumber, instruction, instance);
-        // if definition already exists, it is removed and added to the beginning to keep track of the most recent definition
-        if(def != null){
-            defs.removeDef(def);
+        DefUseVariable def = null;
+        // TODO value oder instance SubstitutedVar? Oder geht immer nur beides oder nichts?
+        if(value instanceof SubstitutedVar){
+            def = symbolicDefs.containsSymbolicField(value, -1, name, linenumber, instruction, instance);
+            if(def != null){
+                symbolicDefs.removeDef(def);
+            } else {
+                def = new DefUseField(linenumber, instruction, -1, value, method, name, instance, instanceName);
+            }
         } else {
-            def = new DefUseField(linenumber, instruction, -1, value, method, name, instance, instanceName);
+            def = defs.containsField(value, -1, name, linenumber, instruction, instance);
+            // if definition already exists, it is removed and added to the beginning to keep track of the most recent definition
+            if(def != null){
+                defs.removeDef(def);
+            } else {
+                def = new DefUseField(linenumber, instruction, -1, value, method, name, instance, instanceName);
+            }
         }
         registerDef(def);
     }
@@ -155,15 +236,29 @@ public class DefUseAnalyser {
          */
         String instanceName = chains.removeAload(instance, linenumber, method);
         DefUseField use = new DefUseField(linenumber, instruction, -1, value, method, name, instance, instanceName);
-        // get most recent field definition for this usage
-        DefUseVariable def = defs.getLastDefinitionFields(-1, name, value, instance);
-        // if there exists a definition and this is an alias, check whether alias definition was more recent
-        if(def != null && def.isAlias()){
-            AliasAlloc alloc = aliases.get(def.getValue());
-            for(int i = 0; i<alloc.varNames.size(); i++){
-                DefUseVariable alias = defs.getAliasDef(-1, name, value);
-                if(alias.getLinenumber() > def.getLinenumber()){
-                    def = alias;
+        DefUseVariable def = null;
+        if(value instanceof SubstitutedVar){
+            def = symbolicDefs.getLastSymbolicDefinitionFields(-1, name, value, instance);
+            if(def != null && def.isAlias()){
+                AliasAlloc alloc = aliases.get(def.getValue());
+                for(int i = 0; i<alloc.varNames.size(); i++){
+                    DefUseVariable alias = symbolicDefs.getSymbolicAliasDef(-1, name, value);
+                    if(alias.getLinenumber() > def.getLinenumber()){
+                        def = alias;
+                    }
+                }
+            }
+        } else {
+            // get most recent field definition for this usage
+            def = defs.getLastDefinitionFields(-1, name, value, instance);
+            // if there exists a definition and this is an alias, check whether alias definition was more recent
+            if(def != null && def.isAlias()){
+                AliasAlloc alloc = aliases.get(def.getValue());
+                for(int i = 0; i<alloc.varNames.size(); i++){
+                    DefUseVariable alias = defs.getAliasDef(-1, name, value);
+                    if(alias.getLinenumber() > def.getLinenumber()){
+                        def = alias;
+                    }
                 }
             }
         }
@@ -186,8 +281,14 @@ public class DefUseAnalyser {
          */
         String arrayName = chains.removeAload(array, linenumber, method);
         DefUseField use = new DefUseField(linenumber, instruction, index, value, method, arrayName+"[", array, arrayName);
+        DefUseVariable def = null;
         // get most recent field definition for this usage
-        DefUseVariable def = defs.getLastDefinitionFields(index, "", value, array);
+        if(value instanceof SubstitutedVar){
+            def = symbolicDefs.getLastSymbolicDefinitionFields(index, "", value, array);
+        } else {
+            def = defs.getLastDefinitionFields(index, "", value, array);
+        }
+
         if(def.variableName.equals("")){
             def.variableName = arrayName+"[";
         }
@@ -212,13 +313,24 @@ public class DefUseAnalyser {
         if(arrayName.equals("this")){
             arrayName = null;
         }
-        // get most recent field definition for this usage
-        DefUseVariable def = defs.containsField(value, index, "", linenumber, instruction, array);
-        // if definition already exists, it is removed and added to the beginning to keep track of the most recent definition
-        if(def != null){
-            defs.removeDef(def);
+        DefUseVariable def = null;
+        if(value instanceof SubstitutedVar){
+            def = symbolicDefs.containsSymbolicField(value, index, "", linenumber, instruction, array);
+            // if definition already exists, it is removed and added to the beginning to keep track of the most recent definition
+            if(def != null){
+                symbolicDefs.removeDef(def);
+            } else {
+                def = new DefUseField(linenumber, instruction, index, value, method, "", array, arrayName);
+            }
         } else {
-            def = new DefUseField(linenumber, instruction, index, value, method, "", array, arrayName);
+            // get most recent field definition for this usage
+            def = defs.containsField(value, index, "", linenumber, instruction, array);
+            // if definition already exists, it is removed and added to the beginning to keep track of the most recent definition
+            if (def != null) {
+                defs.removeDef(def);
+            } else {
+                def = new DefUseField(linenumber, instruction, index, value, method, "", array, arrayName);
+            }
         }
         registerDef(def);
     }
@@ -234,7 +346,11 @@ public class DefUseAnalyser {
      * @param parameter integer indicating which number parameter this is
      */
     public static void visitParameter(Object value, int index, int linenumber, String method, String varname, int parameter){
-        registerParameter(value, index, linenumber, method, varname, parameter);
+        if(value instanceof SubstitutedVar){
+            registerSymbolicParameter(value, index, linenumber, method, varname, parameter);
+        } else {
+            registerParameter(value, index, linenumber, method, varname, parameter);
+        }
     }
 
     /**
@@ -265,10 +381,16 @@ public class DefUseAnalyser {
      */
     protected static void registerDef(DefUseVariable def){
         // check if there already exists a registered alias for this variable value
+        // TODO remove alias if there is a new definition
         AliasAlloc alloc = aliases.get(def.getValue());
         if(alloc == null) {
-            // check if there exists an alias
-            DefUseVariable alias = defs.hasAlias(def);
+            DefUseVariable alias = null;
+            if(def.getValue() instanceof SubstitutedVar){
+                alias = symbolicDefs.hasSymbolicAlias(def);
+            } else {
+                // check if there exists an alias
+                alias = defs.hasAlias(def);
+            }
             if(alias != null){
                 alloc = new AliasAlloc(def.getVariableName(), alias.getVariableName(), def.getVariableIndex(), alias.getVariableIndex());
                 aliases.put(def.getValue(), alloc);
@@ -331,6 +453,59 @@ public class DefUseAnalyser {
     }
 
     /**
+     * Method parameter is registered at the entry of the called method. If this parameter was defined elsewhere and is
+     * passed on to this method, this is not considered as a definition but registered as an allocation over the boundary
+     * of methods. Otherwise, a definition is registered.
+     * @param value value of parameter
+     * @param index index with which this is stored in variable table
+     * @param ln line number where the parameter is defined
+     * @param method method name of this parameter
+     * @param varname name of the parameter
+     * @param parameter integer indicating which number parameter this is
+     */
+    protected static void registerSymbolicParameter(Object value, int index, int ln, String method, String varname, int parameter){
+        if(interMethods.size() != 0){
+            for(InterMethodAlloc alloc : interMethods.interMethodAllocs){
+                // check if there exists a matching allocation for this method invocation
+                if(alloc.newMethod.equals(method) && (alloc.newName == null || alloc.newName.equals(varname)) && parameter == alloc.parameter) {
+                    if(alloc.value == value || (value instanceof ConcSnumber && value.equals(alloc.value) || (value instanceof PartnerClass &&
+                            ((PartnerClass) value).__mulib__getId() instanceof Sint.ConcSint && alloc.value instanceof PartnerClass &&
+                            ((PartnerClass) alloc.value).__mulib__getId() instanceof Sint.ConcSint &&
+                            ((PartnerClass) value).__mulib__getId() == ((PartnerClass) alloc.value).__mulib__getId()))){
+                        // get variable usage for parameter when method is called at call site
+                        // TODO assign symbolic values later on as allocation?
+                        DefUseVariable result = chains.findSymbolicUse(alloc.currentMethod, alloc.linenumber, value, alloc.isRemoved); // TODO Erkennung von Operationen in Methodenaufrufen?
+                        // if this exists a method allocation is registered instead of a definition
+                        if(result != null) {
+                            alloc.newIndex = index;
+                            alloc.newName = varname;
+                            if(!alloc.isRemoved){
+                                alloc.isRemoved = true;
+                            }
+                            alloc.currentIndex = result.getVariableIndex();
+                            alloc.currentName = result.getVariableName();
+                            if(result instanceof DefUseField){
+                                alloc.isField = true;
+                            } else {
+                                alloc.isField = false;
+                            }
+                            return;
+                        }
+                    }
+                }
+            }
+        }
+        // save parameter as variable definition when there is no method allocation
+        DefUseVariable def = symbolicDefs.symbolicContains(value, index, ln, parameter, method);
+        if(def != null){
+            symbolicDefs.removeDef(def);
+        } else {
+            def = new DefUseVariable(ln, parameter, index, value, method, varname);
+        }
+        registerDef(def);
+    }
+
+    /**
      * Method which is called from the instrumented source code whenever a method with only one parameter is invoked.
      * This registers the variable allocation at the call site.
      * @param value value of the parameter
@@ -381,6 +556,8 @@ public class DefUseAnalyser {
                 // get last definition within the calling method
                 if(alloc.isField) {
                     def = defs.getLastDefinitionFields(alloc.currentIndex, alloc.currentName, alloc.value, null);
+                } else if(alloc.value instanceof SubstitutedVar){
+                    def = symbolicDefs.getLastSymbolicDefinition(alloc.currentIndex, alloc.currentMethod, alloc.value, alloc.currentName);
                 } else {
                     def = defs.getLastDefinition(alloc.currentIndex, alloc.currentMethod, alloc.value, alloc.currentName);
                 }
@@ -418,5 +595,24 @@ public class DefUseAnalyser {
      */
     public static void check(){
         logger.info("Size: "+chains.getChainSize());
+    }
+
+    private List<SubstitutedVar> symbolics = new ArrayList<>();
+    private void resolveLabels(SolverManager s) {
+        for (SubstitutedVar sv : symbolics) {
+            if (sv instanceof Sprimitive) {
+                if (sv instanceof ConcSnumber) {
+                    // TODO Das hier muss nicht gelistet sein; - mit equals vergleichen, Wert auslesen
+                }
+            } if (sv instanceof PartnerClass) {
+                // TODO Für Sarray und für PartnerClass (Sarray ist Subtype) gilt: WENN die Id konkret (ConcSint) ist
+                //  dann kann man mit der ID den check nutzen. erstmal nicht '==', sondern:
+                //  ((PartnerClass) sv).__mulib__getId() ==
+                //  Man kann prüfen, ob eine ID symbolisch ist, indem man id auf Sym prüft, oder
+                //  ((PartnerClass) sv).__mulib__defaultIsSymbolic()
+            }
+            Object realValue = s.getLabel(sv);
+
+        }
     }
 }
