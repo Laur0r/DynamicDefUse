@@ -3,6 +3,9 @@ package dacite.core.defuse;
 import java.util.ArrayList;
 import java.util.ListIterator;
 
+import de.wwu.mulib.substitutions.PartnerClass;
+import de.wwu.mulib.substitutions.primitives.ConcSnumber;
+import de.wwu.mulib.substitutions.primitives.Sint;
 import jakarta.xml.bind.annotation.XmlElement;
 import jakarta.xml.bind.annotation.XmlRootElement;
 
@@ -82,6 +85,35 @@ public class DefUseChains {
             DefUseVariable use = chain.getUse();
             if(use.getLinenumber() == linenumber && use.getMethod().equals(method) &&
                     (use.getValue() == value || value != null && DefUseAnalyser.isPrimitiveOrWrapper(value) && value.equals(use.getValue()))){
+                if(!removed){
+                    defUseChains.remove(chain);
+                }
+                return use;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Find variable usage with given characteristics. Necessary in the context of variable allocations over the
+     * boundaries of methods.
+     * @param method name of method where the usage occurred
+     * @param linenumber where the usage occurred
+     * @param value of variable which was used
+     * @param removed boolean indicating whether this usage was already removed from chains
+     * @return variable usage
+     */
+    public DefUseVariable findSymbolicUse(String method, int linenumber, Object value, boolean removed){
+        ListIterator iterator = defUseChains.listIterator(defUseChains.size());
+        while (iterator.hasPrevious()){
+            DefUseChain chain = (DefUseChain) iterator.previous();
+            //for(DefUseChain chain : defUseChains){
+            DefUseVariable use = chain.getUse();
+            if(use.getLinenumber() == linenumber && use.getMethod().equals(method) &&
+                    (use.getValue() == value || (value instanceof ConcSnumber && value.equals(use.getValue())) || (value instanceof PartnerClass &&
+                            ((PartnerClass) value).__mulib__getId() instanceof Sint.ConcSint && use.getValue() instanceof PartnerClass &&
+                            ((PartnerClass) use.getValue()).__mulib__getId() instanceof Sint.ConcSint &&
+                            ((PartnerClass) value).__mulib__getId() == ((PartnerClass) use.getValue()).__mulib__getId()))){
                 if(!removed){
                     defUseChains.remove(chain);
                 }
