@@ -93,8 +93,12 @@ public class CommandRegistry {
                   // Main class in dacite-core
                   "dacite.core.DaciteLauncher",
                   "dacite",
+                      // Projectpath
+                      projectDir + "src/",
+                      // Packagename
+                      packageName +"/",
                   // Class to be analyzed
-                  packageName + "." + className);
+                  className);
 
               // Start process in project's root directory
               ProcessBuilder pb = (new ProcessBuilder(commandArgs)).redirectError(ProcessBuilder.Redirect.INHERIT)

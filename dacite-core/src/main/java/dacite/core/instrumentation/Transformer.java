@@ -59,6 +59,16 @@ public class Transformer implements ClassFileTransformer {
 				e.printStackTrace();
 			}
 
+			File outputfile = new File("/home/l_troo01/Development/Forschung/ByteCode/test.class");
+			try{
+				OutputStream fos = new FileOutputStream(outputfile);
+				fos.write(output);
+				fos.flush();
+				fos.close();
+			} catch (Exception e){
+				e.printStackTrace();
+			}
+
 			//logger.info("Transformer has class written");
 			return output;
 		}
