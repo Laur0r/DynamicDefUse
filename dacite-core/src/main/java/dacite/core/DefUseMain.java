@@ -8,9 +8,17 @@ import org.w3c.dom.Element;
 import org.xml.sax.InputSource;
 
 import java.io.*;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.logging.Logger;
 
+import javax.tools.JavaCompiler;
+import javax.tools.JavaFileObject;
+import javax.tools.StandardJavaFileManager;
+import javax.tools.ToolProvider;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.stream.XMLEventWriter;
@@ -35,16 +43,34 @@ public class DefUseMain {
 	static Logger logger = Logger.getLogger(Logger.GLOBAL_LOGGER_NAME);
 
 	public static void exec(String[] args) throws Exception {
-		if(args.length > 1){
+		if(args.length > 3){
 			throw new IllegalArgumentException("More than one argument for main method detected");
 		} else if(args.length == 0){
 			throw new IllegalArgumentException("Required to specify analysisJunittest to analyse data-flow");
 		}
 		long startTime = System.nanoTime();
 		JUnitCore junitCore = new JUnitCore();
-		String classname = args[0];
+		String projectdir = args[0];
+		String packagename = args[1];
+		String classname = args[2];
+		File file = new File(projectdir+packagename+classname+".java");
+		//ClassLoader.getSystemResource(packagename.replace("/",".")+classname+".class");
+		//Class.forName(packagename.replace("/",".")+classname);
+		//ClassLoader t = Thread.currentThread().getContextClassLoader();
+		URL url = ClassLoader.getSystemResource(packagename+classname+".class");
+		String sourcePath = url.getPath().substring(0,url.getPath().indexOf(packagename));
+		List<File> sourceFileList = new ArrayList<File>();
+		sourceFileList.add(file);
+		JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
+		StandardJavaFileManager fileManager = compiler.getStandardFileManager( null, null, null );
+		Iterable<? extends JavaFileObject> javaSource = fileManager.getJavaFileObjectsFromFiles( sourceFileList );
+		Iterable<String> options = Arrays.asList("-d", sourcePath, "-g");
+		JavaCompiler.CompilationTask task = compiler.getTask(null, fileManager, null, options, null, javaSource);
+		task.call();
+
 		try {
-			junitCore.run(Class.forName(classname));
+			// TODO projectpath mit übergeben und Klasse vor dem Laden neu kompilieren
+			junitCore.run(Class.forName(packagename.replace("/",".")+classname));
 		} catch (ClassNotFoundException e) {
 			e.printStackTrace();
 		}

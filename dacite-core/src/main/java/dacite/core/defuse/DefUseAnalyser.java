@@ -145,7 +145,14 @@ public class DefUseAnalyser {
         DefUseVariable def = null;
         // get most recent field definition for this usage
         if(value instanceof SubstitutedVar){
-            def = symbolicDefs.getLastSymbolicDefinitionFields(-1, name, value, null);
+            // can be compared similar to concrete values
+            if(value instanceof ConcSnumber || (value instanceof PartnerClass && ((PartnerClass) value).__mulib__getId()
+                    instanceof Sint.ConcSint)){
+                def = symbolicDefs.getLastSymbolicDefinitionFields(-1, name, value, null);
+            } else {
+                symbolicUsages.add(use);
+                return;
+            }
         } else {
             def = defs.getLastDefinitionFields(-1, name, value, null);
         }
@@ -238,15 +245,21 @@ public class DefUseAnalyser {
         DefUseField use = new DefUseField(linenumber, instruction, -1, value, method, name, instance, instanceName);
         DefUseVariable def = null;
         if(value instanceof SubstitutedVar){
-            def = symbolicDefs.getLastSymbolicDefinitionFields(-1, name, value, instance);
-            if(def != null && def.isAlias()){
-                AliasAlloc alloc = aliases.get(def.getValue());
-                for(int i = 0; i<alloc.varNames.size(); i++){
-                    DefUseVariable alias = symbolicDefs.getSymbolicAliasDef(-1, name, value);
-                    if(alias.getLinenumber() > def.getLinenumber()){
-                        def = alias;
+            if(value instanceof ConcSnumber || (value instanceof PartnerClass && ((PartnerClass) value).__mulib__getId()
+                    instanceof Sint.ConcSint)){
+                def = symbolicDefs.getLastSymbolicDefinitionFields(-1, name, value, instance);
+                if(def != null && def.isAlias()){
+                    AliasAlloc alloc = aliases.get(def.getValue());
+                    for(int i = 0; i<alloc.varNames.size(); i++){
+                        DefUseVariable alias = symbolicDefs.getSymbolicAliasDef(-1, name, value);
+                        if(alias.getLinenumber() > def.getLinenumber()){
+                            def = alias;
+                        }
                     }
                 }
+            } else {
+                symbolicUsages.add(use);
+                return;
             }
         } else {
             // get most recent field definition for this usage
@@ -284,7 +297,12 @@ public class DefUseAnalyser {
         DefUseVariable def = null;
         // get most recent field definition for this usage
         if(value instanceof SubstitutedVar){
-            def = symbolicDefs.getLastSymbolicDefinitionFields(index, "", value, array);
+            if(value instanceof ConcSnumber || (value instanceof PartnerClass && ((PartnerClass) value).__mulib__getId()
+                    instanceof Sint.ConcSint)){
+                def = symbolicDefs.getLastSymbolicDefinitionFields(index, "", value, array);
+            } else {
+                symbolicUsages.add(use);
+            }
         } else {
             def = defs.getLastDefinitionFields(index, "", value, array);
         }
@@ -599,6 +617,19 @@ public class DefUseAnalyser {
 
     private List<SubstitutedVar> symbolics = new ArrayList<>();
     private void resolveLabels(SolverManager s) {
+        for(DefUseVariable def : symbolicDefs.defs){
+            if((def.getValue() instanceof SubstitutedVar) && !(def.getValue() instanceof ConcSnumber) && !(def.getValue() instanceof PartnerClass && ((PartnerClass) def.getValue()).__mulib__getId()
+                    instanceof Sint.ConcSint)){
+                // TODO ist das jetzt zB int oder ConcSint?
+                def.setValue(s.getLabel(def.getValue()));
+            }
+        }
+        for(DefUseVariable var: symbolicUsages){
+            var.setValue(s.getLabel(var.getValue()));
+            // TODO oder symbolische Vergleiche notwendig?
+            DefUseVariable def = symbolicDefs.getLastDefinition(var.variableIndex, var.method, var.value, var.variableName);
+            registerUse(def, var, var.variableIndex, var.variableName, var.method);
+        }
         for (SubstitutedVar sv : symbolics) {
             if (sv instanceof Sprimitive) {
                 if (sv instanceof ConcSnumber) {
@@ -612,7 +643,6 @@ public class DefUseAnalyser {
                 //  ((PartnerClass) sv).__mulib__defaultIsSymbolic()
             }
             Object realValue = s.getLabel(sv);
-
         }
     }
 }
