@@ -133,6 +133,7 @@ public class DaciteAnalysisToolWindow {
                 }
             }
         }
+        myToolWindowContent.repaint();
     }
 
     private void createTreeViewChildren(DefaultMutableTreeNode top){
