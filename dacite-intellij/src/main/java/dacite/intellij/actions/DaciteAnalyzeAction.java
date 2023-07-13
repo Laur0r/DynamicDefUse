@@ -54,7 +54,7 @@ public class DaciteAnalyzeAction extends AnAction {
       toolWindow = toolWindowManager.registerToolWindow(task);
       toolWindow.show();
     } else {
-      factory.createToolWindowContent(project,toolWindow);
+      factory.changeToolWindowContent(project,toolWindow);
     }
 
     // Using the event, implement an action. For example, create and show a dialog.
