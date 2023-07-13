@@ -267,6 +267,7 @@ public class CommandRegistry {
                 newIsEditorHighlight = ((JsonPrimitive) args.get(1)).getAsBoolean();
               }
               DefUseAnalysisProvider.changeDefUseEditorHighlighting(nodeProperties, newIsEditorHighlight);
+              logger.info("highlight", nodeProperties);
             }
           } catch (Exception e) {
             logger.error(e.getMessage());
