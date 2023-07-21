@@ -3,6 +3,7 @@ package dacite.intellij.lspclient;
 import com.intellij.openapi.diagnostic.Logger;
 
 import dacite.lsp.InlayHintDecorationParams;
+import dacite.lsp.tvp.*;
 import org.eclipse.lsp4j.InlayHint;
 import org.eclipse.lsp4j.InlayHintParams;
 import org.eclipse.lsp4j.ServerCapabilities;
@@ -17,11 +18,6 @@ import java.util.concurrent.CompletableFuture;
 import dacite.lsp.InlayHintDecoration;
 import dacite.lsp.DaciteExtendedLanguageServer;
 import dacite.lsp.DaciteExtendedTextDocumentService;
-import dacite.lsp.tvp.DaciteTreeViewService;
-import dacite.lsp.tvp.TreeViewChildrenParams;
-import dacite.lsp.tvp.TreeViewChildrenResult;
-import dacite.lsp.tvp.TreeViewParentParams;
-import dacite.lsp.tvp.TreeViewParentResult;
 
 public class DaciteLSPRequestManager extends DefaultRequestManager
     implements DaciteExtendedTextDocumentService, DaciteTreeViewService {
@@ -91,6 +87,12 @@ public class DaciteLSPRequestManager extends DefaultRequestManager
       }
     }
     return null;
+  }
+
+  @Override
+  public void treeViewDidChange(TreeViewDidChangeParams params) {
+    System.out.println("notification received!");
+    treeViewService.treeViewDidChange(params);
   }
 
   private void crashed(Exception e) {

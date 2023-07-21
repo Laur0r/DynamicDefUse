@@ -10,4 +10,8 @@ public class TreeViewDidChangeParams {
   @NonNull
   private TreeViewNode[] nodes;
 
+  public TreeViewDidChangeParams(TreeViewNode[] nodes){
+    this.nodes = nodes;
+  }
+
 }

@@ -2,12 +2,17 @@
 
 import * as path from 'path';
 import * as os from 'os';
-import { ExtensionContext, window, workspace, StatusBarAlignment, TextEditor, StatusBarItem } from 'vscode';
+import * as vscode from 'vscode';
+import { ExtensionContext, window, workspace, StatusBarAlignment, TextEditor, StatusBarItem, InlayHint } from 'vscode';
 
 import {
+  ExecuteCommandParams,
+  ExecuteCommandRequest,
+  InlayHintRequest,
   LanguageClient,
   LanguageClientOptions,
-  ServerOptions
+  ServerOptions,
+  TextDocumentIdentifier
 } from 'vscode-languageclient/node';
 import { TreeViews } from './DaciteTreeViewProtocol';
 import { startTreeView } from './treeview';
@@ -70,7 +75,8 @@ export async function activate(context: ExtensionContext) {
 		console.log(error);
   }
 
-  treeViews = startTreeView(languageClient, languageClient.outputChannel, context, ['defUseChains']);
+  
+  treeViews = startTreeView(languageClient, languageClient.outputChannel, context, ['defUseChains', 'notCoveredDUC']);
   context.subscriptions.concat(treeViews.disposables);
 
   window.onDidChangeActiveTextEditor((editor) =>{

@@ -3,6 +3,9 @@ package dacite.ls;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 
+import dacite.lsp.DaciteExtendedLanguageClient;
+import dacite.lsp.tvp.TreeViewDidChangeParams;
+import dacite.lsp.tvp.TreeViewNode;
 import org.eclipse.lsp4j.*;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.eclipse.lsp4j.services.LanguageClient;
@@ -44,7 +47,7 @@ public class CommandRegistry {
     return Arrays.stream(Command.values()).map(it -> COMMAND_PREFIX + it.name()).collect(Collectors.toList());
   }
 
-  public static CompletableFuture<Object> execute(ExecuteCommandParams params, LanguageClient client) {
+  public static CompletableFuture<Object> execute(ExecuteCommandParams params, DaciteExtendedLanguageClient client) {
     logger.info("{}", params);
 
     var command = Command.valueOf(params.getCommand().replaceFirst(COMMAND_PREFIX, ""));
@@ -119,7 +122,11 @@ public class CommandRegistry {
             String stdOut = processOutput.toString().trim();
              */
 
-              DefUseAnalysisProvider.processXmlFile(projectDir + "file.xml");
+              DefUseAnalysisProvider.processXmlFile(projectDir + "coveredDUCs.xml", true);
+              DefUseAnalysisProvider.setTextDocumentUriTrigger(textDocumentUri);
+              TreeViewNode node = new TreeViewNode("defUseChains","", "");
+              TreeViewDidChangeParams paramsChange = new TreeViewDidChangeParams(new TreeViewNode[]{node});
+              client.treeViewDidChange(paramsChange);
             }
           } catch (Exception e) {
             logger.error(e.getMessage());
@@ -194,7 +201,10 @@ public class CommandRegistry {
           String stdOut = processOutput.toString().trim();
            */
 
-            //DefUseAnalysisProvider.processXmlFile(projectDir + "file.xml");
+            DefUseAnalysisProvider.deriveNotCoveredChains(projectDir + "SymbolicDUCs.xml");
+            TreeViewNode node = new TreeViewNode("notCoveredDUC","", "");
+            TreeViewDidChangeParams paramsChange = new TreeViewDidChangeParams(new TreeViewNode[]{node});
+            client.treeViewDidChange(paramsChange);
           }
         } catch (Exception e) {
           logger.error(e.getMessage());
@@ -210,44 +220,29 @@ public class CommandRegistry {
 
             // Extract project's root directory
             Path textDocumentPath = Paths.get(textDocumentUri.replace("file://", ""));
-            String projectDir = textDocumentPath.getParent().toString().split("src/")[0]+"/out/production/TestAnalysis1";
+            String projectDirStart = textDocumentPath.getParent().toString();
+            projectDirStart = projectDirStart.substring(0, projectDirStart.lastIndexOf("/src/"));
+            String projectName = projectDirStart.substring(projectDirStart.lastIndexOf("/")+1);
+            String projectDir = projectDirStart+"/out/production/"+projectName;
             File projectFile = new File(projectDir);
+            if(!projectFile.exists()){
+              projectDir = projectDirStart+"/build/classes/java/main/"+projectName;
+              projectFile = new File(projectDir);
+            }
+            if(!projectFile.exists()){
+              projectDir = projectDirStart+"/target/classes/"+projectName;
+              projectFile = new File(projectDir);
+            }
+            if(!projectFile.exists()){
+              throw new RuntimeException("Class directory not found for executed File");
+            }
             List<TextEdit> c = generateSearchRegions(projectFile, packageName+"."+className);
 
             String uri = textDocumentUri.substring(0,textDocumentUri.lastIndexOf("/"));
             uri += "/DaciteSymbolicDriver.java";
             CreateFile createFile = new CreateFile(uri, new CreateFileOptions(true,false));
             List<TextEdit> edits = generateSearchRegions(projectFile, packageName+"."+className);
-            /*int line = 0;
-            String packageHeader = "package tryme;\n";
-            Range range = new Range();
-            range.setStart(new Position(line,0));
-            range.setEnd(new Position(line, packageHeader.length()));
-            line++;
-            TextEdit textEdit = new TextEdit(range,packageHeader);
-            edits.add(textEdit);
 
-            String classHeader = "public class DaciteSymbolicDriver {\n";
-            Range range0 = new Range();
-            range0.setStart(new Position(line,0));
-            range0.setEnd(new Position(line, classHeader.length()));
-            line++;
-            TextEdit textEdit0 = new TextEdit(range0,classHeader);
-            edits.add(textEdit0);
-
-            String m = " public static String driver(){\n";
-            Range range1 = new Range();
-            range1.setStart(new Position(line,0));
-            range1.setEnd(new Position(line, m.length()));
-            line++;
-            TextEdit textEdit1 = new TextEdit(range1,m);
-            edits.add(textEdit1);
-            String end = "  return \"test\";}}";
-            Range range2 = new Range();
-            range2.setStart(new Position(line,0));
-            range2.setEnd(new Position(line, end.length()));
-            TextEdit textEdit2 = new TextEdit(range2,end);
-            edits.add(textEdit2);*/
             TextDocumentEdit documentEdit = new TextDocumentEdit(new VersionedTextDocumentIdentifier(uri,1), edits);
             List<Either<TextDocumentEdit, ResourceOperation>> changes = new ArrayList<>();
             changes.add(Either.forRight(createFile));
@@ -295,11 +290,11 @@ public class CommandRegistry {
     try {
       //logger.info(classname);
       URL url = project.toURI().toURL();
-      //logger.info(String.valueOf(url));
+      logger.info(String.valueOf(url));
       URLClassLoader classLoader = new URLClassLoader(new URL[]{url});
       //logger.info(String.valueOf(classLoader.getURLs()[0]));
       //Class myclass = classLoader.loadClass(classname);
-      //logger.info(myclass.getName());
+      logger.info(classname.replace('.', '/') + ".class");
       InputStream input = classLoader.getResourceAsStream(classname.replace('.', '/') + ".class");
       //logger.info(input.toString());
       reader = new ClassReader(input);
@@ -357,13 +352,21 @@ public class CommandRegistry {
     TextEdit textEdit0 = new TextEdit(range0,packageHeader);
     edits.add(textEdit0);
 
-    String importHeader = "import de.wwu.mulib.Mulib;"+System.getProperty("line.separator");
+    String importHeader = "import de.wwu.mulib.Mulib;"+System.getProperty("line.separator")+System.getProperty("line.separator");
     Range importRange = new Range();
     importRange.setStart(new Position(line,0));
     importRange.setEnd(new Position(line, importHeader.length()));
     line++;
     TextEdit textEditImport = new TextEdit(importRange,importHeader);
     edits.add(textEditImport);
+
+    String driverComment = "/* This class serves as a search reagion and prepares the input values for the symbolic execution. */"+System.getProperty("line.separator");
+    Range rangeComment = new Range();
+    rangeComment.setStart(new Position(line,0));
+    rangeComment.setEnd(new Position(line, driverComment.length()));
+    line++;
+    TextEdit textEditComment = new TextEdit(rangeComment,driverComment);
+    edits.add(textEditComment);
 
     String classHeader = "public class DaciteSymbolicDriver {"+System.getProperty("line.separator");
     Range range = new Range();
@@ -386,6 +389,13 @@ public class CommandRegistry {
       line++;
       TextEdit textEdit1 = new TextEdit(range1,m);
       edits.add(textEdit1);
+      String commentInput = " /* Input values */"+System.getProperty("line.separator");
+      Range rangeComment2 = new Range();
+      rangeComment2.setStart(new Position(line,0));
+      rangeComment2.setEnd(new Position(line, commentInput.length()));
+      line++;
+      TextEdit textEditComment2 = new TextEdit(rangeComment2,commentInput);
+      edits.add(textEditComment2);
 
       for(int i=0; i<parameters.size();i++){
         String p = "  "+parameters.get(i) + " a"+i;

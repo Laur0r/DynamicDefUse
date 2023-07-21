@@ -51,7 +51,7 @@ public class DefUseMain {
 		long startTime = System.nanoTime();
 		JUnitCore junitCore = new JUnitCore();
 		String projectdir = args[0];
-		String packagename = args[1];
+		String packagename = args[1].replace(".","/");
 		String classname = args[2];
 		File file = new File(projectdir+packagename+classname+".java");
 		//ClassLoader.getSystemResource(packagename.replace("/",".")+classname+".class");
@@ -83,7 +83,7 @@ public class DefUseMain {
 		XMLOutputFactory xof = XMLOutputFactory.newInstance();
 		XMLStreamWriter xsw = null;
 		try {
-			xsw = xof.createXMLStreamWriter(new BufferedOutputStream(new FileOutputStream("file.xml")));
+			xsw = xof.createXMLStreamWriter(new BufferedOutputStream(new FileOutputStream("coveredDUCs.xml")));
 			xsw.writeStartDocument();
 			xsw.writeStartElement("DefUseChains");
 

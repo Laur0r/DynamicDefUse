@@ -89,10 +89,17 @@ public class DaciteTextDocumentService
             codeLenses.add(new CodeLens(new Range(new Position(range.begin.line - 1, range.begin.column - 1),
                 new Position(range.end.line - 1, range.end.column)),
                 new Command("Run Analysis", "dacite.analyze", List.of(params.getTextDocument().getUri())), null));
-            codeLenses.add(new CodeLens(new Range(new Position(range.begin.line - 1, range.begin.column - 1),
+            /*codeLenses.add(new CodeLens(new Range(new Position(range.begin.line - 1, range.begin.column - 1),
                     new Position(range.end.line - 1, range.end.column)),
-                    new Command("Run Symbolic Analysis", "dacite.analyzeTrigger", List.of(params.getTextDocument().getUri())), null));
+                    new Command("Run Symbolic Analysis", "dacite.symbolicTrigger", List.of(params.getTextDocument().getUri())), null));*/
           }));
+
+      compilationUnit.findAll(ClassOrInterfaceDeclaration.class).stream().filter(coid ->String.valueOf(coid.getName()).equals("DaciteSymbolicDriver"))
+              .forEach(coid ->coid.getName().getRange().ifPresent(range -> {
+                codeLenses.add(new CodeLens(new Range(new Position(range.begin.line - 1, range.begin.column - 1),
+                        new Position(range.end.line - 1, range.end.column)),
+                        new Command("Run Dacite Symbolic Analysis", "dacite.analyzeSymbolic", List.of(params.getTextDocument().getUri())), null));
+              }));
     } catch (ParseProblemException e) {
       logger.error("Document {} could not be parsed successfully: {}", params.getTextDocument().getUri(), e);
     }
@@ -112,109 +119,11 @@ public class DaciteTextDocumentService
     var packageName = codeAnalyser.extractPackageName();
 
     Set<com.github.javaparser.Position> globalDefPositions = new HashSet<>();
-    var defUseVariableMap = DefUseAnalysisProvider.getUniqueDefUseVariablesByLine(packageName, className);
-    // First use grouping by line number...
-    defUseVariableMap.forEach((lineNumber, defUseVariables) -> {
-      // ...then group by variable name and try to match with positions obtained from parsing
-      DefUseAnalysisProvider.groupByVariableNamesAndSort(defUseVariables)
-          .forEach((variableName, groupedDefUseVariables) -> {
-            //logger.info(variableName+" "+groupedDefUseVariables.size());
-            // TODO: move the following fix into DefUseVariable class?
-            if(variableName.contains("[")){
-              variableName = variableName.substring(0, variableName.indexOf("["));
-            }
-            List<DefUseVariable> defs = new ArrayList<>();
-            List<DefUseVariable> uses = new ArrayList<>();
-            for(int i = 0; i< groupedDefUseVariables.size(); i++){
-              DefUseVariable var = groupedDefUseVariables.get(i);
-              if(var.getRole() == DefUseVariableRole.DEFINITION){
-                defs.add(var);
-              } else {
-                uses.add(var);
-              }
-            }
-            List<com.github.javaparser.Position> defPositions = new ArrayList<>();
-            //List<Position> defPos = codeAnalyser.extractVariablePositionsAtLine(lineNumber, variableName);
-            if(defs.size() != 0){
-              defPositions = codeAnalyser.extractVariablePositionsAtLine(lineNumber, variableName, true).get(0);
-              globalDefPositions.addAll(defPositions);
-              //logger.info("defPositions: "+defPositions.size());
-              int i = 0;
-              while (i < defs.size() && i < defPositions.size()) {
-                /*if(lineNumber == 39){
-                  logger.info("defPositions: "+defPositions.size());
-                  logger.info("def "+defs.get(i).toString());
-                }*/
-                if(defs.get(i).isEditorHighlight()) {
-                  var defUseVariable = defs.get(i);
-                  var parserPosition = defPositions.get(i);
-                  var label = defUseVariable.getRole() == DefUseVariableRole.DEFINITION ? "Def" : "Use";
+    Map<Integer, List<DefUseVariable>> defUseVariableMap = DefUseAnalysisProvider.getUniqueDefUseVariablesByLine(packageName, className, true);
+    getInlayHints(defUseVariableMap, inlayHints, params, codeAnalyser);
+    Map<Integer, List<DefUseVariable>> notCoveredMap = DefUseAnalysisProvider.getUniqueDefUseVariablesByLine(packageName, className, false);
+    getInlayHints(notCoveredMap, inlayHints, params, codeAnalyser);
 
-                  var lspPos = new Position(parserPosition.line - 1, parserPosition.column - 1);
-                  var hint = new InlayHint(lspPos, Either.forLeft(label));
-                  hint.setPaddingLeft(true);
-                  hint.setPaddingRight(true);
-                  inlayHints.add(hint);
-
-                  if (highlightedDefUseVariables.containsKey(params.getTextDocument())) {
-                    highlightedDefUseVariables.get(params.getTextDocument()).put(lspPos, defUseVariable);
-                  } else {
-                    HashMap<Position, DefUseVariable> newMap = new HashMap<>();
-                    newMap.put(lspPos, defUseVariable);
-                    highlightedDefUseVariables.put(params.getTextDocument(), newMap);
-                  }
-                }
-                i++;
-              }
-            }
-
-            if(uses.size() != 0){
-              var pos = codeAnalyser.extractVariablePositionsAtLine(lineNumber, variableName, false);
-              var usePositionsDup = pos.get(0);
-              var unaryPosition = pos.get(1);
-              /*if(lineNumber == 15 & variableName.contains("number")){
-                logger.info("uses "+uses.get(0));
-                logger.info("usePositionsDup: "+usePositionsDup.size());
-              }*/
-              List<com.github.javaparser.Position> usePositions = new ArrayList<>();
-              for(com.github.javaparser.Position p:usePositionsDup){
-                if(!globalDefPositions.contains(p) || unaryPosition.contains(p)){
-                  usePositions.add(p);
-                }
-              }
-              /*if(lineNumber == 15 & variableName.contains("number")){
-                logger.info("usePositions: "+usePositions.size());
-              }*/
-              int i = 0;
-              while (i < uses.size() && i < usePositions.size()) {
-                /*if(lineNumber == 15 & variableName.contains("number")){
-                  logger.info("usePositions: "+usePositions.size());
-                  logger.info("use "+uses.get(i).toString());
-                }*/
-                if(uses.get(i).isEditorHighlight()) {
-                  var defUseVariable = uses.get(i);
-                  var parserPosition = usePositions.get(i);
-                  var label = defUseVariable.getRole() == DefUseVariableRole.DEFINITION ? "Def" : "Use";
-
-                  var lspPos = new Position(parserPosition.line - 1, parserPosition.column - 1);
-                  var hint = new InlayHint(lspPos, Either.forLeft(label));
-                  hint.setPaddingLeft(true);
-                  hint.setPaddingRight(true);
-                  inlayHints.add(hint);
-
-                  if (highlightedDefUseVariables.containsKey(params.getTextDocument())) {
-                    highlightedDefUseVariables.get(params.getTextDocument()).put(lspPos, defUseVariable);
-                  } else {
-                    HashMap<Position, DefUseVariable> newMap = new HashMap<>();
-                    newMap.put(lspPos, defUseVariable);
-                    highlightedDefUseVariables.put(params.getTextDocument(), newMap);
-                  }
-                }
-                i++;
-              }
-            }
-          });
-    });
 
     //logger.info("hints {}", inlayHints);
 
@@ -250,89 +159,13 @@ public class DaciteTextDocumentService
     List<DefUseClass> classes = DefUseAnalysisProvider.getDefUseClasses();
 
     if (params.getViewId().equals("defUseChains")) {
-      if (nodeUri.equals("")) {
-        for (DefUseClass cl : classes) {
-          TreeViewNode node = new TreeViewNode("defUseChains", cl.getName(),
-              cl.getName() + " " + cl.getNumberChains() + " chains");
-          node.setCollapseState("collapsed");
-          node.setIcon("class");
-
-          var commandArg = new JsonObject();
-          commandArg.addProperty("packageClass", cl.getName());
-          node.setCommand(new TreeViewCommand("Highlight", "dacite.highlight", List.of(commandArg)));
-
-          nodes.add(node);
-        }
-      } else {
-        for (DefUseClass cl : classes) {
-          if (nodeUri.equals(cl.getName())) {
-            for (DefUseMethod m : cl.getMethods()) {
-              TreeViewNode node = new TreeViewNode("defUseChains", cl.getName() + "." + m.getName(),
-                  m.getName() + " " + m.getNumberChains() + " chains");
-              node.setCollapseState("collapsed");
-              node.setIcon("method");
-
-              var commandArg = new JsonObject();
-              commandArg.addProperty("packageClass", cl.getName());
-              commandArg.addProperty("method", m.getName());
-              node.setCommand(new TreeViewCommand("Highlight", "dacite.highlight", List.of(commandArg)));
-
-              nodes.add(node);
-            }
-            break;
-          } else {
-            for (DefUseMethod m : cl.getMethods()) {
-              if (nodeUri.equals(cl.getName() + "." + m.getName())) {
-                for (DefUseVar var : m.getVariables()) {
-                  TreeViewNode node = new TreeViewNode("defUseChains",
-                      cl.getName() + "." + m.getName() + " " + var.getName(),
-                      var.getName() + " " + var.getNumberChains() + " chains");
-                  node.setCollapseState("collapsed");
-                  node.setIcon("variable");
-
-                  var commandArg = new JsonObject();
-                  commandArg.addProperty("packageClass", cl.getName());
-                  commandArg.addProperty("method", m.getName());
-                  commandArg.addProperty("variable", var.getName());
-                  node.setCommand(new TreeViewCommand("Highlight", "dacite.highlight", List.of(commandArg)));
-
-                  nodes.add(node);
-                }
-                break;
-              } else {
-                for (DefUseVar var : m.getVariables()) {
-                  if (nodeUri.equals(cl.getName() + "." + m.getName() + " " + var.getName())) {
-                    for (DefUseData data : var.getData()) {
-                      TreeViewNode node = new TreeViewNode("defUseChains",
-                          cl.getName() + "." + m.getName() + " " + var.getName() + " " + data.getDefLocation() + " - "
-                              + data.getUseLocation() + " " + data.getIndex() + " " + data.getUseInstruction(),
-                          data.getName() + " " + data.getDefLocation() + " - " + data.getUseLocation());
-
-                      var commandArg = new JsonObject();
-                      commandArg.addProperty("packageClass", cl.getName());
-                      commandArg.addProperty("method", m.getName());
-                      commandArg.addProperty("variable", var.getName());
-                      commandArg.addProperty("defLocation", data.getDefLocation());
-                      commandArg.addProperty("defInstruction", data.getDefInstruction());
-                      commandArg.addProperty("useLocation", data.getUseLocation());
-                      commandArg.addProperty("index", data.getIndex());
-                      commandArg.addProperty("useInstruction", data.getUseInstruction());
-                      node.setCommand(new TreeViewCommand("Highlight", "dacite.highlight", List.of(commandArg)));
-
-                      nodes.add(node);
-                    }
-                    break;
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
+      nodes = getTreeViewNodes(nodeUri, "defUseChains");
+    } else if (params.getViewId().equals("notCoveredDUC")) {
+      nodes = getTreeViewNodes(nodeUri, "notCoveredDUC");
+      logger.info(nodes.toString());
     }
 
     var result = new TreeViewChildrenResult(nodes.toArray(new TreeViewNode[0]));
-    //logger.info("children: {}", result);
 
     return CompletableFuture.completedFuture(result);
   }
@@ -375,5 +208,202 @@ public class DaciteTextDocumentService
       }
     }
     return CompletableFuture.completedFuture(null);
+  }
+
+  @Override
+  public void treeViewDidChange(TreeViewDidChangeParams params) {
+
+  }
+
+  private ArrayList<TreeViewNode> getTreeViewNodes(String nodeUri, String id) {
+    ArrayList<TreeViewNode> nodes = new ArrayList<TreeViewNode>();
+    List<DefUseClass> classes;
+    if (id.equals("defUseChains")) {
+      classes = DefUseAnalysisProvider.getDefUseClasses();
+    } else {
+      classes = DefUseAnalysisProvider.getNotCoveredClasses();
+    }
+    if (nodeUri.equals("")) {
+      for (DefUseClass cl : classes) {
+        TreeViewNode node = new TreeViewNode(id, cl.getName(),
+                cl.getName() + " " + cl.getNumberChains() + " chains");
+        node.setContextValue(DefUseAnalysisProvider.getTextDocumentUriTrigger());
+        node.setCollapseState("collapsed");
+        node.setIcon("class");
+
+        var commandArg = new JsonObject();
+        commandArg.addProperty("packageClass", cl.getName());
+        if (id.equals("notCoveredDUC")) {
+          commandArg.addProperty("notCovered", true);
+        }
+        node.setCommand(new TreeViewCommand("Highlight", "dacite.highlight", List.of(commandArg)));
+
+        nodes.add(node);
+      }
+    } else {
+      for (DefUseClass cl : classes) {
+        if (nodeUri.equals(cl.getName())) {
+          for (DefUseMethod m : cl.getMethods()) {
+            TreeViewNode node = new TreeViewNode(id, cl.getName() + "." + m.getName(),
+                    m.getName() + " " + m.getNumberChains() + " chains");
+            node.setCollapseState("collapsed");
+            node.setIcon("method");
+
+            var commandArg = new JsonObject();
+            commandArg.addProperty("packageClass", cl.getName());
+            commandArg.addProperty("method", m.getName());
+            if (id.equals("notCoveredDUC")) {
+              commandArg.addProperty("notCovered", true);
+            }
+            node.setCommand(new TreeViewCommand("Highlight", "dacite.highlight", List.of(commandArg)));
+
+            nodes.add(node);
+          }
+          break;
+        } else {
+          for (DefUseMethod m : cl.getMethods()) {
+            if (nodeUri.equals(cl.getName() + "." + m.getName())) {
+              for (DefUseVar var : m.getVariables()) {
+                TreeViewNode node = new TreeViewNode(id,
+                        cl.getName() + "." + m.getName() + " " + var.getName(),
+                        var.getName() + " " + var.getNumberChains() + " chains");
+                node.setCollapseState("collapsed");
+                node.setIcon("variable");
+
+                var commandArg = new JsonObject();
+                commandArg.addProperty("packageClass", cl.getName());
+                commandArg.addProperty("method", m.getName());
+                commandArg.addProperty("variable", var.getName());
+                if (id.equals("notCoveredDUC")) {
+                  commandArg.addProperty("notCovered", true);
+                }
+                node.setCommand(new TreeViewCommand("Highlight", "dacite.highlight", List.of(commandArg)));
+
+                nodes.add(node);
+              }
+              break;
+            } else {
+              for (DefUseVar var : m.getVariables()) {
+                if (nodeUri.equals(cl.getName() + "." + m.getName() + " " + var.getName())) {
+                  for (DefUseData data : var.getData()) {
+                    TreeViewNode node = new TreeViewNode(id,
+                            cl.getName() + "." + m.getName() + " " + var.getName() + " " + data.getDefLocation() + " - "
+                                    + data.getUseLocation() + " " + data.getIndex() + " " + data.getUseInstruction(),
+                            data.getName() + " " + data.getDefLocation() + " - " + data.getUseLocation());
+
+                    var commandArg = new JsonObject();
+                    commandArg.addProperty("packageClass", cl.getName());
+                    commandArg.addProperty("method", m.getName());
+                    commandArg.addProperty("variable", var.getName());
+                    commandArg.addProperty("defLocation", data.getDefLocation());
+                    commandArg.addProperty("defInstruction", data.getDefInstruction());
+                    commandArg.addProperty("useLocation", data.getUseLocation());
+                    commandArg.addProperty("index", data.getIndex());
+                    commandArg.addProperty("useInstruction", data.getUseInstruction());
+                    if (id.equals("notCoveredDUC")) {
+                      commandArg.addProperty("notCovered", true);
+                    }
+                    node.setCommand(new TreeViewCommand("Highlight", "dacite.highlight", List.of(commandArg)));
+
+                    nodes.add(node);
+                  }
+                  break;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    return nodes;
+  }
+
+  private void getInlayHints(Map<Integer, List<DefUseVariable>> map, List<InlayHint> inlayHints, InlayHintParams params, CodeAnalyser codeAnalyser){
+    Set<com.github.javaparser.Position> globalDefPositions = new HashSet<>();
+    map.forEach((lineNumber, defUseVariables) -> {
+      // ...then group by variable name and try to match with positions obtained from parsing
+      DefUseAnalysisProvider.groupByVariableNamesAndSort(defUseVariables)
+              .forEach((variableName, groupedDefUseVariables) -> {
+                //logger.info(variableName+" "+groupedDefUseVariables.size());
+                // TODO: move the following fix into DefUseVariable class?
+                if(variableName.contains("[")){
+                  variableName = variableName.substring(0, variableName.indexOf("["));
+                }
+                List<DefUseVariable> defs = new ArrayList<>();
+                List<DefUseVariable> uses = new ArrayList<>();
+                for(int i = 0; i< groupedDefUseVariables.size(); i++){
+                  DefUseVariable var = groupedDefUseVariables.get(i);
+                  if(var.getRole() == DefUseVariableRole.DEFINITION){
+                    defs.add(var);
+                  } else {
+                    uses.add(var);
+                  }
+                }
+                List<com.github.javaparser.Position> defPositions = new ArrayList<>();
+                //List<Position> defPos = codeAnalyser.extractVariablePositionsAtLine(lineNumber, variableName);
+                if(defs.size() != 0){
+                  defPositions = codeAnalyser.extractVariablePositionsAtLine(lineNumber, variableName, true).get(0);
+                  globalDefPositions.addAll(defPositions);
+                  int i = 0;
+                  while (i < defs.size() && i < defPositions.size()) {
+                    if(defs.get(i).isEditorHighlight()) {
+                      var defUseVariable = defs.get(i);
+                      var parserPosition = defPositions.get(i);
+                      var label = defUseVariable.getRole() == DefUseVariableRole.DEFINITION ? "Def" : "Use";
+
+                      var lspPos = new Position(parserPosition.line - 1, parserPosition.column - 1);
+                      var hint = new InlayHint(lspPos, Either.forLeft(label));
+                      hint.setPaddingLeft(true);
+                      hint.setPaddingRight(true);
+                      inlayHints.add(hint);
+
+                      if (highlightedDefUseVariables.containsKey(params.getTextDocument())) {
+                        highlightedDefUseVariables.get(params.getTextDocument()).put(lspPos, defUseVariable);
+                      } else {
+                        HashMap<Position, DefUseVariable> newMap = new HashMap<>();
+                        newMap.put(lspPos, defUseVariable);
+                        highlightedDefUseVariables.put(params.getTextDocument(), newMap);
+                      }
+                    }
+                    i++;
+                  }
+                }
+
+                if(uses.size() != 0){
+                  var pos = codeAnalyser.extractVariablePositionsAtLine(lineNumber, variableName, false);
+                  var usePositionsDup = pos.get(0);
+                  var unaryPosition = pos.get(1);
+                  List<com.github.javaparser.Position> usePositions = new ArrayList<>();
+                  for(com.github.javaparser.Position p:usePositionsDup){
+                    if(!globalDefPositions.contains(p) || unaryPosition.contains(p)){
+                      usePositions.add(p);
+                    }
+                  }
+                  int i = 0;
+                  while (i < uses.size() && i < usePositions.size()) {
+                    if(uses.get(i).isEditorHighlight()) {
+                      var defUseVariable = uses.get(i);
+                      var parserPosition = usePositions.get(i);
+                      var label = defUseVariable.getRole() == DefUseVariableRole.DEFINITION ? "Def" : "Use";
+
+                      var lspPos = new Position(parserPosition.line - 1, parserPosition.column - 1);
+                      var hint = new InlayHint(lspPos, Either.forLeft(label));
+                      hint.setPaddingLeft(true);
+                      hint.setPaddingRight(true);
+                      inlayHints.add(hint);
+
+                      if (highlightedDefUseVariables.containsKey(params.getTextDocument())) {
+                        highlightedDefUseVariables.get(params.getTextDocument()).put(lspPos, defUseVariable);
+                      } else {
+                        HashMap<Position, DefUseVariable> newMap = new HashMap<>();
+                        newMap.put(lspPos, defUseVariable);
+                        highlightedDefUseVariables.put(params.getTextDocument(), newMap);
+                      }
+                    }
+                    i++;
+                  }
+                }
+              });
+    });
   }
 }

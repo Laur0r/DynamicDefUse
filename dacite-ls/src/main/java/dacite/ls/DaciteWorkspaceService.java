@@ -1,5 +1,6 @@
 package dacite.ls;
 
+import dacite.lsp.DaciteExtendedLanguageClient;
 import org.eclipse.lsp4j.*;
 import org.eclipse.lsp4j.jsonrpc.services.JsonRequest;
 import org.eclipse.lsp4j.services.LanguageClient;
@@ -9,7 +10,7 @@ import java.util.concurrent.CompletableFuture;
 
 public class DaciteWorkspaceService implements WorkspaceService {
 
-  private LanguageClient client;
+  private DaciteExtendedLanguageClient client;
 
   @Override
   public void didChangeConfiguration(DidChangeConfigurationParams params) {
@@ -24,6 +25,6 @@ public class DaciteWorkspaceService implements WorkspaceService {
     return CommandRegistry.execute(params, client);
   }
 
-  public void setClient(LanguageClient client){ this.client = client;}
+  public void setClient(LanguageClient client){ this.client = (DaciteExtendedLanguageClient) client;}
 
 }

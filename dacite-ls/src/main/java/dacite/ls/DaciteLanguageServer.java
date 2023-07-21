@@ -81,6 +81,7 @@ public class DaciteLanguageServer implements DaciteExtendedLanguageServer, Langu
   @Override
   public void connect(LanguageClient client) {
     this.client = client;
+    logger.info(client.toString());
     this.workspaceService.setClient(client);
   }
 
