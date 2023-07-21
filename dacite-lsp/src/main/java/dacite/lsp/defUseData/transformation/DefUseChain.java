@@ -30,4 +30,16 @@ public class DefUseChain {
                 " name="+use.getVariableName() +" color="+use.getColor();
         return output;
     }
+
+    @Override
+    public boolean equals(Object o){
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        DefUseChain that = (DefUseChain) o;
+        return this.def.equals(that.def) && this.use.equals(that.use);
+    }
 }

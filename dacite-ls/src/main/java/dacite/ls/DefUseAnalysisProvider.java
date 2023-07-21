@@ -30,8 +30,13 @@ public class DefUseAnalysisProvider {
   private static final Logger logger = LoggerFactory.getLogger(DefUseAnalysisProvider.class);
 
   private static String textDocumentUriTrigger;
+
   private static List<DefUseChain> defUseChains = new ArrayList<>();
   private static List<DefUseClass> defUseClasses = new ArrayList<>();
+
+  private static List<DefUseChain> notCoveredChains = new ArrayList<>();
+
+  private static List<DefUseClass> notCoveredClasses = new ArrayList<>();
 
   private static final String[] indexcolors = new String[]{
           "#1c1c1c", "#F6BE00", "#18c1d6", "#FF34FF", "#FF4A46", "#008941", "#006FA6", "#A30059",
@@ -53,16 +58,61 @@ public class DefUseAnalysisProvider {
           "#C895C5", "#320033", "#FF6832", "#66E1D3", "#CFCDAC", "#D0AC94", "#7ED379", "#012C58"
   };
 
-  public static void processXmlFile(String path) throws JAXBException, IOException {
+  public static void processXmlFile(String path, boolean covered) throws JAXBException, IOException {
     JAXBContext jaxbContext = JAXBContext.newInstance(DefUseChains.class);
     Unmarshaller jaxbUnmarshaller = jaxbContext.createUnmarshaller();
     String test = Files.readString(Paths.get(path));
     var chainCollection = (DefUseChains) jaxbUnmarshaller.unmarshal(new StringReader(test));
-    defUseChains = chainCollection.getChains();
-    defUseClasses = transformDefUse(defUseChains);
+    if(covered) {
+      defUseChains = chainCollection.getChains();
+      defUseClasses = transformDefUse(defUseChains);
+    } else {
+      notCoveredChains = chainCollection.getChains();
+    }
 
+    if(covered){
+      // Augment parsed information and pre-process
+      defUseChains.forEach(chain -> {
+        var def = chain.getDef();
+        var use = chain.getUse();
+
+        // Set backlink
+        def.setChain(chain);
+        use.setChain(chain);
+
+        // Set role
+        def.setRole(DefUseVariableRole.DEFINITION);
+        use.setRole(DefUseVariableRole.USAGE);
+
+        // Set visibility of highlights
+        def.setEditorHighlight(false);
+        use.setEditorHighlight(false);
+      });
+
+      int i = 0;
+      for (HashMap<DefUseVariable, List<DefUseVariable>> defuse : getVariableMapping(true).values()) {
+        Color color;
+        if(i<indexcolors.length){
+            color = Color.decode(indexcolors[i]);
+        } else {
+            Random random = new Random();
+            color = new Color(random.nextInt(256), random.nextInt(256), random.nextInt(256));
+        }
+
+        defuse.forEach((def, uses) -> {
+          def.setColor(color);
+          uses.forEach(it -> {it.setColor(color); it.getChain().getDef().setColor(color);});
+        });
+        i++;
+      }
+    }
+    //logger.info(defUseChains.toString());
+  }
+
+  public static void deriveNotCoveredChains(String path) throws JAXBException, IOException {
+    processXmlFile(path, false);
     // Augment parsed information and pre-process
-    defUseChains.forEach(chain -> {
+    notCoveredChains.forEach(chain -> {
       var def = chain.getDef();
       var use = chain.getUse();
 
@@ -79,23 +129,23 @@ public class DefUseAnalysisProvider {
       use.setEditorHighlight(false);
     });
 
-    int i = 0;
-    for (HashMap<DefUseVariable, List<DefUseVariable>> defuse : getVariableMapping().values()) {
-      String color;
-      if(i<indexcolors.length){
-        color = indexcolors[i];
-      } else {
-        Random random = new Random();
-        color = "rgb("+random.nextInt(256)+","+ random.nextInt(256)+","+ random.nextInt(256)+")";;
+    List<DefUseChain> chains = new ArrayList<>();
+    for(DefUseChain chain: notCoveredChains){
+      if(!defUseChains.contains(chain)){
+        chains.add(chain);
       }
+    }
+    notCoveredChains = chains;
+    logger.info(notCoveredChains.toString());
+    notCoveredClasses = transformDefUse(notCoveredChains);
 
+    for (HashMap<DefUseVariable, List<DefUseVariable>> defuse : getVariableMapping(false).values()) {
+      Color color = Color.red;
       defuse.forEach((def, uses) -> {
         def.setColor(color);
         uses.forEach(it -> {it.setColor(color); it.getChain().getDef().setColor(color);});
       });
-      i++;
     }
-    logger.info(defUseChains.toString());
   }
 
   public static List<DefUseChain> getDefUseChains() {
@@ -106,31 +156,51 @@ public class DefUseAnalysisProvider {
     return defUseClasses;
   }
 
-  public static List<DefUseVariable> getDefUseVariables() {
+  public static List<DefUseClass> getNotCoveredClasses() {
+    return notCoveredClasses;
+  }
+
+  public static List<DefUseVariable> getDefUseVariables(boolean covered) {
     final List<DefUseVariable> defUseVariables = new ArrayList<>();
-    for (DefUseChain defUseChain : defUseChains) {
-      defUseVariables.add(defUseChain.getDef());
-      defUseVariables.add(defUseChain.getUse());
+    if(covered) {
+      for (DefUseChain defUseChain : defUseChains) {
+        defUseVariables.add(defUseChain.getDef());
+        defUseVariables.add(defUseChain.getUse());
+      }
+    } else {
+      for (DefUseChain defUseChain : notCoveredChains) {
+        defUseVariables.add(defUseChain.getDef());
+        defUseVariables.add(defUseChain.getUse());
+      }
     }
     return defUseVariables;
   }
 
-  public static List<DefUseVariable> getUniqueDefUseVariables() {
+  public static List<DefUseVariable> getUniqueDefUseVariables(boolean covered) {
     List<DefUseVariable> uniqueDefUseVariables = new ArrayList<>();
-    var defUseMapping = getDefUseMapping();
+    var defUseMapping = getDefUseMapping(covered);
     uniqueDefUseVariables.addAll(defUseMapping.keySet());
     uniqueDefUseVariables.addAll(defUseMapping.values().stream().flatMap(List::stream).collect(Collectors.toList()));
     return uniqueDefUseVariables;
   }
 
-  public static List<DefUseVariable> getUniqueDefUseVariables(String packageName, String className) {
-    return getUniqueDefUseVariables().stream()
+  public static List<DefUseVariable> getUniqueDefUseVariables(String packageName, String className, boolean covered) {
+    return getUniqueDefUseVariables(covered).stream()
         .filter(it -> it.getPackageName().equals(packageName) && it.getClassName().equals(className))
         .collect(Collectors.toList());
   }
 
   public static void changeDefUseEditorHighlighting(JsonObject nodeProperties, Boolean newIsEditorHighlight) {
-    defUseChains.forEach(chain -> {
+    if (nodeProperties.has("notCovered")) {
+      changeDefUseEditorHighlighting(notCoveredChains, nodeProperties, newIsEditorHighlight);
+    } else {
+      changeDefUseEditorHighlighting(defUseChains, nodeProperties, newIsEditorHighlight);
+    }
+
+  }
+
+  private static void changeDefUseEditorHighlighting(List<DefUseChain> list, JsonObject nodeProperties, Boolean newIsEditorHighlight) {
+    list.forEach(chain -> {
       DefUseVariable def = chain.getDef();
       DefUseVariable use = chain.getUse();
       var affected = false;
@@ -183,9 +253,9 @@ public class DefUseAnalysisProvider {
 
       if (affected) {
         def.setEditorHighlight(
-            // Standard implementations of the Tree View Protocol do not provide the additional parameter
-            // for newIsEditorHighlight. If it is null, we just toggle the boolean value of affected nodes
-            newIsEditorHighlight == null ? !def.isEditorHighlight() : newIsEditorHighlight);
+                // Standard implementations of the Tree View Protocol do not provide the additional parameter
+                // for newIsEditorHighlight. If it is null, we just toggle the boolean value of affected nodes
+                newIsEditorHighlight == null ? !def.isEditorHighlight() : newIsEditorHighlight);
         use.setEditorHighlight(
                 // Standard implementations of the Tree View Protocol do not provide the additional parameter
                 // for newIsEditorHighlight. If it is null, we just toggle the boolean value of affected nodes
@@ -194,10 +264,10 @@ public class DefUseAnalysisProvider {
     });
   }
 
-  public static HashMap<DefUseVariable, List<DefUseVariable>> getDefUseMapping() {
+  public static HashMap<DefUseVariable, List<DefUseVariable>> getDefUseMapping(boolean covered) {
     HashMap<DefUseVariable, List<DefUseVariable>> defUseMapping = new HashMap<>();
 
-    List<DefUseVariable> defUseVars = getDefUseVariables();
+    List<DefUseVariable> defUseVars = getDefUseVariables(covered);
     Set<DefUseVariable> defs = new HashSet<>();
     Set<DefUseVariable> uses = new HashSet<>();
     for(DefUseVariable var:defUseVars){
@@ -224,10 +294,10 @@ public class DefUseAnalysisProvider {
     return defUseMapping;
   }
 
-  public static HashMap<String, HashMap<DefUseVariable,List<DefUseVariable>>> getVariableMapping() {
+  public static HashMap<String, HashMap<DefUseVariable,List<DefUseVariable>>> getVariableMapping(boolean covered) {
     HashMap<String, HashMap<DefUseVariable,List<DefUseVariable>>> variableMapping = new HashMap<>();
 
-    var defUseVars = getDefUseVariables();
+    var defUseVars = getDefUseVariables(covered);
     List<DefUseVariable> defs = new ArrayList<>();
     List<DefUseVariable> uses = new ArrayList<>();
     for(DefUseVariable var:defUseVars){
@@ -269,10 +339,10 @@ public class DefUseAnalysisProvider {
   }
 
   public static HashMap<Integer, List<DefUseVariable>> getUniqueDefUseVariablesByLine(String packageName,
-      String className) {
+      String className, boolean covered) {
     HashMap<Integer, List<DefUseVariable>> uniqueDefUseVariablesByLine = new HashMap<>();
 
-    getUniqueDefUseVariables(packageName, className).forEach(
+    getUniqueDefUseVariables(packageName, className, covered).forEach(
         defUseVariable -> addDefUseVariable(uniqueDefUseVariablesByLine, defUseVariable));
 
     return uniqueDefUseVariablesByLine;
@@ -412,7 +482,5 @@ public class DefUseAnalysisProvider {
   public static void setTextDocumentUriTrigger(String textDocumentUriTrigger) {
     DefUseAnalysisProvider.textDocumentUriTrigger = textDocumentUriTrigger;
   }
-
-
 
 }

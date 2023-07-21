@@ -1,6 +1,5 @@
 package dacite.lsp;
 
-import dacite.lsp.tvp.DaciteTreeViewService;
 import org.eclipse.lsp4j.jsonrpc.Launcher;
 import org.eclipse.lsp4j.launch.LSPLauncher;
 import org.eclipse.lsp4j.services.LanguageClient;

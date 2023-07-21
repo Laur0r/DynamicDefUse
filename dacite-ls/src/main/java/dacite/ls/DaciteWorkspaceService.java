@@ -30,6 +30,6 @@ public class DaciteWorkspaceService implements WorkspaceService {
     return CommandRegistry.execute(params, client);
   }
 
-  public void setClient(LanguageClient client){this.client = (DaciteExtendedLanguageClient) client;}
+  public void setClient(LanguageClient client){ this.client = (DaciteExtendedLanguageClient) client;}
 
 }

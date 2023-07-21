@@ -4,6 +4,7 @@ import static org.wso2.lsp4intellij.requests.Timeout.getTimeout;
 import static org.wso2.lsp4intellij.requests.Timeouts.INIT;
 import static org.wso2.lsp4intellij.requests.Timeouts.REFERENCES;
 
+import com.intellij.openapi.actionSystem.PlatformCoreDataKeys;
 import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.editor.EditorCustomElementRenderer;
 import com.intellij.openapi.editor.Inlay;
@@ -15,6 +16,7 @@ import com.intellij.openapi.fileEditor.FileEditorManager;
 import com.intellij.openapi.fileEditor.impl.text.PsiAwareTextEditorImpl;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.wm.ToolWindow;
+import com.intellij.psi.PsiFile;
 import com.intellij.ui.JBColor;
 import com.intellij.ui.components.JBScrollPane;
 import com.intellij.ui.treeStructure.Tree;
@@ -29,31 +31,30 @@ import org.eclipse.lsp4j.TextDocumentIdentifier;
 import org.eclipse.lsp4j.jsonrpc.JsonRpcException;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.jetbrains.annotations.NotNull;
+import org.wso2.lsp4intellij.IntellijLanguageClient;
 import org.wso2.lsp4intellij.client.languageserver.requestmanager.RequestManager;
 
-import java.awt.BorderLayout;
-import java.awt.Color;
-import java.awt.Font;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
-import java.awt.Rectangle;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.font.FontRenderContext;
 import java.awt.geom.AffineTransform;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import javax.swing.BoxLayout;
-import javax.swing.JPanel;
-import javax.swing.JScrollPane;
+import javax.swing.*;
+import javax.swing.border.Border;
 import javax.swing.event.CellEditorListener;
 import javax.swing.event.ChangeEvent;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
+import javax.swing.tree.TreeModel;
 import javax.swing.tree.TreeNode;
 
 import dacite.intellij.lspclient.DaciteLSPRequestManager;
@@ -63,57 +64,43 @@ import dacite.lsp.tvp.TreeViewChildrenParams;
 import dacite.lsp.tvp.TreeViewChildrenResult;
 import dacite.lsp.tvp.TreeViewCommand;
 import dacite.lsp.tvp.TreeViewNode;
+import org.wso2.lsp4intellij.client.languageserver.wrapper.LanguageServerWrapper;
+import org.wso2.lsp4intellij.utils.FileUtils;
 
 public class DaciteAnalysisToolWindow {
     private JPanel myToolWindowContent;
     private Project project;
     private DaciteLSPRequestManager requestManager;
 
+    private Tree tree;
+
     public DaciteAnalysisToolWindow(ToolWindow toolWindow, Project project, RequestManager requestManager) {
         this.project = project;
         this.requestManager = (DaciteLSPRequestManager) requestManager;
         myToolWindowContent = new JPanel();
         myToolWindowContent.setLayout(new BoxLayout(myToolWindowContent, BoxLayout.Y_AXIS));
-        TreeViewNode root = new TreeViewNode("defUseChains", "", "root");
-        DefaultMutableTreeNode top =
-                new DefaultMutableTreeNode(root);
-        createTreeViewChildren(top);
-        Tree tree2 = new Tree(top);
-        ((DefaultTreeModel)tree2.getModel()).setAsksAllowsChildren(true);
-        tree2.setCellRenderer(new TreeViewCellRenderer());
-        TreeViewCellEditor editor = new TreeViewCellEditor();
-        editor.addChangeListener(new CellEditorListener() {
-            @Override
-            public void editingStopped(ChangeEvent changeEvent) {
-                DefaultMutableTreeNode node = (DefaultMutableTreeNode) changeEvent.getSource();
-                updateChildrenNodes(node);
-
-                TreeViewNode iniView = (TreeViewNode) node.getUserObject();
-                TreeViewCommand command = iniView.getCommand();
-                if (command != null) {
-                    // Tell server to make corresponding inlay hints visible
-                    var args = new ArrayList<>(command.getArguments());
-                    args.add(iniView.isEditorHighlight());
-                    requestManager.executeCommand(new ExecuteCommandParams(
-                        command.getCommand(),
-                        args
-                    ));
-
-                    // Retrieve new inlay hints from server
-                    addInlays();
+        tree = createTree("defUseChains");
+        JScrollPane treeView = new JBScrollPane(tree);
+        String borderTitle = "Covered DUCs";
+        Border etchedBorder = BorderFactory.createEtchedBorder();
+        Border etchedTitledBorder = BorderFactory.createTitledBorder(etchedBorder, borderTitle);
+        treeView.setBorder(etchedTitledBorder);
+        myToolWindowContent.add(treeView, BorderLayout.CENTER);
+        JButton button = new JButton("Run Symbolic Analysis");
+        button.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                DefaultMutableTreeNode node = (DefaultMutableTreeNode) ((DefaultMutableTreeNode) tree.getModel().getRoot()).getChildAt(0);
+                String uri = ((TreeViewNode) node.getUserObject()).getContextValue();
+                Set<LanguageServerWrapper> wrapper = IntellijLanguageClient.getAllServerWrappersFor(FileUtils.projectToUri(project));
+                RequestManager requestManager = null;
+                if (wrapper.size() == 1) {
+                    requestManager = wrapper.iterator().next().getRequestManager();
                 }
+                CompletableFuture<Object> result = requestManager.executeCommand(new ExecuteCommandParams("dacite.symbolicTrigger",List.of(uri)));
             }
+        } );
+        myToolWindowContent.add(button, BorderLayout.PAGE_END);
 
-            @Override
-            public void editingCanceled(ChangeEvent changeEvent) {
-
-            }
-        });
-        tree2.setCellEditor(editor);
-        tree2.setRootVisible(false);
-        tree2.setEditable(true);
-        JScrollPane treeView2 = new JBScrollPane(tree2);
-        myToolWindowContent.add(treeView2, BorderLayout.CENTER);
     }
 
     public JPanel getContent() {
@@ -240,5 +227,63 @@ public class DaciteAnalysisToolWindow {
 
         }
 
+    }
+
+    public Tree createTree(String rootName){
+        TreeViewNode root = new TreeViewNode(rootName, "", "root");
+        DefaultMutableTreeNode top =
+                new DefaultMutableTreeNode(root);
+        createTreeViewChildren(top);
+        Tree tree = new Tree(top);
+        ((DefaultTreeModel)tree.getModel()).setAsksAllowsChildren(true);
+        tree.setCellRenderer(new TreeViewCellRenderer());
+        TreeViewCellEditor editor = new TreeViewCellEditor();
+        editor.addChangeListener(new CellEditorListener() {
+            @Override
+            public void editingStopped(ChangeEvent changeEvent) {
+                DefaultMutableTreeNode node = (DefaultMutableTreeNode) changeEvent.getSource();
+                updateChildrenNodes(node);
+
+                TreeViewNode iniView = (TreeViewNode) node.getUserObject();
+                TreeViewCommand command = iniView.getCommand();
+                if (command != null) {
+                    // Tell server to make corresponding inlay hints visible
+                    var args = new ArrayList<>(command.getArguments());
+                    args.add(iniView.isEditorHighlight());
+                    requestManager.executeCommand(new ExecuteCommandParams(
+                            command.getCommand(),
+                            args
+                    ));
+
+                    // Retrieve new inlay hints from server
+                    addInlays();
+                }
+            }
+
+            @Override
+            public void editingCanceled(ChangeEvent changeEvent) {
+
+            }
+        });
+        tree.setCellEditor(editor);
+        tree.setRootVisible(false);
+        tree.setEditable(true);
+        return tree;
+    }
+
+    public JPanel addNotCoveredView(){
+        Tree tree2 = createTree("notCoveredDUC");
+        JScrollPane treeView2 = new JBScrollPane(tree2);
+        String borderTitle = "Not covered DUCs";
+        Border etchedBorder = BorderFactory.createEtchedBorder();
+        Border etchedTitledBorder = BorderFactory.createTitledBorder(etchedBorder, borderTitle);
+        treeView2.setBorder(etchedTitledBorder);
+        if(myToolWindowContent.getComponentCount() == 3) {
+            myToolWindowContent.remove(0);
+            myToolWindowContent.getComponent(0);
+        }
+        myToolWindowContent.add(treeView2, BorderLayout.PAGE_START);
+        myToolWindowContent.setComponentZOrder(treeView2, 0);
+        return myToolWindowContent;
     }
 }

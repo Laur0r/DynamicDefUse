@@ -114,7 +114,8 @@ export async function activate(context: ExtensionContext) {
 		console.log(error);
   }
 
-  treeViews = startTreeView(languageClient, languageClient.outputChannel, context, ['defUseChains']);
+
+  treeViews = startTreeView(languageClient, languageClient.outputChannel, context, ['defUseChains', 'notCoveredDUC']);
   context.subscriptions.concat(treeViews.disposables);
 
   window.onDidChangeActiveTextEditor((editor) =>{

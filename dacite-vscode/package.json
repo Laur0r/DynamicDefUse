@@ -47,6 +47,25 @@
         {
           "id": "defUseChains",
           "name": "Def-Use Chains"
+        },
+        {
+          "id": "notCoveredDUC",
+          "name": "Not covered DUCs"
+        }
+      ]
+    },
+    "commands":[
+      {
+        "command":"dacite.symbolicTrigger2",
+        "title" : "Start Symbolic",
+        "icon":"$(debug-line-by-line)"
+      }
+    ],
+    "menus":{
+      "view/title":[
+        {
+          "command": "dacite.symbolicTrigger2",
+          "group": "navigation"
         }
       ]
     }

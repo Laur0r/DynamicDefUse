@@ -28,6 +28,8 @@ export interface TreeViewNode {
   icon?: string;
   /** An optional description of this tree node that is displayed when the user hovers over this node. */
   tooltip?: string;
+  /** An optional information for this tree node. */
+  contextValue?: string
   /**
    * Whether this tree node should be collapsed, expanded or if it has no children.
    *

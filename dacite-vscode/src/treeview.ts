@@ -1,8 +1,9 @@
 // Adapted from https://github.com/scalameta/metals-vscode/blob/main/src/treeview.ts
 
 import * as path from "path";
-import { LanguageClient, Disposable } from "vscode-languageclient/node";
+import { LanguageClient, Disposable, ExecuteCommandParams, ExecuteCommandRequest, } from "vscode-languageclient/node";
 import * as fs from "fs";
+import * as vscode from 'vscode';
 import {
   TreeDataProvider,
   TreeItem,
@@ -58,6 +59,12 @@ export function startTreeView(
     });
     allViews.set(viewId, view);
 
+    /*const params: ExecuteCommandParams = {
+      command: 'dacite.symbolicTrigger',
+      arguments: [provider.docUri]
+    }
+    vscode.commands.registerCommand("dacite.symbolicTrigger", () => client.sendRequest(ExecuteCommandRequest.type,params));*/
+
     // Notify the server about view visibility changes
     const onDidChangeVisibility = view.onDidChangeVisibility((e) => {
       client.sendNotification(TreeViewVisibilityDidChange.type, {
@@ -73,6 +80,7 @@ export function startTreeView(
         collapsed: false,
       });
     });
+
     const onDidChangeCollapseNode = view.onDidCollapseElement((e) => {
       expandedNode(viewId).delete(e.element);
       client.sendNotification(TreeViewNodeCollapseDidChange.type, {
@@ -89,6 +97,7 @@ export function startTreeView(
       onDidChangeCollapseNode,
     ];
   });
+
 
   // Update tree nodes on server notificiations
   const treeViewDidChangeDisposable = client.onNotification(
@@ -173,6 +182,7 @@ export function startTreeView(
  */
 class DaciteTreeDataProvider implements TreeDataProvider<string> {
   didChange = new EventEmitter<string | undefined>();
+  docUri = "";
   onDidChangeTreeData = this.didChange.event;
   items: Map<string, TreeViewNode> = new Map();
   constructor(
@@ -235,13 +245,23 @@ class DaciteTreeDataProvider implements TreeDataProvider<string> {
         nodeUri: uri,
       })
       .then((result) => {
-        console.log(result);
 
         result.nodes.forEach((n) => {
           if (n.nodeUri) {
             this.items.set(n.nodeUri, n);
+          } 
+          //console.log("test "+n.nodeUri+" "+n.contextValue);
+          if(this.docUri.length == 0 && n.contextValue && this.viewId != "notCoveredDUC"){
+            this.docUri = n.contextValue;
+            console.log("docUri "+this.docUri);
+            const params: ExecuteCommandParams = {
+              command: 'dacite.symbolicTrigger',
+              arguments: [this.docUri]
+            }
+            vscode.commands.registerCommand("dacite.symbolicTrigger2", () => this.client.sendRequest(ExecuteCommandRequest.type,params));
           }
         });
+        console.log(result.nodes);
         return result.nodes.map((n) => n.nodeUri).filter(notEmpty);
       });
   }

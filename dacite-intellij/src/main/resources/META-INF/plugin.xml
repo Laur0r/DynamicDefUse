@@ -52,7 +52,7 @@
     <action id="dacite.analyze" class="dacite.intellij.actions.DaciteAnalyzeAction"
             text="Run Dacite Analysis" description="Dynamic analysis of def-use chains" icon="AllIcons.Actions.StartMemoryProfile">
     </action>
-    <action id="dacite.analyzeTrigger" class="dacite.intellij.actions.DaciteSymbolicTriggerAction"
+    <action id="dacite.symbolicTrigger" class="dacite.intellij.actions.DaciteSymbolicTriggerAction"
             text="Run Dacite Symbolic Analysis" description="Symbolic analysis of def-use chains" icon="AllIcons.Actions.StartMemoryProfile">
     </action>
     <action id="dacite.analyzeSymbolic" class="dacite.intellij.actions.DaciteSymbolicAnalysisAction"

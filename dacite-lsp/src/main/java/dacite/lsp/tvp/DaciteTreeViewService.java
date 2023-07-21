@@ -17,6 +17,9 @@ public interface DaciteTreeViewService {
   CompletableFuture<TreeViewParentResult> treeViewParent(TreeViewParentParams params);
 
   @JsonNotification
+  void treeViewDidChange(TreeViewDidChangeParams params);
+
+  @JsonNotification
   default void treeViewVisibilityDidChange(TreeViewVisibilityDidChangeParams params) {
   }
 

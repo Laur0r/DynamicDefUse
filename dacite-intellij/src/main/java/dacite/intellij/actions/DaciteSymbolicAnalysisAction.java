@@ -1,12 +1,16 @@
 package dacite.intellij.actions;
 
+import com.intellij.icons.AllIcons;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.actionSystem.PlatformCoreDataKeys;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.wm.RegisterToolWindowTask;
 import com.intellij.openapi.wm.ToolWindow;
+import com.intellij.openapi.wm.ToolWindowAnchor;
 import com.intellij.openapi.wm.ToolWindowManager;
 import com.intellij.psi.PsiFile;
+import dacite.intellij.visualisation.DaciteAnalysisToolWindow;
 import dacite.intellij.visualisation.DaciteToolWindowFactory;
 import org.eclipse.lsp4j.ExecuteCommandParams;
 import org.jetbrains.annotations.NotNull;
@@ -44,16 +48,10 @@ public class DaciteSymbolicAnalysisAction extends AnAction {
     DaciteToolWindowFactory factory = new DaciteToolWindowFactory();
 
     // One time registration of the tool window (does not add any content).
-    /*if (toolWindow == null) {
-      System.out.println("tool window not registered yet");
-      RegisterToolWindowTask task = new RegisterToolWindowTask("DaciteAnalysisToolWindow", ToolWindowAnchor.RIGHT, null, false,true,true,true,factory, AllIcons.General.Modified,null );// null, null, null);
-      toolWindow = toolWindowManager.registerToolWindow(task);
-      toolWindow.show();
-    } else {
-      factory.createToolWindowContent(project,toolWindow);
-    }*/
+    if (toolWindow != null) {
+      factory.createToolWindowWithView(project,toolWindow);
+    }
 
-    // Using the event, implement an action. For example, create and show a dialog.
   }
 
 }

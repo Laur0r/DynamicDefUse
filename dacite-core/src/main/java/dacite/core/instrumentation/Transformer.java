@@ -82,6 +82,7 @@ public class Transformer implements ClassFileTransformer {
 		reader.accept(node, 0);
 
 		node = transformBasis(node, reader);
+		logger.info(String.valueOf(node.version));
 
 		ClassWriter writer = new ClassWriter(reader, ClassWriter.COMPUTE_FRAMES);
 		String newName = node.name.substring(0,node.name.lastIndexOf("/")) + "/dacite_"+node.name.substring(node.name.lastIndexOf("/")+1);
@@ -106,6 +107,7 @@ public class Transformer implements ClassFileTransformer {
 			if (insns.size() == 0) {
 				continue;
 			}
+			node.version = 55;
 			if (mnode.name.equals("<init>")) {
 				//continue;
 			}

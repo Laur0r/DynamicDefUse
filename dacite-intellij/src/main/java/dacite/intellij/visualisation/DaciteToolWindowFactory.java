@@ -36,13 +36,25 @@ public class DaciteToolWindowFactory implements ToolWindowFactory {
         ContentFactory contentFactory = ContentFactory.getInstance();
         Content content = contentFactory.createContent(daciteAnalysisToolWindow.getContent(), "", false);
         toolWindow.getContentManager().addContent(content);
-
-
     }
 
     public void changeToolWindowContent(@NotNull Project project, @NotNull ToolWindow toolWindow){
         toolWindow.getContentManager().removeAllContents(true);
         createToolWindowContent(project, toolWindow);
+        toolWindow.show();
+    }
+
+    public void createToolWindowWithView(@NotNull Project project, @NotNull ToolWindow toolWindow){
+        toolWindow.getContentManager().removeAllContents(true);
+        Set<LanguageServerWrapper> wrapper = IntellijLanguageClient.getAllServerWrappersFor(FileUtils.projectToUri(project));
+        RequestManager requestManager = null;
+        if(wrapper.size() == 1){
+            requestManager = wrapper.iterator().next().getRequestManager();
+        }
+        DaciteAnalysisToolWindow daciteAnalysisToolWindow = new DaciteAnalysisToolWindow(toolWindow, project, requestManager);
+        ContentFactory contentFactory = ContentFactory.getInstance();
+        Content content = contentFactory.createContent(daciteAnalysisToolWindow.addNotCoveredView(), "", false);
+        toolWindow.getContentManager().addContent(content);
         toolWindow.show();
     }
 }
