@@ -103,13 +103,12 @@ public class SymbolicExec {
                         .setCHOICE_OPTION_DEQUE_TYPE(ChoiceOptionDeques.DIRECT_ACCESS)
                         .setGLOBAL_SOLVER_TYPE(Solvers.Z3_GLOBAL_LEARNING)
                         .setINCR_ACTUAL_CP_BUDGET(16)
-                        .setTRANSF_USE_DEFAULT_MODEL_CLASSES(false)
+                        .setTRANSF_USE_DEFAULT_MODEL_CLASSES(true)
                         .setHIGH_LEVEL_FREE_ARRAY_THEORY(true)
                         .setSECONDS_PER_INVOCATION(5)
                         .setFIXED_ACTUAL_CP_BUDGET(64)
                         .setTRANSF_TREAT_SPECIAL_METHOD_CALLS(true)
                         .setTRANSF_IGNORE_CLASSES(List.of(DefUseAnalyser.class, ParameterCollector.class))
-                        .setTRANSF_TRY_USE_MORE_GENERAL_METHOD_FOR(List.of(Integer.class))
                 ;
         Mulib.executeMulib("driver0", cls, builder); //// TODO Use loop for different driver-methods
 
