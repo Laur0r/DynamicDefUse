@@ -360,7 +360,7 @@ public class CommandRegistry {
     TextEdit textEditImport = new TextEdit(importRange,importHeader);
     edits.add(textEditImport);
 
-    String driverComment = "/* This class serves as a search reagion and prepares the input values for the symbolic execution. */"+System.getProperty("line.separator");
+    String driverComment = "/* This class serves as a search region and prepares the input values for the symbolic execution. */"+System.getProperty("line.separator");
     Range rangeComment = new Range();
     rangeComment.setStart(new Position(line,0));
     rangeComment.setEnd(new Position(line, driverComment.length()));

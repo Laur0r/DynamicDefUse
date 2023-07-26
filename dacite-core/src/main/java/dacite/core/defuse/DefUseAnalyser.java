@@ -1,10 +1,8 @@
 package dacite.core.defuse;
 
-import de.wwu.mulib.expressions.Sub;
+import de.wwu.mulib.exceptions.NotYetImplementedException;
 import de.wwu.mulib.solving.solvers.SolverManager;
-import de.wwu.mulib.substitutions.Conc;
 import de.wwu.mulib.substitutions.PartnerClass;
-import de.wwu.mulib.substitutions.Sarray;
 import de.wwu.mulib.substitutions.SubstitutedVar;
 import de.wwu.mulib.substitutions.primitives.ConcSnumber;
 import de.wwu.mulib.substitutions.primitives.Sint;
@@ -351,6 +349,44 @@ public class DefUseAnalyser {
             }
         }
         registerDef(def);
+    }
+
+    /**
+     * Method which is called from the instrumented source code whenever an array element is used with a potentially symbolic
+     * index.
+     * @param array array instance of the referenced element
+     * @param index index of the array element which is used, potentially symbolic
+     * @param value value of the used array element
+     * @param linenumber line number where the array element is used in the source code
+     * @param instruction integer helping to differentiating instructions within a line
+     * @param method name of the source code method where the array element is used
+     */
+    public static void visitArrayUse(Object array, Sint index, Object value, int linenumber, int instruction, String method){
+        if (index instanceof Sint.ConcSint) {
+            visitArrayUse(array, ((Sint.ConcSint) index).intVal(), value, linenumber, instruction, method);
+            return;
+        }
+        //// TODO
+        throw new NotYetImplementedException();
+    }
+
+    /**
+     * Method which is called from the instrumented source code whenever an array element is defined with a potentially symbolic
+     * index.
+     * @param array array instance of the referenced element
+     * @param index index of the array element which is defined, potentially symbolic
+     * @param value value of the defined array element
+     * @param linenumber line number where the array element is defined in the source code
+     * @param instruction integer helping to differentiating instructions within a line
+     * @param method name of the source code method where the array element is defined
+     */
+    public static void visitArrayDef(Object array, Sint index, Object value, int linenumber, int instruction, String method){
+        if (index instanceof Sint.ConcSint) {
+            visitArrayDef(array, ((Sint.ConcSint) index).intVal(), value, linenumber, instruction, method);
+            return;
+        }
+        //// TODO
+        throw new NotYetImplementedException();
     }
 
     /**

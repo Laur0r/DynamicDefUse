@@ -1,4 +1,4 @@
 [submodule "mulib"]
 	path = mulib
 	url = git@github.com:NoItAll/mulib.git
-	branch = dacite_mulib_integration
+	branch = integration_dacite
