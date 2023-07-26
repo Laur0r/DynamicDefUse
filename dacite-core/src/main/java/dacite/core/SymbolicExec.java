@@ -8,6 +8,9 @@ import dacite.core.instrumentation.Transformer;
 import de.wwu.mulib.Mulib;
 import de.wwu.mulib.MulibConfig;
 import de.wwu.mulib.examples.sac22_mulib_benchmark.NQueens;
+import de.wwu.mulib.search.executors.SearchStrategy;
+import de.wwu.mulib.search.trees.ChoiceOptionDeques;
+import de.wwu.mulib.solving.Solvers;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
@@ -43,7 +46,6 @@ public class SymbolicExec {
         if(args.length != 3){
             throw new IllegalArgumentException("Not the expected amount of arguments given for SymbolicExec.exec()");
         }
-
         String projectpath = args[0];
         String packagename = args[1];
         String classname = args[2];
@@ -90,12 +92,26 @@ public class SymbolicExec {
         Object instance = cls.getDeclaredConstructor().newInstance();
         logger.info(instance.toString());
 
-        MulibConfig.MulibConfigBuilder builder = MulibConfig.builder().setTRANSF_WRITE_TO_FILE(true).setTRANSF_GENERATED_CLASSES_PATH(sourcePath);
-        List<Class<?>> classes = new ArrayList<>(){};
-        classes.add(DefUseAnalyser.class);
-        classes.add(ParameterCollector.class);
-        builder.setTRANSF_IGNORE_CLASSES(classes);
-        Mulib.executeMulib("driver", cls, builder);
+        MulibConfig.MulibConfigBuilder builder =
+                MulibConfig.builder()
+                        .setTRANSF_WRITE_TO_FILE(true)
+                        .setTRANSF_GENERATED_CLASSES_PATH(sourcePath)
+//                        .setTRANSF_LOAD_WITH_SYSTEM_CLASSLOADER(true)
+//                        .setTRANSF_OVERWRITE_FILE_FOR_SYSTEM_CLASSLOADER(true)
+                        .setTRANSF_VALIDATE_TRANSFORMATION(true)
+                        .setGLOBAL_SEARCH_STRATEGY(SearchStrategy.IDDSAS)
+                        .setCHOICE_OPTION_DEQUE_TYPE(ChoiceOptionDeques.DIRECT_ACCESS)
+                        .setGLOBAL_SOLVER_TYPE(Solvers.Z3_GLOBAL_LEARNING)
+                        .setINCR_ACTUAL_CP_BUDGET(16)
+                        .setTRANSF_USE_DEFAULT_MODEL_CLASSES(false)
+                        .setHIGH_LEVEL_FREE_ARRAY_THEORY(true)
+                        .setSECONDS_PER_INVOCATION(5)
+                        .setFIXED_ACTUAL_CP_BUDGET(64)
+                        .setTRANSF_TREAT_SPECIAL_METHOD_CALLS(true)
+                        .setTRANSF_IGNORE_CLASSES(List.of(DefUseAnalyser.class, ParameterCollector.class))
+                        .setTRANSF_TRY_USE_MORE_GENERAL_METHOD_FOR(List.of(Integer.class))
+                ;
+        Mulib.executeMulib("driver0", cls, builder); //// TODO Use loop for different driver-methods
 
 
         /*try {
