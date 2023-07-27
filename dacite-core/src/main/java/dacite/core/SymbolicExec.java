@@ -1,9 +1,6 @@
 package dacite.core;
 
-import dacite.core.defuse.DefUseAnalyser;
-import dacite.core.defuse.DefUseField;
-import dacite.core.defuse.DefUseVariable;
-import dacite.core.defuse.ParameterCollector;
+import dacite.core.defuse.*;
 import dacite.core.instrumentation.Transformer;
 import de.wwu.mulib.Mulib;
 import de.wwu.mulib.MulibConfig;
@@ -22,6 +19,7 @@ import javax.print.DocFlavor;
 import javax.tools.*;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.stream.XMLOutputFactory;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
 import javax.xml.transform.Source;
@@ -51,8 +49,6 @@ public class SymbolicExec {
         String classname = args[2];
         File file = new File(projectpath+packagename+classname);
         logger.info("file1 "+file.getPath()+" "+file.exists());
-
-        InputStream stream = ClassLoader.getSystemResourceAsStream("dacite_Sort.class");
 
         //logger.info(dir);
         File packagedir = new File(projectpath+packagename);
@@ -105,29 +101,22 @@ public class SymbolicExec {
                         .setINCR_ACTUAL_CP_BUDGET(16)
                         .setTRANSF_USE_DEFAULT_MODEL_CLASSES(true)
                         .setHIGH_LEVEL_FREE_ARRAY_THEORY(true)
-                        .setSECONDS_PER_INVOCATION(5)
-                        .setFIXED_ACTUAL_CP_BUDGET(64)
+                        //.setSECONDS_PER_INVOCATION(5)
+                        .setFIXED_ACTUAL_CP_BUDGET(16)
                         .setTRANSF_TREAT_SPECIAL_METHOD_CALLS(true)
                         .setTRANSF_IGNORE_CLASSES(List.of(DefUseAnalyser.class, ParameterCollector.class))
+                        .setPATH_SOLUTION_CALLBACK(DefUseAnalyser::resolveLabels)
                 ;
         Mulib.executeMulib("driver0", cls, builder); //// TODO Use loop for different driver-methods
+        DefUseAnalyser.check();
 
-
-        /*try {
-            junitCore.run(Class.forName(classname));
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-        }
-        long endTime   = System.nanoTime();
-        long totalTime = (endTime - startTime) /1000000;
-        logger.info(String.valueOf(totalTime));
         logger.info("run through symbolic method");
         DefUseAnalyser.check();
         // write xml file
         XMLOutputFactory xof = XMLOutputFactory.newInstance();
         XMLStreamWriter xsw = null;
         try {
-            xsw = xof.createXMLStreamWriter(new BufferedOutputStream(new FileOutputStream("file.xml")));
+            xsw = xof.createXMLStreamWriter(new BufferedOutputStream(new FileOutputStream("SymbolicDUCs.xml")));
             xsw.writeStartDocument();
             xsw.writeStartElement("DefUseChains");
 
@@ -149,7 +138,7 @@ public class SymbolicExec {
         }
         catch (Exception e) {
             logger.info("Unable to write the file: " + e.getMessage());
-        }*/
+        }
 
     }
 

@@ -30,6 +30,6 @@ public class DaciteLanguageClient extends DefaultLanguageClient {
 
     @JsonNotification("dacite/treeViewDidChange")
     public void treeViewDidChange(TreeViewDidChangeParams params) {
-        System.out.println("notification received in Client!");
+        //System.out.println("notification received in Client!");
     }
 }

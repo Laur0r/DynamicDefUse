@@ -46,6 +46,30 @@ public class DefSet {
      * @param name of defined variable
      * @return existing variable definition otherwise null
      */
+    public DefUseVariable getLastDefinition(int index, String method, Object value, String name, long time){
+        DefUseVariable output = null;
+        for(DefUseVariable def : defs){
+            if(def.getVariableIndex() == index && def.getMethod().equals(method)
+                    && !(def instanceof DefUseField) && time>def.timeRef){
+                // to be able to compare integer and Integer due to transformer boxing
+                if(def.getValue() == value || value != null && DefUseAnalyser.isPrimitiveOrWrapper(value) && value.equals(def.getValue())
+                        && def.getVariableName().equals(name)) {
+                    output = def;
+                    break;
+                }
+            }
+        }
+        return output;
+    }
+
+    /**
+     * Get most recent variable definition for characteristics.
+     * @param index of defined variable
+     * @param method name where the variable was defined
+     * @param value of defined variable
+     * @param name of defined variable
+     * @return existing variable definition otherwise null
+     */
     public DefUseVariable getLastSymbolicDefinition(int index, String method, Object value, String name){
         DefUseVariable output = null;
         for(DefUseVariable def : defs){
