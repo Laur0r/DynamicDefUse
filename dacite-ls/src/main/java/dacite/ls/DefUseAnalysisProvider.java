@@ -140,7 +140,7 @@ public class DefUseAnalysisProvider {
     notCoveredClasses = transformDefUse(notCoveredChains);
 
     for (HashMap<DefUseVariable, List<DefUseVariable>> defuse : getVariableMapping(false).values()) {
-      String color = Color.red.toString();
+      String color = "rgb("+Color.red.getRed()+","+Color.red.getGreen()+","+Color.red.getBlue()+")";
       defuse.forEach((def, uses) -> {
         def.setColor(color);
         uses.forEach(it -> {it.setColor(color); it.getChain().getDef().setColor(color);});
