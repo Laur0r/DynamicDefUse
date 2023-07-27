@@ -1,6 +1,8 @@
 package dacite.core.defuse;
 
 import de.wwu.mulib.exceptions.NotYetImplementedException;
+import de.wwu.mulib.search.executors.MulibExecutor;
+import de.wwu.mulib.search.trees.PathSolution;
 import de.wwu.mulib.solving.solvers.SolverManager;
 import de.wwu.mulib.substitutions.PartnerClass;
 import de.wwu.mulib.substitutions.SubstitutedVar;
@@ -37,6 +39,8 @@ public class DefUseAnalyser {
     // allocation of aliases
     protected static Map<Object,AliasAlloc> aliases;
 
+    protected static long counter;
+
     static{
         chains = new DefUseChains();
         defs = new DefSet();
@@ -44,6 +48,7 @@ public class DefUseAnalyser {
         symbolicUsages = new ArrayList<>();
         interMethods = new InterMethodAllocDequeue();
         aliases = new HashMap<Object, AliasAlloc>();
+        counter = 0;
     }
 
     /**
@@ -110,6 +115,8 @@ public class DefUseAnalyser {
                 registerUse(symbolicDef, use, index,varname, method);
             } else {
                 // Evaluation has to be made later when use.value has a concrete value
+                use.setTimeRef(counter);
+                counter++;
                 symbolicUsages.add(use);
             }
 
@@ -148,6 +155,8 @@ public class DefUseAnalyser {
                     instanceof Sint.ConcSint)){
                 def = symbolicDefs.getLastSymbolicDefinitionFields(-1, name, value, null);
             } else {
+                use.setTimeRef(counter);
+                counter++;
                 symbolicUsages.add(use);
                 return;
             }
@@ -256,6 +265,8 @@ public class DefUseAnalyser {
                     }
                 }
             } else {
+                use.setTimeRef(counter);
+                counter++;
                 symbolicUsages.add(use);
                 return;
             }
@@ -299,6 +310,8 @@ public class DefUseAnalyser {
                     instanceof Sint.ConcSint)){
                 def = symbolicDefs.getLastSymbolicDefinitionFields(index, "", value, array);
             } else {
+                use.setTimeRef(counter);
+                counter++;
                 symbolicUsages.add(use);
             }
         } else {
@@ -454,7 +467,13 @@ public class DefUseAnalyser {
         } else {
             alloc.addAlias(def.getVariableName(), def.getVariableIndex());
         }
-        defs.addDef(def);
+        if(def.getValue() instanceof SubstitutedVar){
+            def.setTimeRef(counter);
+            symbolicDefs.addDef(def);
+            counter++;
+        } else {
+            defs.addDef(def);
+        }
     }
 
     /**
@@ -646,13 +665,16 @@ public class DefUseAnalyser {
 
     /**
      * Print number of identified DUCs
+     *
+     * @return
      */
-    public static void check(){
+    public static String check(){
         logger.info("Size: "+chains.getChainSize());
+        return null;
     }
 
-    private List<SubstitutedVar> symbolics = new ArrayList<>();
-    private void resolveLabels(SolverManager s) {
+    private static List<SubstitutedVar> symbolics = new ArrayList<>();
+    public static void resolveLabels(MulibExecutor mulibExecutor, PathSolution pathSolution, SolverManager s) {
         for(DefUseVariable def : symbolicDefs.defs){
             if((def.getValue() instanceof SubstitutedVar) && !(def.getValue() instanceof ConcSnumber) && !(def.getValue() instanceof PartnerClass && ((PartnerClass) def.getValue()).__mulib__getId()
                     instanceof Sint.ConcSint)){
@@ -663,7 +685,7 @@ public class DefUseAnalyser {
         for(DefUseVariable var: symbolicUsages){
             var.setValue(s.getLabel(var.getValue()));
             // TODO oder symbolische Vergleiche notwendig?
-            DefUseVariable def = symbolicDefs.getLastDefinition(var.variableIndex, var.method, var.value, var.variableName);
+            DefUseVariable def = symbolicDefs.getLastDefinition(var.variableIndex, var.method, var.value, var.variableName, var.timeRef);
             registerUse(def, var, var.variableIndex, var.variableName, var.method);
         }
         for (SubstitutedVar sv : symbolics) {

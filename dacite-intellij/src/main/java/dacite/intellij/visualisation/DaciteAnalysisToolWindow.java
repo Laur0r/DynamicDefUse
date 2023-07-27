@@ -1,6 +1,7 @@
 package dacite.intellij.visualisation;
 
 import static org.wso2.lsp4intellij.requests.Timeout.getTimeout;
+import static org.wso2.lsp4intellij.requests.Timeouts.INIT;
 import static org.wso2.lsp4intellij.requests.Timeouts.REFERENCES;
 
 import com.intellij.openapi.actionSystem.PlatformCoreDataKeys;
@@ -128,7 +129,7 @@ public class DaciteAnalysisToolWindow {
         CompletableFuture<TreeViewChildrenResult> request = requestManager.treeViewChildren(params);
         if(request != null){
             try{
-                TreeViewChildrenResult result = request.get(getTimeout(REFERENCES), TimeUnit.MILLISECONDS);
+                TreeViewChildrenResult result = request.get(getTimeout(INIT), TimeUnit.MILLISECONDS);
                 for(TreeViewNode child : result.getNodes()){
                     DefaultMutableTreeNode node = new DefaultMutableTreeNode(child);
                     top.add(node);
@@ -167,8 +168,15 @@ public class DaciteAnalysisToolWindow {
                                 try {
                                     InlayHintDecoration decoration = decorationRequest.get(getTimeout(REFERENCES), TimeUnit.MILLISECONDS);
                                     font = new Font(decoration.getFontStyle(), Font.PLAIN, font.getSize());
-                                    int[] colors = decoration.getColor();
-                                    color = new Color(colors[0], colors[1], colors[2], colors[3]);
+                                    String colors = decoration.getColor();
+                                    if(!colors.contains(",")){
+                                        color = Color.decode(colors);
+                                    } else{
+                                        String[] list = colors.split(",");
+                                        list[0] = list[0].substring(list[0].indexOf("(")+1);
+                                        list[list.length-1] = list[list.length-1].substring(0,list[list.length-1].length()-1);
+                                        color = new Color(Integer.parseInt(list[0].trim()), Integer.parseInt(list[1].trim()), Integer.parseInt(list[2].trim()));
+                                    }
                                 } catch (TimeoutException | InterruptedException | JsonRpcException |
                                          ExecutionException e) {
                                     e.printStackTrace();

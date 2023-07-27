@@ -17,7 +17,7 @@ public class DefUseVariable {
 
   // Additional attributes used after parsing XML
   private DefUseVariableRole role;
-  private Color color;
+  private String color;
   private DefUseChain chain;
   private boolean editorHighlight;
 
@@ -83,11 +83,11 @@ public class DefUseVariable {
     this.role = role;
   }
 
-  public Color getColor() {
+  public String getColor() {
     return color;
   }
 
-  public void setColor(Color color) {
+  public void setColor(String color) {
     this.color = color;
   }
 

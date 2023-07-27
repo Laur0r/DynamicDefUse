@@ -114,7 +114,11 @@ public class DaciteTextDocumentService
     List<InlayHint> inlayHints = new ArrayList<>();
     highlightedDefUseVariables = new HashMap<>();
 
-    var codeAnalyser = new CodeAnalyser(TextDocumentItemProvider.get(params.getTextDocument()).getText());
+    String text = "";
+    if(TextDocumentItemProvider.get(params.getTextDocument()) != null){
+      text = TextDocumentItemProvider.get(params.getTextDocument()).getText();
+    }
+    var codeAnalyser = new CodeAnalyser(text);
     var className = codeAnalyser.extractClassName();
     var packageName = codeAnalyser.extractPackageName();
 
@@ -135,13 +139,12 @@ public class DaciteTextDocumentService
     //logger.info("inlayHintDecoration {}", params);
 
     var font = Font.SERIF;
-    var color = new int[] { 255, 0, 0, 255 };
+    String color = Color.BLUE.toString();
 
     if (highlightedDefUseVariables.containsKey(params.getIdentifier())) {
       var defUseVars = highlightedDefUseVariables.get(params.getIdentifier());
       if (defUseVars.containsKey(params.getPosition())) {
-        var awtColor = defUseVars.get(params.getPosition()).getColor();
-        color = new int[] { awtColor.getRed(), awtColor.getGreen(), awtColor.getBlue(), awtColor.getAlpha() };
+        color = defUseVars.get(params.getPosition()).getColor();
       }
     }
 
@@ -162,7 +165,7 @@ public class DaciteTextDocumentService
       nodes = getTreeViewNodes(nodeUri, "defUseChains");
     } else if (params.getViewId().equals("notCoveredDUC")) {
       nodes = getTreeViewNodes(nodeUri, "notCoveredDUC");
-      logger.info(nodes.toString());
+      //logger.info(nodes.toString());
     }
 
     var result = new TreeViewChildrenResult(nodes.toArray(new TreeViewNode[0]));
