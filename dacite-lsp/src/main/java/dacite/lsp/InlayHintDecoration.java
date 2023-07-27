@@ -5,15 +5,15 @@ import org.eclipse.lsp4j.Position;
 import java.awt.*;
 
 public class InlayHintDecoration {
-    private int[] color;
+    private String color;
     private String fontStyle;
 
-    public InlayHintDecoration(int[] color, String font){
+    public InlayHintDecoration(String color, String font){
         this.color = color;
         this.fontStyle = font;
     }
 
-    public int[] getColor() {
+    public String getColor() {
         return color;
     }
 

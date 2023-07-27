@@ -91,12 +91,12 @@ public class DefUseAnalysisProvider {
 
       int i = 0;
       for (HashMap<DefUseVariable, List<DefUseVariable>> defuse : getVariableMapping(true).values()) {
-        Color color;
+        String color;
         if(i<indexcolors.length){
-            color = Color.decode(indexcolors[i]);
+            color = indexcolors[i];//Color.decode(indexcolors[i]);
         } else {
             Random random = new Random();
-            color = new Color(random.nextInt(256), random.nextInt(256), random.nextInt(256));
+            color = "rgb("+random.nextInt(256)+","+ random.nextInt(256)+","+ random.nextInt(256)+")";
         }
 
         defuse.forEach((def, uses) -> {
@@ -140,7 +140,7 @@ public class DefUseAnalysisProvider {
     notCoveredClasses = transformDefUse(notCoveredChains);
 
     for (HashMap<DefUseVariable, List<DefUseVariable>> defuse : getVariableMapping(false).values()) {
-      Color color = Color.red;
+      String color = Color.red.toString();
       defuse.forEach((def, uses) -> {
         def.setColor(color);
         uses.forEach(it -> {it.setColor(color); it.getChain().getDef().setColor(color);});

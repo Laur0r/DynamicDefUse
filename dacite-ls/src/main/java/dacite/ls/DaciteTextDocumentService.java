@@ -109,12 +109,16 @@ public class DaciteTextDocumentService
 
   @Override
   public CompletableFuture<List<InlayHint>> inlayHint(InlayHintParams params) {
-    //logger.info("inlayHint {}", params);
+    logger.info("inlayHint {}", params);
 
     List<InlayHint> inlayHints = new ArrayList<>();
     highlightedDefUseVariables = new HashMap<>();
 
-    var codeAnalyser = new CodeAnalyser(TextDocumentItemProvider.get(params.getTextDocument()).getText());
+    String text = "";
+    if(TextDocumentItemProvider.get(params.getTextDocument()) != null){
+      text = TextDocumentItemProvider.get(params.getTextDocument()).getText();
+    }
+    var codeAnalyser = new CodeAnalyser(text);
     var className = codeAnalyser.extractClassName();
     var packageName = codeAnalyser.extractPackageName();
 
@@ -125,23 +129,22 @@ public class DaciteTextDocumentService
     getInlayHints(notCoveredMap, inlayHints, params, codeAnalyser);
 
 
-    //logger.info("hints {}", inlayHints);
+    logger.info("hints {}", inlayHints);
 
     return CompletableFuture.completedFuture(inlayHints);
   }
 
   @Override
   public CompletableFuture<InlayHintDecoration> inlayHintDecoration(InlayHintDecorationParams params) {
-    //logger.info("inlayHintDecoration {}", params);
+    logger.info("inlayHintDecoration {}", params);
 
     var font = Font.SERIF;
-    var color = new int[] { 255, 0, 0, 255 };
+    String color = Color.BLUE.toString();
 
     if (highlightedDefUseVariables.containsKey(params.getIdentifier())) {
       var defUseVars = highlightedDefUseVariables.get(params.getIdentifier());
       if (defUseVars.containsKey(params.getPosition())) {
-        var awtColor = defUseVars.get(params.getPosition()).getColor();
-        color = new int[] { awtColor.getRed(), awtColor.getGreen(), awtColor.getBlue(), awtColor.getAlpha() };
+        color = defUseVars.get(params.getPosition()).getColor();
       }
     }
 
