@@ -109,7 +109,7 @@ public class DaciteTextDocumentService
 
   @Override
   public CompletableFuture<List<InlayHint>> inlayHint(InlayHintParams params) {
-    logger.info("inlayHint {}", params);
+    //logger.info("inlayHint {}", params);
 
     List<InlayHint> inlayHints = new ArrayList<>();
     highlightedDefUseVariables = new HashMap<>();
@@ -129,14 +129,14 @@ public class DaciteTextDocumentService
     getInlayHints(notCoveredMap, inlayHints, params, codeAnalyser);
 
 
-    logger.info("hints {}", inlayHints);
+    //logger.info("hints {}", inlayHints);
 
     return CompletableFuture.completedFuture(inlayHints);
   }
 
   @Override
   public CompletableFuture<InlayHintDecoration> inlayHintDecoration(InlayHintDecorationParams params) {
-    logger.info("inlayHintDecoration {}", params);
+    //logger.info("inlayHintDecoration {}", params);
 
     var font = Font.SERIF;
     String color = Color.BLUE.toString();
@@ -165,7 +165,7 @@ public class DaciteTextDocumentService
       nodes = getTreeViewNodes(nodeUri, "defUseChains");
     } else if (params.getViewId().equals("notCoveredDUC")) {
       nodes = getTreeViewNodes(nodeUri, "notCoveredDUC");
-      logger.info(nodes.toString());
+      //logger.info(nodes.toString());
     }
 
     var result = new TreeViewChildrenResult(nodes.toArray(new TreeViewNode[0]));
