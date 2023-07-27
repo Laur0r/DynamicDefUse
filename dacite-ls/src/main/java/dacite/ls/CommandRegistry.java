@@ -224,7 +224,7 @@ public class CommandRegistry {
               throw new RuntimeException("Class directory not found for executed File");
             }
             String uri = textDocumentUri.substring(0,textDocumentUri.lastIndexOf("/"));
-            uri += "/DaciteSymbolicDriver.java";
+            uri += "/DaciteSymbolicDriverFor" + className + ".java";
             CreateFile createFile = new CreateFile(uri, new CreateFileOptions(true,false));
             List<TextEdit> edits = generateSearchRegions(projectFile, packageName+"."+className);
 
@@ -315,10 +315,10 @@ public class CommandRegistry {
     } catch (Exception e) {
       throw new RuntimeException(e);
     }
-    ClassNode node = new ClassNode();
-    reader.accept(node, 0);
+    ClassNode classNode = new ClassNode();
+    reader.accept(classNode, 0);
     Map<String, List<String>> invokedMethods = new HashMap<>();
-    for(MethodNode mnode : node.methods) {
+    for(MethodNode mnode : classNode.methods) {
       //logger.info(mnode.name);
       if (mnode.visibleAnnotations != null) {
         for (AnnotationNode an : mnode.visibleAnnotations) {
@@ -368,7 +368,7 @@ public class CommandRegistry {
     String driverComment = "/* This class serves as a search region and prepares the input values for the symbolic execution. */"+ls;
     line = createTextEditAndIncrementLine(edits, line, driverComment);
 
-    String classHeader = "public class DaciteSymbolicDriver {"+ls;
+    String classHeader = "public class DaciteSymbolicDriverFor" + classname.substring(classname.lastIndexOf('.') + 1) + " {"+ls;
     line = createTextEditAndIncrementLine(edits, line, classHeader);
     int counter = 0;
     for (Map.Entry<String, List<String>> entry : invokedMethods.entrySet()) {
@@ -376,15 +376,16 @@ public class CommandRegistry {
       String returnType = entry.getValue().get(1);
       String staticRef = entry.getValue().get(0);
       final String method = entry.getKey();
+      String indent = "  ";
 
-      String m = " public static "+returnType+" driver"+counter+"(){"+ls;
+      String m = indent + "public static "+returnType+" driver"+counter+"(){"+ls;
       line = createTextEditAndIncrementLine(edits, line, m);
-      String commentInput = " /* Input values */"+ls;
+      String commentInput = indent.repeat(2) + "/* Input values */"+ls;
       line = createTextEditAndIncrementLine(edits, line, commentInput);
 
       for(int i=0; i<parameters.size();i++){
-        String p = "  "+parameters.get(i) + " a"+i;
-        String mulibRememberPrefix = "= Mulib.rememberedFree";
+        String p = indent.repeat(2)+parameters.get(i) + " a"+i;
+        String mulibRememberPrefix = " = Mulib.rememberedFree";
         switch (parameters.get(i)){
           case "int": p+= mulibRememberPrefix + "Int(\"a"+i+"\");";break;
           case "double": p+= mulibRememberPrefix + "Double(\"a"+i+"\");";break;
@@ -404,15 +405,15 @@ public class CommandRegistry {
       if (isNonStaticMethod) {
         String namedClass = method.substring(0, method.lastIndexOf("."));
         String object =
-                String.format(" %s obj = Mulib.rememberedFreeObject(\"%s\", %s.class);", namedClass, objName, namedClass) + ls;
+                String.format("%s%sobj = Mulib.rememberedFreeObject(\"%s\", %s.class);", indent.repeat(2), namedClass, objName, namedClass) + ls;
         line = createTextEditAndIncrementLine(edits, line, object);
         methodCall = objName + "." +method.substring(method.lastIndexOf(".")+1);
       } else {
         methodCall = method;
       }
-      StringBuilder methodS = new StringBuilder("  ");
+      StringBuilder methodS = new StringBuilder(indent.repeat(2));
       if(!returnType.equals("void")){
-        methodS.append(returnType).append(" r0 = ");
+        methodS.append(returnType).append(indent.repeat(2)).append("r0 = ");
       }
 
       methodS.append(methodCall).append("(");
@@ -424,16 +425,34 @@ public class CommandRegistry {
       }
       methodS.append(");").append(ls);
       line = createTextEditAndIncrementLine(edits, line, methodS.toString());
-
+      for (int i = 0; i < parameters.size(); i++) {
+        // Remember state of input-object after executing method
+        String parameterType = parameters.get(i);
+        String parameterName = "a" + i;
+        String rememberCall = null;
+        switch (parameterType) {
+          case "int":
+          case "double":
+          case "byte":
+          case "boolean":
+          case "short":
+          case "long":
+          case "char": break;
+          default: rememberCall = String.format("%sMulib.remember(%s, \"%sAfterExec\");%s", indent.repeat(2), parameterName, parameterName, ls);
+        }
+        if (rememberCall != null) {
+          line = createTextEditAndIncrementLine(edits, line, rememberCall);
+        }
+      }
       if (isNonStaticMethod) {
-        String rememberObj = String.format("Mulib.remember(%s, \"%sAfterExec\");", objName, objName);
+        String rememberObj = String.format("%sMulib.remember(%s, \"%sAfterExec\");%s", indent.repeat(2), objName, objName, ls);
         line = createTextEditAndIncrementLine(edits, line, rememberObj);
       }
       String end = "";
       if(!returnType.equals("void")){
-        end = "  return r0;";
+        end = indent.repeat(2) + "return r0;";
       }
-      end += " }"+ls;
+      end += indent + ls + "}"+ls;
       line = createTextEditAndIncrementLine(edits, line, end);
       counter ++;
     }
