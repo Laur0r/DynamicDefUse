@@ -202,8 +202,10 @@ public class DaciteWorkspaceEditHandler extends WorkspaceEditHandler {
                         public void run() {
                             EditorEventManager manager = EditorEventManagerBase.forEditor(editor);
                             Runnable runnable = manager.getEditsRunnable(version, toEither(edits), name, true);
-                            ApplicationUtils.invokeLater(()->writeAction(()->CommandProcessor.getInstance().executeCommand(curProject[0], runnable, name, "LSPPlugin", UndoConfirmationPolicy.DEFAULT,
-                                    false)));
+                            if(runnable != null){
+                                ApplicationUtils.invokeLater(()->writeAction(()->CommandProcessor.getInstance().executeCommand(curProject[0], runnable, name, "LSPPlugin", UndoConfirmationPolicy.DEFAULT,
+                                        false)));
+                            }
                         }
                     };
                     ApplicationManager.getApplication().invokeLater(run);
