@@ -8,7 +8,6 @@ import dacite.lsp.tvp.TreeViewDidChangeParams;
 import dacite.lsp.tvp.TreeViewNode;
 import org.eclipse.lsp4j.*;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
-import org.eclipse.lsp4j.services.LanguageClient;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
@@ -17,10 +16,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.io.IOException;
 import java.io.InputStream;
-import java.lang.reflect.Method;
-import java.net.URI;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.file.Files;
@@ -191,18 +187,6 @@ public class CommandRegistry {
             logger.info("{}: process {} started", "executed command", pb.command());
             logger.info("process exited with status {}", process.waitFor());
 
-            // Get standard output
-          /*
-          StringBuilder processOutput = new StringBuilder();
-          try (BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
-            String readLine;
-            while ((readLine = bufferedReader.readLine()) != null) {
-              processOutput.append(readLine + System.lineSeparator());
-            }
-          }
-          String stdOut = processOutput.toString().trim();
-           */
-
             DefUseAnalysisProvider.deriveNotCoveredChains(projectDir + "SymbolicDUCs.xml");
             TreeViewNode node = new TreeViewNode("notCoveredDUC","", "");
             TreeViewDidChangeParams paramsChange = new TreeViewDidChangeParams(new TreeViewNode[]{node});
@@ -239,10 +223,8 @@ public class CommandRegistry {
             if(!projectFile.exists()){
               throw new RuntimeException("Class directory not found for executed File");
             }
-            List<TextEdit> c = generateSearchRegions(projectFile, packageName+"."+className);
-
             String uri = textDocumentUri.substring(0,textDocumentUri.lastIndexOf("/"));
-            uri += "/DaciteSymbolicDriver.java";
+            uri += "/DaciteSymbolicDriverFor" + className + ".java";
             CreateFile createFile = new CreateFile(uri, new CreateFileOptions(true,false));
             List<TextEdit> edits = generateSearchRegions(projectFile, packageName+"."+className);
 
@@ -317,9 +299,8 @@ public class CommandRegistry {
   }
 
   private static List<TextEdit> generateSearchRegions(File project, String classname){
-    List<String> output = new ArrayList<>();
     String packageName = classname.substring(0, classname.lastIndexOf("."));
-    ClassReader reader = null;
+    ClassReader reader;
     try {
       //logger.info(classname);
       URL url = project.toURI().toURL();
@@ -334,10 +315,10 @@ public class CommandRegistry {
     } catch (Exception e) {
       throw new RuntimeException(e);
     }
-    ClassNode node = new ClassNode();
-    reader.accept(node, 0);
+    ClassNode classNode = new ClassNode();
+    reader.accept(classNode, 0);
     Map<String, List<String>> invokedMethods = new HashMap<>();
-    for(MethodNode mnode : node.methods) {
+    for(MethodNode mnode : classNode.methods) {
       //logger.info(mnode.name);
       if (mnode.visibleAnnotations != null) {
         for (AnnotationNode an : mnode.visibleAnnotations) {
@@ -377,129 +358,116 @@ public class CommandRegistry {
     }
     List<TextEdit> edits = new ArrayList<>();
     int line = 0;
-    String packageHeader = "package tryme;"+System.getProperty("line.separator")+"import de.wwu.mulib.Mulib;"+System.getProperty("line.separator");
-    Range range0 = new Range();
-    range0.setStart(new Position(line,0));
-    range0.setEnd(new Position(line, packageHeader.length()));
-    line++;
-    TextEdit textEdit0 = new TextEdit(range0,packageHeader);
-    edits.add(textEdit0);
+    String ls = System.getProperty("line.separator");
+    String packageHeader = "package tryme;"+ls+"import de.wwu.mulib.Mulib;"+ls;
+    line = createTextEditAndIncrementLine(edits, line, packageHeader);
 
-    String importHeader = "import de.wwu.mulib.Mulib;"+System.getProperty("line.separator")+System.getProperty("line.separator");
-    Range importRange = new Range();
-    importRange.setStart(new Position(line,0));
-    importRange.setEnd(new Position(line, importHeader.length()));
-    line++;
-    TextEdit textEditImport = new TextEdit(importRange,importHeader);
-    edits.add(textEditImport);
+    String importHeader = "import de.wwu.mulib.Mulib;"+ls+ls;
+    line = createTextEditAndIncrementLine(edits, line, importHeader);
 
-    String driverComment = "/* This class serves as a search region and prepares the input values for the symbolic execution. */"+System.getProperty("line.separator");
-    Range rangeComment = new Range();
-    rangeComment.setStart(new Position(line,0));
-    rangeComment.setEnd(new Position(line, driverComment.length()));
-    line++;
-    TextEdit textEditComment = new TextEdit(rangeComment,driverComment);
-    edits.add(textEditComment);
+    String driverComment = "/* This class serves as a search region and prepares the input values for the symbolic execution. */"+ls;
+    line = createTextEditAndIncrementLine(edits, line, driverComment);
 
-    String classHeader = "public class DaciteSymbolicDriver {"+System.getProperty("line.separator");
-    Range range = new Range();
-    range.setStart(new Position(line,0));
-    range.setEnd(new Position(line, classHeader.length()));
-    line++;
-    TextEdit textEdit = new TextEdit(range,classHeader);
-    edits.add(textEdit);
+    String classHeader = "public class DaciteSymbolicDriverFor" + classname.substring(classname.lastIndexOf('.') + 1) + " {"+ls;
+    line = createTextEditAndIncrementLine(edits, line, classHeader);
     int counter = 0;
     for (Map.Entry<String, List<String>> entry : invokedMethods.entrySet()) {
       List<String> parameters = entry.getValue().subList(2,entry.getValue().size());
       String returnType = entry.getValue().get(1);
       String staticRef = entry.getValue().get(0);
-      String method = entry.getKey();
+      final String method = entry.getKey();
+      String indent = "  ";
 
-      String m = " public static "+returnType+" driver"+counter+"(){"+System.getProperty("line.separator");
-      Range range1 = new Range();
-      range1.setStart(new Position(line,0));
-      range1.setEnd(new Position(line, m.length()));
-      line++;
-      TextEdit textEdit1 = new TextEdit(range1,m);
-      edits.add(textEdit1);
-      String commentInput = " /* Input values */"+System.getProperty("line.separator");
-      Range rangeComment2 = new Range();
-      rangeComment2.setStart(new Position(line,0));
-      rangeComment2.setEnd(new Position(line, commentInput.length()));
-      line++;
-      TextEdit textEditComment2 = new TextEdit(rangeComment2,commentInput);
-      edits.add(textEditComment2);
+      String m = indent + "public static "+returnType+" driver"+counter+"(){"+ls;
+      line = createTextEditAndIncrementLine(edits, line, m);
+      String commentInput = indent.repeat(2) + "/* Input values */"+ls;
+      line = createTextEditAndIncrementLine(edits, line, commentInput);
 
       for(int i=0; i<parameters.size();i++){
-        String p = "  "+parameters.get(i) + " a"+i;
+        String p = indent.repeat(2)+parameters.get(i) + " a"+i;
+        String mulibRememberPrefix = " = Mulib.rememberedFree";
         switch (parameters.get(i)){
-          case "int": p+="= Mulib.rememberedFreeInt(\"a"+i+"\");";break;
-          case "double": p+="= Mulib.rememberedFreeDouble(\"a"+i+"\");";break;
-          case "byte":p+="= Mulib.rememberedFreeByte(\"a"+i+"\");";break;
-          case "boolean":p+="= Mulib.rememberedFreeBoolean(\"a"+i+"\");";break;
-          case "short":p+="= Mulib.rememberedFreeShort(\"a"+i+"\");";break;
-          case "long":p+="= Mulib.rememberedFreeLong(\"a"+i+"\");";break;
-          default: p+="= Mulib.rememberedFreeObject(\"a"+i+"\", "+parameters.get(i)+".class);";
+          case "int": p+= mulibRememberPrefix + "Int(\"a"+i+"\");";break;
+          case "double": p+= mulibRememberPrefix + "Double(\"a"+i+"\");";break;
+          case "byte":p+= mulibRememberPrefix + "Byte(\"a"+i+"\");";break;
+          case "boolean":p+= mulibRememberPrefix + "Boolean(\"a"+i+"\");";break;
+          case "short":p+= mulibRememberPrefix + "Short(\"a"+i+"\");";break;
+          case "long":p+= mulibRememberPrefix + "Long(\"a"+i+"\");";break;
+          case "char": p+= mulibRememberPrefix + "Char(\"a"+i+"\");"; break;
+          default: p+= mulibRememberPrefix + "Object(\"a"+i+"\", "+parameters.get(i)+".class);";
         }
-        p += System.getProperty("line.separator");
-        Range range2 = new Range();
-        range2.setStart(new Position(line,0));
-        range2.setEnd(new Position(line, p.length()));
-        line++;
-        TextEdit textEdit2 = new TextEdit(range2,p);
-        edits.add(textEdit2);
+        p += ls;
+        line = createTextEditAndIncrementLine(edits, line, p);
       }
-      if(staticRef.equals("object") && method.contains(".")){
-        String namedClass = ""+method.substring(0,method.indexOf("."));
-        String object = "  "+namedClass+" obj = new "+namedClass+"();"+System.getProperty("line.separator");
-        Range range2 = new Range();
-        range2.setStart(new Position(line,0));
-        range2.setEnd(new Position(line, object.length()));
-        line++;
-        TextEdit textEdit2 = new TextEdit(range2,object);
-        edits.add(textEdit2);
-        method = "obj."+method.substring(method.indexOf(".")+1);
+      boolean isNonStaticMethod = staticRef.equals("object") && method.contains(".");
+      final String objName = "obj";
+      final String methodCall;
+      if (isNonStaticMethod) {
+        String namedClass = method.substring(0, method.lastIndexOf("."));
+        String object =
+                String.format("%s%sobj = Mulib.rememberedFreeObject(\"%s\", %s.class);", indent.repeat(2), namedClass, objName, namedClass) + ls;
+        line = createTextEditAndIncrementLine(edits, line, object);
+        methodCall = objName + "." +method.substring(method.lastIndexOf(".")+1);
+      } else {
+        methodCall = method;
       }
-      String methodS = "  ";
+      StringBuilder methodS = new StringBuilder(indent.repeat(2));
       if(!returnType.equals("void")){
-        methodS+=returnType+" r0 = ";
+        methodS.append(returnType).append(indent.repeat(2)).append("r0 = ");
       }
 
-      methodS+=method+"(";
+      methodS.append(methodCall).append("(");
       for(int i=0; i<parameters.size();i++){
-        methodS+="a"+i+",";
+        methodS.append("a").append(i).append(",");
       }
-      if(parameters.size()!=0){
-        methodS = methodS.substring(0,methodS.length()-1);
+      if(!parameters.isEmpty()){
+        methodS = new StringBuilder(methodS.substring(0, methodS.length() - 1));
       }
-      methodS+=");"+System.getProperty("line.separator");
-      Range range2 = new Range();
-      range2.setStart(new Position(line,0));
-      range2.setEnd(new Position(line, methodS.length()));
-      line++;
-      TextEdit textEdit2 = new TextEdit(range2,methodS);
-      edits.add(textEdit2);
-
+      methodS.append(");").append(ls);
+      line = createTextEditAndIncrementLine(edits, line, methodS.toString());
+      for (int i = 0; i < parameters.size(); i++) {
+        // Remember state of input-object after executing method
+        String parameterType = parameters.get(i);
+        String parameterName = "a" + i;
+        String rememberCall = null;
+        switch (parameterType) {
+          case "int":
+          case "double":
+          case "byte":
+          case "boolean":
+          case "short":
+          case "long":
+          case "char": break;
+          default: rememberCall = String.format("%sMulib.remember(%s, \"%sAfterExec\");%s", indent.repeat(2), parameterName, parameterName, ls);
+        }
+        if (rememberCall != null) {
+          line = createTextEditAndIncrementLine(edits, line, rememberCall);
+        }
+      }
+      if (isNonStaticMethod) {
+        String rememberObj = String.format("%sMulib.remember(%s, \"%sAfterExec\");%s", indent.repeat(2), objName, objName, ls);
+        line = createTextEditAndIncrementLine(edits, line, rememberObj);
+      }
       String end = "";
       if(!returnType.equals("void")){
-        end = "  return r0;";
+        end = indent.repeat(2) + "return r0;";
       }
-      end += " }"+System.getProperty("line.separator");
-      Range range3 = new Range();
-      range3.setStart(new Position(line,0));
-      range3.setEnd(new Position(line, end.length()));
-      line++;
-      TextEdit textEdit3 = new TextEdit(range3,end);
-      edits.add(textEdit3);
+      end += indent + ls + "}"+ls;
+      line = createTextEditAndIncrementLine(edits, line, end);
       counter ++;
     }
-    String finalend = "}"+System.getProperty("line.separator");
-    Range range3 = new Range();
-    range3.setStart(new Position(line,0));
-    range3.setEnd(new Position(line, finalend.length()));
-    TextEdit textEdit3 = new TextEdit(range3,finalend);
-    edits.add(textEdit3);
+    String finalend = "}"+ls;
+    createTextEditAndIncrementLine(edits, line, finalend);
     return edits;
+  }
+
+  private static int createTextEditAndIncrementLine(List<TextEdit> edits, int line, String object) {
+    Range range = new Range();
+    range.setStart(new Position(line,0));
+    range.setEnd(new Position(line, object.length()));
+    TextEdit textEdit2 = new TextEdit(range,object);
+    edits.add(textEdit2);
+    return ++line;
   }
 
 }
