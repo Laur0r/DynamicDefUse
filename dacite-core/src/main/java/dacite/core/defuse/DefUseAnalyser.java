@@ -11,10 +11,7 @@ import de.wwu.mulib.substitutions.primitives.ConcSnumber;
 import de.wwu.mulib.substitutions.primitives.Sint;
 import de.wwu.mulib.substitutions.primitives.Sprimitive;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.logging.Logger;
 
 /**
@@ -33,7 +30,7 @@ public class DefUseAnalyser {
     protected static DefSet symbolicDefs;
 
     // all identified DUC that were passed so far
-    public static List<DefUseVariable> symbolicUsages;
+    public static ArrayDeque<DefUseVariable> symbolicUsages;
 
     // allocation of variables over the boundary of methods
     protected static InterMethodAllocDequeue interMethods;
@@ -46,7 +43,7 @@ public class DefUseAnalyser {
         chains = new DefUseChains();
         defs = new DefSet();
         symbolicDefs = new DefSet();
-        symbolicUsages = new ArrayList<>();
+        symbolicUsages = new ArrayDeque<>();
         interMethods = new InterMethodAllocDequeue();
         aliases = new HashMap<Object, AliasAlloc>();
         counter = 0;
@@ -118,7 +115,7 @@ public class DefUseAnalyser {
                 // Evaluation has to be made later when use.value has a concrete value
                 use.setTimeRef(counter);
                 counter++;
-                symbolicUsages.add(use);
+                symbolicUsages.addFirst(use);
             }
 
         } else {
@@ -158,7 +155,7 @@ public class DefUseAnalyser {
             } else {
                 use.setTimeRef(counter);
                 counter++;
-                symbolicUsages.add(use);
+                symbolicUsages.addFirst(use);
                 return;
             }
         } else {
@@ -268,7 +265,7 @@ public class DefUseAnalyser {
             } else {
                 use.setTimeRef(counter);
                 counter++;
-                symbolicUsages.add(use);
+                symbolicUsages.addFirst(use);
                 return;
             }
         } else {
@@ -313,7 +310,8 @@ public class DefUseAnalyser {
             } else {
                 use.setTimeRef(counter);
                 counter++;
-                symbolicUsages.add(use);
+                symbolicUsages.addFirst(use);
+                return;
             }
         } else {
             def = defs.getLastDefinitionFields(index, "", value, array);
@@ -455,7 +453,7 @@ public class DefUseAnalyser {
     protected static void registerUse(DefUseVariable def, DefUseVariable use, int index, String name, String method, Solution solution){
         // if no definition was found for this method, find definition of allocations in other methods
         if(def == null && interMethods.size() != 0){
-            def = getAllocDef(method, index, name);
+            def = getAllocDef(method, index, name, use.value);
         }
         // if a definition was found and DUC does not exist, add DUC
         if(def != null){
@@ -572,7 +570,7 @@ public class DefUseAnalyser {
                             ((PartnerClass) value).__mulib__getId() == ((PartnerClass) alloc.value).__mulib__getId()))){
                         // get variable usage for parameter when method is called at call site
                         // TODO assign symbolic values later on as allocation?
-                        DefUseVariable result = chains.findSymbolicUse(alloc.currentMethod, alloc.linenumber, value, alloc.isRemoved); // TODO Erkennung von Operationen in Methodenaufrufen?
+                        DefUseVariable result = findSymbolicUse(alloc.currentMethod, alloc.linenumber, value, alloc.isRemoved); // TODO Erkennung von Operationen in Methodenaufrufen?
                         // if this exists a method allocation is registered instead of a definition
                         if(result != null) {
                             alloc.newIndex = index;
@@ -677,6 +675,43 @@ public class DefUseAnalyser {
     }
 
     /**
+     * Find variable definition via the allocations in other methods.
+     * @param method method where the usage has occured
+     * @param index index depending on type of usage
+     * @param name name of the variable
+     * @return variable definition
+     */
+    protected static DefUseVariable getAllocDef(String method, int index, String name, Object subValue){
+        DefUseVariable def;
+        for(InterMethodAlloc alloc : interMethods.interMethodAllocs){
+            // if there exists an allocation for the given arguments
+            if(alloc.newMethod.equals(method) && alloc.newName != null && alloc.newIndex == index && alloc.newName.equals(name)){
+                // get last definition within the calling method
+                if(alloc.isField) {
+                    def = defs.getLastDefinitionFields(alloc.currentIndex, alloc.currentName, alloc.value, null);
+                } else if(alloc.value instanceof SubstitutedVar){
+                    def = symbolicDefs.getLastDefinition(alloc.currentIndex, alloc.currentMethod, subValue, alloc.currentName);
+                } else {
+                    def = defs.getLastDefinition(alloc.currentIndex, alloc.currentMethod, alloc.value, alloc.currentName);
+                }
+                if(def == null){
+                    /*
+                    if no definition exists, get definitions in calling method recursively (when parameters are forwarded
+                    over several methods.
+                    */
+                    if(!alloc.currentMethod.equals(method)){
+                        def = getAllocDef(alloc.currentMethod, alloc.currentIndex, alloc.currentName, subValue);
+                        return def;
+                    }
+                } else {
+                    return def;
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
      * Check whether the given Object is instance of a primitive type or its wrapper class
      * @param obj given Object
      * @return boolean if it is an instance of a primitive type or wrapper
@@ -714,7 +749,7 @@ public class DefUseAnalyser {
             registerUse(def, var, var.variableIndex, var.variableName, var.method, pathSolution.getSolution());
         }
         symbolicDefs = new DefSet();
-        symbolicUsages = new ArrayList<>();
+        symbolicUsages = new ArrayDeque<>();
         for (SubstitutedVar sv : symbolics) {
             if (sv instanceof Sprimitive) {
                 if (sv instanceof ConcSnumber) {
@@ -729,5 +764,21 @@ public class DefUseAnalyser {
             }
             Object realValue = s.getLabel(sv);
         }
+    }
+
+    private static DefUseVariable findSymbolicUse(String method, int linenumber, Object value, boolean removed){
+        for(DefUseVariable use : symbolicUsages){
+            if(use.getLinenumber() == linenumber && use.getMethod().equals(method) &&
+                    (use.getValue() == value || (value instanceof ConcSnumber && value.equals(use.getValue())) || (value instanceof PartnerClass &&
+                            ((PartnerClass) value).__mulib__getId() instanceof Sint.ConcSint && use.getValue() instanceof PartnerClass &&
+                            ((PartnerClass) use.getValue()).__mulib__getId() instanceof Sint.ConcSint &&
+                            ((PartnerClass) value).__mulib__getId() == ((PartnerClass) use.getValue()).__mulib__getId()))) {
+                if (!removed) {
+                    symbolicUsages.remove(use);
+                }
+                return use;
+            }
+        }
+        return null;
     }
 }

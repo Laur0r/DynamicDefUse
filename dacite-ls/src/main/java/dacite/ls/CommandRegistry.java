@@ -405,7 +405,7 @@ public class CommandRegistry {
       if (isNonStaticMethod) {
         String namedClass = method.substring(0, method.lastIndexOf("."));
         String object =
-                String.format("%s%sobj = Mulib.rememberedFreeObject(\"%s\", %s.class);", indent.repeat(2), namedClass, objName, namedClass) + ls;
+                String.format("%s%s obj = Mulib.rememberedFreeObject(\"%s\", %s.class);", indent.repeat(2), namedClass, objName, namedClass) + ls;
         line = createTextEditAndIncrementLine(edits, line, object);
         methodCall = objName + "." +method.substring(method.lastIndexOf(".")+1);
       } else {
@@ -457,7 +457,9 @@ public class CommandRegistry {
       counter ++;
     }
     String finalend = "}"+ls;
-    createTextEditAndIncrementLine(edits, line, finalend);
+    line = createTextEditAndIncrementLine(edits, line, finalend);
+    String finalend2 = "}"+ls;
+    createTextEditAndIncrementLine(edits, line, finalend2);
     return edits;
   }
 
