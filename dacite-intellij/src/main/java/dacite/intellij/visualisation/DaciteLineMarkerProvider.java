@@ -42,7 +42,7 @@ import static org.wso2.lsp4intellij.requests.Timeouts.REFERENCES;
 public class DaciteLineMarkerProvider implements LineMarkerProvider {
     public LineMarkerInfo getLineMarkerInfo(@NotNull PsiElement element) {
         if (element instanceof PsiIdentifier &&
-                element.getText().equals("DaciteSymbolicDriver")) {
+                element.getText().contains("DaciteSymbolicDriver")) {
             Set<LanguageServerWrapper> wrapper = IntellijLanguageClient.getAllServerWrappersFor(FileUtils.projectToUri(element.getProject()));
             RequestManager requestManager = null;
             if (wrapper.size() == 1) {

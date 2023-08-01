@@ -41,7 +41,7 @@ public class Transformer implements ClassFileTransformer {
 	public byte[] transform(ClassLoader loader, String className, Class<?> classBeingRedefined,
 			ProtectionDomain protectionDomain, byte[] classfileBuffer) throws IllegalClassFormatException {
 		Thread th = Thread.currentThread();
-		if (className.startsWith(dir) && !className.contains("DaciteSymbolicDriver") && !className.contains("__mulib__dacite")) {
+		if (className.startsWith(dir) && !className.contains("DaciteSymbolicDriver") && !className.contains("__mulib__")) {
 			logger.info("transformed "+className);
 			classname = className;
 			ClassReader reader = new ClassReader(classfileBuffer);
@@ -77,6 +77,7 @@ public class Transformer implements ClassFileTransformer {
 	}
 
 	public void transformSymbolic(String input, Map<String, String> remap, String path) throws IOException {
+		logger.info(input);
 		ClassReader reader = new ClassReader(input);
 		classname = input.replace(".","/");
 		ClassNode node = new ClassNode();
@@ -87,12 +88,12 @@ public class Transformer implements ClassFileTransformer {
 		}
 
 		ClassWriter writer = new ClassWriter(reader, ClassWriter.COMPUTE_FRAMES);
-		String newName = node.name.substring(0,node.name.lastIndexOf("/")) + "/dacite_"+node.name.substring(node.name.lastIndexOf("/")+1);
-		SimpleRemapper mapper = new SimpleRemapper(remap);
-		ClassRemapper remapper = new ClassRemapper(writer, mapper);
+		String newName = node.name.substring(0,node.name.lastIndexOf("/")) +"/"+node.name.substring(node.name.lastIndexOf("/")+1); //+ "/dacite_"
+		//SimpleRemapper mapper = new SimpleRemapper(remap);
+		//ClassRemapper remapper = new ClassRemapper(writer, mapper);
 		File outputfile = new File(path+newName+".class");
 		try{
-			node.accept(remapper);
+			node.accept(writer);
 			OutputStream fos = new FileOutputStream(outputfile);
 			fos.write(writer.toByteArray());
 			fos.flush();
