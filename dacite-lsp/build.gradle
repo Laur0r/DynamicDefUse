@@ -8,4 +8,5 @@ dependencies {
     implementation 'jakarta.xml.bind:jakarta.xml.bind-api:3.0.0'
     implementation 'com.sun.xml.bind:jaxb-impl:3.0.0'
     implementation 'org.eclipse.lsp4j:org.eclipse.lsp4j:0.17.0'
+    implementation project(':mulib')
 }

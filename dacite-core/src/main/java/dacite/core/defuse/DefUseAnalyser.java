@@ -3,6 +3,7 @@ package dacite.core.defuse;
 import de.wwu.mulib.exceptions.NotYetImplementedException;
 import de.wwu.mulib.search.executors.MulibExecutor;
 import de.wwu.mulib.search.trees.PathSolution;
+import de.wwu.mulib.search.trees.Solution;
 import de.wwu.mulib.solving.solvers.SolverManager;
 import de.wwu.mulib.substitutions.PartnerClass;
 import de.wwu.mulib.substitutions.SubstitutedVar;
@@ -443,6 +444,30 @@ public class DefUseAnalyser {
     }
 
     /**
+     * Given a usage and its most recent definition, these form a DUC and are added to chains. A Solution is added to the chain.
+     * @param def most recent definition
+     * @param use usage
+     * @param index index based on type of definition/usage
+     * @param name name of variable/field/element
+     * @param method method where this usage occured
+     * @param solution PathSolution with which this chain is passed
+     */
+    protected static void registerUse(DefUseVariable def, DefUseVariable use, int index, String name, String method, Solution solution){
+        // if no definition was found for this method, find definition of allocations in other methods
+        if(def == null && interMethods.size() != 0){
+            def = getAllocDef(method, index, name);
+        }
+        // if a definition was found and DUC does not exist, add DUC
+        if(def != null){
+            DefUseChain chain = new DefUseChain(def, use);
+            chain.setSolution(solution);
+            if(!chains.containsSimilar(chain)){
+                chains.addChain(chain);
+            }
+        }
+    }
+
+    /**
      * Given a definition, this is added to defs. If there exist an alias, this is registered.
      * @param def definition
      */
@@ -686,8 +711,10 @@ public class DefUseAnalyser {
             var.setValue(s.getLabel(var.getValue()));
             // TODO oder symbolische Vergleiche notwendig?
             DefUseVariable def = symbolicDefs.getLastDefinition(var.variableIndex, var.method, var.value, var.variableName, var.timeRef);
-            registerUse(def, var, var.variableIndex, var.variableName, var.method);
+            registerUse(def, var, var.variableIndex, var.variableName, var.method, pathSolution.getSolution());
         }
+        symbolicDefs = new DefSet();
+        symbolicUsages = new ArrayList<>();
         for (SubstitutedVar sv : symbolics) {
             if (sv instanceof Sprimitive) {
                 if (sv instanceof ConcSnumber) {
