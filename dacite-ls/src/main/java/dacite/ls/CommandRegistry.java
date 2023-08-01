@@ -40,6 +40,7 @@ public class CommandRegistry {
     analyze,
     analyzeSymbolic,
     symbolicTrigger,
+    generateTestCases,
     highlight
   }
 
@@ -132,6 +133,7 @@ public class CommandRegistry {
             logger.error(e.getMessage());
           }
           return CompletableFuture.completedFuture(null);
+
       case analyzeSymbolic:
         try {
           String textDocumentUri = args.size() > 0 ? ((JsonPrimitive) args.get(0)).getAsString() : null;
@@ -210,6 +212,7 @@ public class CommandRegistry {
           logger.error(e.getMessage());
         }
         return CompletableFuture.completedFuture(null);
+
         case symbolicTrigger:
           String textDocumentUri = args.size() > 0 ? ((JsonPrimitive) args.get(0)).getAsString() : null;
           if (textDocumentUri != null && textDocumentUri.startsWith("file://")) {
@@ -252,6 +255,36 @@ public class CommandRegistry {
             client.applyEdit(new ApplyWorkspaceEditParams(edit));
             return CompletableFuture.completedFuture(null);
           }
+
+      case generateTestCases:
+        textDocumentUri = args.size() > 0 ? ((JsonPrimitive) args.get(0)).getAsString() : null;
+        if (textDocumentUri != null && textDocumentUri.startsWith("file://")) {
+          CodeAnalyser analyser = new CodeAnalyser(TextDocumentItemProvider.get(textDocumentUri).getText());
+          //analyser.methodVisitor();
+          String className = analyser.extractClassName();
+          String packageName = analyser.extractPackageName();
+
+          // Extract project's root directory
+          Path textDocumentPath = Paths.get(textDocumentUri.replace("file://", ""));
+          String projectDirStart = textDocumentPath.getParent().toString();
+          projectDirStart = projectDirStart.substring(0, projectDirStart.lastIndexOf("/src/"));
+          String projectName = projectDirStart.substring(projectDirStart.lastIndexOf("/")+1);
+          String projectDir = projectDirStart+"/out/production/"+projectName;
+          File projectFile = new File(projectDir);
+          if(!projectFile.exists()){
+            projectDir = projectDirStart+"/build/classes/java/main/"+projectName;
+            projectFile = new File(projectDir);
+          }
+          if(!projectFile.exists()){
+            projectDir = projectDirStart+"/target/classes/"+projectName;
+            projectFile = new File(projectDir);
+          }
+          if(!projectFile.exists()){
+            throw new RuntimeException("Class directory not found for executed File");
+          }
+          // TODO generate TestCase String and give to client
+          return CompletableFuture.completedFuture(null);
+        }
 
         case highlight:
           try {

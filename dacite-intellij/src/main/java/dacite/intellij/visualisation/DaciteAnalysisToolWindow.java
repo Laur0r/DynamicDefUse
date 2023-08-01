@@ -278,12 +278,28 @@ public class DaciteAnalysisToolWindow {
         Border etchedBorder = BorderFactory.createEtchedBorder();
         Border etchedTitledBorder = BorderFactory.createTitledBorder(etchedBorder, borderTitle);
         treeView2.setBorder(etchedTitledBorder);
+        JButton button = new JButton("Generate JUnit tests");
+        button.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                DefaultMutableTreeNode node = (DefaultMutableTreeNode) ((DefaultMutableTreeNode) tree.getModel().getRoot()).getChildAt(0);
+                String uri = ((TreeViewNode) node.getUserObject()).getContextValue();
+                Set<LanguageServerWrapper> wrapper = IntellijLanguageClient.getAllServerWrappersFor(FileUtils.projectToUri(project));
+                RequestManager requestManager = null;
+                if (wrapper.size() == 1) {
+                    requestManager = wrapper.iterator().next().getRequestManager();
+                }
+                CompletableFuture<Object> result = requestManager.executeCommand(new ExecuteCommandParams("dacite.generateTestCases",List.of(uri)));
+            }
+        } );
+
         if(myToolWindowContent.getComponentCount() == 3) {
             myToolWindowContent.remove(0);
             myToolWindowContent.getComponent(0);
         }
         myToolWindowContent.add(treeView2, BorderLayout.PAGE_START);
         myToolWindowContent.setComponentZOrder(treeView2, 0);
+        myToolWindowContent.add(button, BorderLayout.PAGE_START);
+        myToolWindowContent.setComponentZOrder(button, 1);
         return myToolWindowContent;
     }
 }

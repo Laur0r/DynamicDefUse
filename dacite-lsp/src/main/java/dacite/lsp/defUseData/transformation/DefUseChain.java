@@ -1,10 +1,13 @@
 package dacite.lsp.defUseData.transformation;
 
 import jakarta.xml.bind.annotation.XmlElement;
+import jakarta.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
 
 public class DefUseChain {
     private DefUseVariable def;
     private DefUseVariable use;
+
+    private XMLSolution solution;
 
     @XmlElement
     public DefUseVariable getDef() {
@@ -24,10 +27,19 @@ public class DefUseChain {
         this.use = use;
     }
 
+    @XmlElement(name="xmlSolution")
+    public XMLSolution getSolution() {
+        return solution;
+    }
+
+    public void setSolution(XMLSolution solution) {
+        this.solution = solution;
+    }
+
     public String toString(){
         String output = "";
         output += "   DefUse var "+use.getVariableIndex()+": Def name="+def.getVariableName()+" Method "+def.getMethod()+" ln=" + def.getLinenumber()+" ins="+def.getInstruction()+" color="+def.getColor() +" --> Use: Method "+use.getMethod()+" ln=" + use.getLinenumber()+" ins="+use.getInstruction()+
-                " name="+use.getVariableName() +" color="+use.getColor();
+                " name="+use.getVariableName();
         return output;
     }
 

@@ -2,20 +2,17 @@ package dacite.core;
 
 import dacite.core.defuse.*;
 import dacite.core.instrumentation.Transformer;
+import dacite.lsp.defUseData.transformation.XMLSolution;
 import de.wwu.mulib.Mulib;
 import de.wwu.mulib.MulibConfig;
-import de.wwu.mulib.examples.sac22_mulib_benchmark.NQueens;
 import de.wwu.mulib.search.executors.SearchStrategy;
 import de.wwu.mulib.search.trees.ChoiceOptionDeques;
+import de.wwu.mulib.search.trees.Solution;
 import de.wwu.mulib.solving.Solvers;
-import org.objectweb.asm.ClassReader;
-import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.Type;
-import org.objectweb.asm.tree.*;
+import jakarta.xml.bind.*;
 import org.w3c.dom.Document;
 import org.xml.sax.InputSource;
 
-import javax.print.DocFlavor;
 import javax.tools.*;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -28,13 +25,10 @@ import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import java.io.*;
 import java.net.URL;
-import java.net.URLClassLoader;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.logging.Logger;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class SymbolicExec {
 
@@ -115,6 +109,7 @@ public class SymbolicExec {
         // write xml file
         XMLOutputFactory xof = XMLOutputFactory.newInstance();
         XMLStreamWriter xsw = null;
+        xof.setProperty("escapeCharacters", false);
         try {
             xsw = xof.createXMLStreamWriter(new BufferedOutputStream(new FileOutputStream("SymbolicDUCs.xml")));
             xsw.writeStartDocument();
@@ -128,6 +123,9 @@ public class SymbolicExec {
                 xsw.writeStartElement("use");
                 parseDefUseVariable(xsw, chain.getUse());
                 xsw.writeEndElement();
+                //xsw.writeStartElement("solution");
+                parseSolution(xsw, chain.getSolution());
+                //xsw.writeEndElement();
                 xsw.writeEndElement();
             }
             xsw.writeEndElement();
@@ -135,6 +133,12 @@ public class SymbolicExec {
             xsw.flush();
             xsw.close();
             //format("file.xml");
+
+            JAXBContext jaxbContext = JAXBContext.newInstance(dacite.lsp.defUseData.transformation.DefUseChains.class);
+            Unmarshaller jaxbUnmarshaller = jaxbContext.createUnmarshaller();
+            String test = Files.readString(Paths.get("SymbolicDUCs.xml"));
+            var chainCollection = (dacite.lsp.defUseData.transformation.DefUseChains) jaxbUnmarshaller.unmarshal(new StringReader(test));
+            System.out.println(chainCollection);
         }
         catch (Exception e) {
             logger.info("Unable to write the file: " + e.getMessage());
@@ -169,6 +173,23 @@ public class SymbolicExec {
         }
     }
 
+    private static void parseSolution(XMLStreamWriter xsw, Solution solution){
+        try {
+            XMLSolution s = new XMLSolution();
+            s.setSolution(solution);
+            JAXBContext jaxbContextR = JAXBContext.newInstance(XMLSolution.class);
+            Marshaller jaxbMarshallerR = jaxbContextR.createMarshaller();
+            jaxbMarshallerR.setProperty(Marshaller.JAXB_FRAGMENT, true);
+            StringWriter swR = new StringWriter();
+            jaxbMarshallerR.marshal(s, swR);
+            xsw.writeCharacters(swR.toString());
+        } catch (JAXBException e) {
+            e.printStackTrace();
+        } catch (XMLStreamException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     private static void format(String file) {
         logger.info("hat String gebaut");
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
@@ -192,98 +213,6 @@ public class SymbolicExec {
             logger.info(e.getMessage());
             e.printStackTrace();
         }
-    }
-
-    private static List<String> generateSearchRegions(String classname) throws IOException {
-        List<String> output = new ArrayList<>();
-        String packageName = classname.substring(0, classname.lastIndexOf("."));
-        ClassReader reader = new ClassReader(classname);
-        ClassNode node = new ClassNode();
-        reader.accept(node, 0);
-        Map<String, List<String>> invokedMethods = new HashMap<>();
-        for(MethodNode mnode : node.methods) {
-            logger.info(mnode.name);
-            if (mnode.visibleAnnotations != null) {
-                for (AnnotationNode an : mnode.visibleAnnotations) {
-                    if (an.desc.equals("Lorg/junit/Test;")) {
-                        InsnList insns = mnode.instructions;
-                        Iterator<AbstractInsnNode> j = insns.iterator();
-                        while (j.hasNext()) {
-                            AbstractInsnNode in = j.next();
-                            if (in instanceof MethodInsnNode) {
-                                MethodInsnNode methodins = (MethodInsnNode) in;
-                                if(methodins.owner.contains(packageName) && !methodins.name.equals("<init>")){
-                                    String name = methodins.owner + "." + methodins.name;
-                                    if(methodins.owner.contains("/")){
-                                        name = methodins.owner.substring(methodins.owner.lastIndexOf("/")+1)+"." + methodins.name;
-                                    }
-                                    Type[] types = Type.getArgumentTypes(methodins.desc);
-                                    List<String> list = new ArrayList<>();
-                                    if(methodins.getOpcode() == Opcodes.INVOKESTATIC){
-                                        list.add("static");
-                                    } else if(methodins.getOpcode() == Opcodes.INVOKEINTERFACE){
-                                        list.add("interface");
-                                    } else {
-                                        list.add("object");
-                                    }
-                                    String returnType = Type.getReturnType(methodins.desc).getClassName();
-                                    list.add(returnType);
-                                    List<String> list2 = Arrays.stream(types).map(Type::getClassName).collect(Collectors.toList());
-                                    list.addAll(list2);
-                                    invokedMethods.put(name, list);
-                                }
-                                logger.info(methodins.owner + "." + methodins.name);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        for (Map.Entry<String, List<String>> entry : invokedMethods.entrySet()) {
-            List<String> parameters = entry.getValue().subList(2,entry.getValue().size());
-            String returnType = entry.getValue().get(1);
-            String staticRef = entry.getValue().get(0);
-            String method = entry.getKey();
-            StringBuilder searchRegion = new StringBuilder("public static "+returnType+" driver(){" + System.getProperty("line.separator"));
-            for(int i=0; i<parameters.size();i++){
-                searchRegion.append(parameters.get(i)).append(" a").append(i);
-                switch (parameters.get(i)){
-                    case "int":searchRegion.append("= Mulib.namedFreeInt(").append("\"a").append(i).append("\");");break;
-                    case "double":searchRegion.append("= Mulib.namedFreeDouble(").append("\"a").append(i).append("\");");break;
-                    case "byte":searchRegion.append("= Mulib.namedFreeByte(").append("\"a").append(i).append("\");");break;
-                    case "boolean":searchRegion.append("= Mulib.namedFreeBoolean(").append("\"a").append(i).append("\");");break;
-                    case "short":searchRegion.append("= Mulib.namedFreeShort(").append("\"a").append(i).append("\");");break;
-                    case "long":searchRegion.append("= Mulib.namedFreeLong(").append("\"a").append(i).append("\");");break;
-                    default: searchRegion.append("= Mulib.namedFreeObject(").append("\"a").append(i).append("\", ")
-                            .append(parameters.get(i)).append(".class);");
-                }
-                searchRegion.append(System.getProperty("line.separator"));
-            }
-            if(staticRef.equals("object") && method.contains(".")){
-                String namedClass = method.substring(0,method.indexOf("."));
-                searchRegion.append(namedClass).append(" obj = new ").append(namedClass).append("();");
-                searchRegion.append(System.getProperty("line.separator"));
-                method = "obj."+method.substring(method.indexOf(".")+1);
-            }
-            if(!returnType.equals("void")){
-                searchRegion.append(returnType).append(" r0 = ");
-            }
-
-            searchRegion.append(method).append("(");
-            for(int i=0; i<parameters.size();i++){
-                searchRegion.append("a").append(i).append(",");
-            }
-            if(parameters.size()!=0){
-                searchRegion.deleteCharAt(searchRegion.length()-1);
-            }
-            searchRegion.append(");").append(System.getProperty("line.separator"));
-            if(!returnType.equals("void")){
-                searchRegion.append("return r0;");
-            }
-            searchRegion.append("}");
-            output.add(searchRegion.toString());
-        }
-        return output;
     }
 
 
