@@ -52,13 +52,24 @@ public class SymbolicExec {
         for(File f: packagedir.listFiles()){
             if(!f.isDirectory()){
                 String name = f.getName().substring(0,f.getName().lastIndexOf("."));
-                remap.put(packagename+name, packagename+"dacite_"+name);
+                //remap.put(packagename+name, packagename+"dacite_"+name);
                 if(!f.getName().contains("DaciteSymbolicDriver") && url == null){
                     url = Class.forName(packagename.replace("/",".")+name).getResource(name+".class");
                 }
             }
         }
         String sourcePath = url.getPath().substring(0,url.getPath().indexOf(packagename));
+
+        // Compile source file.
+        JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
+        List<File> sourceFileList = new ArrayList<File>();
+        sourceFileList.add(file);
+        StandardJavaFileManager fileManager = compiler.getStandardFileManager( null, null, null );
+        Iterable<? extends JavaFileObject> javaSource = fileManager.getJavaFileObjectsFromFiles( sourceFileList );
+        Iterable<String> options = Arrays.asList("-d", sourcePath);
+        JavaCompiler.CompilationTask task = compiler.getTask(null, fileManager, null, options, null, javaSource);
+        task.call();
+
         for(File f: packagedir.listFiles()){
             if(!f.isDirectory()){
                 String name = f.getName().substring(0,f.getName().lastIndexOf("."));
@@ -66,19 +77,8 @@ public class SymbolicExec {
             }
         }
 
-
-        // Compile source file.
-        JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
-        /*List<File> sourceFileList = new ArrayList<File>();
-        sourceFileList.add(file);
-        StandardJavaFileManager fileManager = compiler.getStandardFileManager( null, null, null );
-        Iterable<? extends JavaFileObject> javaSource = fileManager.getJavaFileObjectsFromFiles( sourceFileList );
-        Iterable<String> options = Arrays.asList("-d", sourcePath);
-        JavaCompiler.CompilationTask task = compiler.getTask(null, fileManager, null, options, null, javaSource);
-        task.call();*/
-
         // Load and instantiate compiled class.
-        Class<?> cls = Class.forName(packagename.replace("/",".")+"dacite_DaciteSymbolicDriver");
+        Class<?> cls = Class.forName(packagename.replace("/",".")+classname.substring(0,classname.indexOf(".")));//+"dacite_"
         Object instance = cls.getDeclaredConstructor().newInstance();
         logger.info(instance.toString());
 
@@ -96,7 +96,7 @@ public class SymbolicExec {
                         .setTRANSF_USE_DEFAULT_MODEL_CLASSES(true)
                         .setHIGH_LEVEL_FREE_ARRAY_THEORY(true)
                         //.setSECONDS_PER_INVOCATION(5)
-                        .setFIXED_ACTUAL_CP_BUDGET(16)
+                        .setFIXED_ACTUAL_CP_BUDGET(24)
                         .setTRANSF_TREAT_SPECIAL_METHOD_CALLS(true)
                         .setTRANSF_IGNORE_CLASSES(List.of(DefUseAnalyser.class, ParameterCollector.class))
                         .setPATH_SOLUTION_CALLBACK(DefUseAnalyser::resolveLabels)

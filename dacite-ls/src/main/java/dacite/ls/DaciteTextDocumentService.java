@@ -94,7 +94,7 @@ public class DaciteTextDocumentService
                     new Command("Run Symbolic Analysis", "dacite.symbolicTrigger", List.of(params.getTextDocument().getUri())), null));*/
           }));
 
-      compilationUnit.findAll(ClassOrInterfaceDeclaration.class).stream().filter(coid ->String.valueOf(coid.getName()).equals("DaciteSymbolicDriver"))
+      compilationUnit.findAll(ClassOrInterfaceDeclaration.class).stream().filter(coid ->String.valueOf(coid.getName()).contains("DaciteSymbolicDriver"))
               .forEach(coid ->coid.getName().getRange().ifPresent(range -> {
                 codeLenses.add(new CodeLens(new Range(new Position(range.begin.line - 1, range.begin.column - 1),
                         new Position(range.end.line - 1, range.end.column)),
@@ -226,7 +226,7 @@ public class DaciteTextDocumentService
     } else {
       classes = DefUseAnalysisProvider.getNotCoveredClasses();
     }
-    if (nodeUri.equals("")) {
+    if (nodeUri.equals("") && classes != null) {
       for (DefUseClass cl : classes) {
         TreeViewNode node = new TreeViewNode(id, cl.getName(),
                 cl.getName() + " " + cl.getNumberChains() + " chains");
@@ -243,7 +243,7 @@ public class DaciteTextDocumentService
 
         nodes.add(node);
       }
-    } else {
+    } else if(classes != null) {
       for (DefUseClass cl : classes) {
         if (nodeUri.equals(cl.getName())) {
           for (DefUseMethod m : cl.getMethods()) {
