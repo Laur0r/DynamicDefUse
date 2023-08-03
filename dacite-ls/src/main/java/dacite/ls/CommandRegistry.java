@@ -358,8 +358,8 @@ public class CommandRegistry {
     }
     List<TextEdit> edits = new ArrayList<>();
     int line = 0;
-    String ls = System.getProperty("line.separator");
-    String packageHeader = "package tryme;"+ls+"import de.wwu.mulib.Mulib;"+ls;
+    String ls = System.lineSeparator();
+    String packageHeader = "package tryme;"+ls; //// TODO Edit package name
     line = createTextEditAndIncrementLine(edits, line, packageHeader);
 
     String importHeader = "import de.wwu.mulib.Mulib;"+ls+ls;
@@ -376,36 +376,54 @@ public class CommandRegistry {
       String returnType = entry.getValue().get(1);
       String staticRef = entry.getValue().get(0);
       final String method = entry.getKey();
-      String indent = "  ";
+      String indent = "    ";
 
-      String m = indent + "public static "+returnType+" driver"+counter+"(){"+ls;
+      String m = indent + "public static "+returnType+" driver"+counter+"() {"+ls;
       line = createTextEditAndIncrementLine(edits, line, m);
       String commentInput = indent.repeat(2) + "/* Input values */"+ls;
       line = createTextEditAndIncrementLine(edits, line, commentInput);
 
-      for(int i=0; i<parameters.size();i++){
-        String p = indent.repeat(2)+parameters.get(i) + " a"+i;
+
+      boolean isNonStaticMethod = staticRef.equals("object") && method.contains(".");
+      final String objName = isNonStaticMethod ? "arg0" : null;
+      String[] parameterNames = new String[parameters.size()];
+      int parameterNumber = isNonStaticMethod ? 1 : 0;
+      for (int i = 0; i < parameterNames.length; i++) {
+        parameterNames[i] = "arg" + parameterNumber;
+        parameterNumber++;
+      }
+      boolean containsArray = false;
+      for(int i = 0; i < parameters.size(); i++){
+        String parameter = parameters.get(i);
+        String p = indent.repeat(2) + parameter + " " +  parameterNames[i];
         String mulibRememberPrefix = " = Mulib.rememberedFree";
-        switch (parameters.get(i)){
-          case "int": p+= mulibRememberPrefix + "Int(\"a"+i+"\");";break;
-          case "double": p+= mulibRememberPrefix + "Double(\"a"+i+"\");";break;
-          case "byte":p+= mulibRememberPrefix + "Byte(\"a"+i+"\");";break;
-          case "boolean":p+= mulibRememberPrefix + "Boolean(\"a"+i+"\");";break;
-          case "short":p+= mulibRememberPrefix + "Short(\"a"+i+"\");";break;
-          case "long":p+= mulibRememberPrefix + "Long(\"a"+i+"\");";break;
-          case "char": p+= mulibRememberPrefix + "Char(\"a"+i+"\");"; break;
-          default: p+= mulibRememberPrefix + "Object(\"a"+i+"\", "+parameters.get(i)+".class);";
+        switch (parameter) {
+          case "int": p+= mulibRememberPrefix + "Int(\""+parameterNames[i]+"\");";break;
+          case "double": p+= mulibRememberPrefix + "Double(\""+parameterNames[i]+"\");";break;
+          case "byte":p+= mulibRememberPrefix + "Byte(\""+parameterNames[i]+"\");";break;
+          case "boolean":p+= mulibRememberPrefix + "Boolean(\""+parameterNames[i]+"\");";break;
+          case "short":p+= mulibRememberPrefix + "Short(\""+parameterNames[i]+"\");";break;
+          case "long":p+= mulibRememberPrefix + "Long(\""+parameterNames[i]+"\");";break;
+          case "char": p+= mulibRememberPrefix + "Char(\""+parameterNames[i]+"\");"; break;
+          default: p+= mulibRememberPrefix + "Object(\""+parameterNames[i]+"\", " + parameter + ".class);";
+        }
+        if(parameter.contains("[")){
+          containsArray = true;
         }
         p += ls;
         line = createTextEditAndIncrementLine(edits, line, p);
       }
-      boolean isNonStaticMethod = staticRef.equals("object") && method.contains(".");
-      final String objName = "obj";
+
+      if(containsArray) {
+        String arrayComment = indent.repeat(2)+"// To restrict the array size use: Mulib.assume(array.lenght<...);"+ls;
+        line = createTextEditAndIncrementLine(edits, line, arrayComment);
+      }
+
       final String methodCall;
       if (isNonStaticMethod) {
         String namedClass = method.substring(0, method.lastIndexOf("."));
         String object =
-                String.format("%s%s obj = Mulib.rememberedFreeObject(\"%s\", %s.class);", indent.repeat(2), namedClass, objName, namedClass) + ls;
+                String.format("%s%s %s = Mulib.rememberedFreeObject(\"%s\", %s.class);", indent.repeat(2), namedClass, objName, objName, namedClass) + ls;
         line = createTextEditAndIncrementLine(edits, line, object);
         methodCall = objName + "." +method.substring(method.lastIndexOf(".")+1);
       } else {
@@ -413,12 +431,12 @@ public class CommandRegistry {
       }
       StringBuilder methodS = new StringBuilder(indent.repeat(2));
       if(!returnType.equals("void")){
-        methodS.append(returnType).append(indent.repeat(2)).append("r0 = ");
+        methodS.append(returnType).append(" ").append("r0 = ");
       }
 
       methodS.append(methodCall).append("(");
       for(int i=0; i<parameters.size();i++){
-        methodS.append("a").append(i).append(",");
+        methodS.append("arg").append(i).append(",");
       }
       if(!parameters.isEmpty()){
         methodS = new StringBuilder(methodS.substring(0, methodS.length() - 1));
@@ -428,7 +446,7 @@ public class CommandRegistry {
       for (int i = 0; i < parameters.size(); i++) {
         // Remember state of input-object after executing method
         String parameterType = parameters.get(i);
-        String parameterName = "a" + i;
+        String parameterName = parameterNames[i];
         String rememberCall = null;
         switch (parameterType) {
           case "int":
@@ -450,16 +468,14 @@ public class CommandRegistry {
       }
       String end = "";
       if(!returnType.equals("void")){
-        end = indent.repeat(2) + "return r0;";
+        end = indent.repeat(2) + "return r0;" + ls;
       }
-      end += indent + ls + "}"+ls;
+      end = end + indent + "}" + ls;
       line = createTextEditAndIncrementLine(edits, line, end);
       counter ++;
     }
-    String finalend = "}"+ls;
-    line = createTextEditAndIncrementLine(edits, line, finalend);
-    String finalend2 = "}"+ls;
-    createTextEditAndIncrementLine(edits, line, finalend2);
+    String finalEnd = "}"+ls;
+    createTextEditAndIncrementLine(edits, line, finalEnd);
     return edits;
   }
 
@@ -469,7 +485,7 @@ public class CommandRegistry {
     range.setEnd(new Position(line, object.length()));
     TextEdit textEdit2 = new TextEdit(range,object);
     edits.add(textEdit2);
-    return ++line;
+    return line + 2;
   }
 
 }
