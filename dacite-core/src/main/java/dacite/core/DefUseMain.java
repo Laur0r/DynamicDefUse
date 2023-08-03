@@ -61,6 +61,12 @@ public class DefUseMain {
 		String sourcePath = url.getPath().substring(0,url.getPath().indexOf(packagename));
 		List<File> sourceFileList = new ArrayList<File>();
 		sourceFileList.add(file);
+		File packagedir = new File(projectdir+packagename);
+		for(File f: packagedir.listFiles()){
+			if(!f.isDirectory()){
+				sourceFileList.add(f);
+			}
+		}
 		JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
 		StandardJavaFileManager fileManager = compiler.getStandardFileManager( null, null, null );
 		Iterable<? extends JavaFileObject> javaSource = fileManager.getJavaFileObjectsFromFiles( sourceFileList );
