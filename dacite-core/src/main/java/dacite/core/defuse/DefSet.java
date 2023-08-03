@@ -115,6 +115,27 @@ public class DefSet {
         return output;
     }
 
+    public DefUseVariable getLastDefinitionFields(int index, String varname, Object value, Object fieldInstance, long time){
+        DefUseVariable output = null;
+        for(DefUseVariable def : defs){
+            if(def instanceof DefUseField) {
+                DefUseField field = (DefUseField) def;
+                if(field.getVariableIndex() == index && (varname.contains(field.getVariableName()))
+                        && (fieldInstance == null || field.getInstance()== fieldInstance)&& time>def.timeRef){
+                    // to be able to compare integer and Integer due to transformer boxing
+                    if(def.getValue() == value || value != null && DefUseAnalyser.isPrimitiveOrWrapper(value) && value.equals(field.getValue())){
+                        if(!varname.equals("") && field.getVariableName().equals("")){
+                            def.setVariableName(varname);
+                        }
+                        output = def;
+                        break;
+                    }
+                }
+            }
+        }
+        return output;
+    }
+
     /**
      * Get most recent array element or field definition for characteristics.
      * @param index of defined element
@@ -142,6 +163,17 @@ public class DefSet {
                         break;
                     }
                 }
+            }
+        }
+        return output;
+    }
+
+    public DefUseVariable getLastDefinitionArray(Object array, String arrayName){
+        DefUseVariable output = null;
+        for(DefUseVariable def : defs){
+            if(def.getValue() == array && def.getVariableName().equals(arrayName)){
+                output = def;
+                break;
             }
         }
         return output;
@@ -226,8 +258,7 @@ public class DefSet {
             if(def.getValue() == null){
                 continue;
             }
-            if(!(def.getVariableIndex() == newDef.getVariableIndex()) && (newDef.getValue() instanceof ConcSnumber && newDef.getValue().equals(def.getValue())) ||
-                    (def.getValue() instanceof PartnerClass && ((PartnerClass) def.getValue()).__mulib__getId() instanceof
+            if((def.getValue() instanceof PartnerClass && ((PartnerClass) def.getValue()).__mulib__getId() instanceof
                             Sint.ConcSint && newDef.getValue() instanceof PartnerClass &&
                     ((PartnerClass) newDef.getValue()).__mulib__getId() instanceof Sint.ConcSint &&
                     ((PartnerClass) def.getValue()).__mulib__getId() == ((PartnerClass) newDef.getValue()).__mulib__getId())){

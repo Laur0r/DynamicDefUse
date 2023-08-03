@@ -105,7 +105,8 @@ public class DefUseAnalyser {
                     AliasAlloc alloc = aliases.get(symbolicDef.getValue());
                     for(int i = 0; i<alloc.varNames.size(); i++){
                         DefUseVariable alias = defs.getSymbolicAliasDef(alloc.varIndexes.get(i), alloc.varNames.get(i), value);
-                        if(alias.getLinenumber() > symbolicDef.getLinenumber()){
+                        if(alias.getLinenumber() >
+                                symbolicDef.getLinenumber()){
                             symbolicDef = alias;
                         }
                     }
@@ -315,9 +316,16 @@ public class DefUseAnalyser {
             }
         } else {
             def = defs.getLastDefinitionFields(index, "", value, array);
+            if(def == null){
+                DefUseVariable defArray = defs.getLastDefinitionArray(array, arrayName);
+                DefUseField defField = new DefUseField(defArray.linenumber, 0,use.variableIndex,use.value,defArray.method,
+                        arrayName+"[",array, arrayName);
+                defs.addDef(defField);
+                def=defField;
+            }
         }
 
-        if(def.variableName.equals("")){
+        if(def != null && def.variableName.equals("")){
             def.variableName = arrayName+"[";
         }
         registerUse(def, use, index, "", method);
@@ -735,9 +743,10 @@ public class DefUseAnalyser {
 
     private static List<SubstitutedVar> symbolics = new ArrayList<>();
     public static void resolveLabels(MulibExecutor mulibExecutor, PathSolution pathSolution, SolverManager s) {
+
         for(DefUseVariable def : symbolicDefs.defs){
-            if((def.getValue() instanceof SubstitutedVar) && !(def.getValue() instanceof ConcSnumber) && !(def.getValue() instanceof PartnerClass && ((PartnerClass) def.getValue()).__mulib__getId()
-                    instanceof Sint.ConcSint)){
+            if((def.getValue() instanceof SubstitutedVar)){ //&& !(def.getValue() instanceof ConcSnumber) && !(def.getValue() instanceof PartnerClass && ((PartnerClass) def.getValue()).__mulib__getId()
+                    //instanceof Sint.ConcSint)){
                 // TODO ist das jetzt zB int oder ConcSint?
                 def.setValue(s.getLabel(def.getValue()));
             }
@@ -745,12 +754,22 @@ public class DefUseAnalyser {
         for(DefUseVariable var: symbolicUsages){
             var.setValue(s.getLabel(var.getValue()));
             // TODO oder symbolische Vergleiche notwendig?
-            DefUseVariable def = symbolicDefs.getLastDefinition(var.variableIndex, var.method, var.value, var.variableName, var.timeRef);
+            DefUseVariable def = null;
+            if(var instanceof DefUseField){
+                def = symbolicDefs.getLastDefinitionFields(var.variableIndex, var.variableName,var.value, ((DefUseField) var).getInstance(), var.timeRef);
+            } else {
+                def = symbolicDefs.getLastDefinition(var.variableIndex, var.method, var.value, var.variableName, var.timeRef);
+            }
             registerUse(def, var, var.variableIndex, var.variableName, var.method, pathSolution.getSolution());
         }
         symbolicDefs = new DefSet();
         symbolicUsages = new ArrayDeque<>();
-        for (SubstitutedVar sv : symbolics) {
+        for(DefUseChain chain:chains.getDefUseChains()){
+            if(chain.getSolution() == null){
+                chain.setSolution(pathSolution.getSolution());
+            }
+        }
+        /*for (SubstitutedVar sv : symbolics) {
             if (sv instanceof Sprimitive) {
                 if (sv instanceof ConcSnumber) {
                     // TODO Das hier muss nicht gelistet sein; - mit equals vergleichen, Wert auslesen
@@ -763,7 +782,7 @@ public class DefUseAnalyser {
                 //  ((PartnerClass) sv).__mulib__defaultIsSymbolic()
             }
             Object realValue = s.getLabel(sv);
-        }
+        }*/
     }
 
     private static DefUseVariable findSymbolicUse(String method, int linenumber, Object value, boolean removed){

@@ -96,7 +96,7 @@ public class SymbolicExec {
                         .setTRANSF_USE_DEFAULT_MODEL_CLASSES(true)
                         .setHIGH_LEVEL_FREE_ARRAY_THEORY(true)
                         //.setSECONDS_PER_INVOCATION(5)
-                        .setFIXED_ACTUAL_CP_BUDGET(24)
+                        .setFIXED_ACTUAL_CP_BUDGET(16)
                         .setTRANSF_TREAT_SPECIAL_METHOD_CALLS(true)
                         .setTRANSF_IGNORE_CLASSES(List.of(DefUseAnalyser.class, ParameterCollector.class))
                         .setPATH_SOLUTION_CALLBACK(DefUseAnalyser::resolveLabels)
@@ -176,8 +176,25 @@ public class SymbolicExec {
     private static void parseSolution(XMLStreamWriter xsw, Solution solution){
         try {
             XMLSolution s = new XMLSolution();
-            s.setSolution(solution);
-            JAXBContext jaxbContextR = JAXBContext.newInstance(XMLSolution.class);
+            if(solution!= null){
+                s.setSolution(solution);
+            }
+            Set<Class<?>> classes = new HashSet<>();
+            int i = 0;
+            for (Map.Entry<String, Object> o : solution.labels.getIdToLabel().entrySet()) {
+                //if (o.getKey().equals("returnValue")) {
+                //    i++;
+                //    continue;
+                //}
+                if (o.getValue() == null) {
+                    classes.add(Object.class);
+                } else {
+                    classes.add(o.getValue().getClass());
+                }
+                i++;
+            }
+            classes.add(XMLSolution.class);
+            JAXBContext jaxbContextR = JAXBContext.newInstance(classes.toArray(Class[]::new));
             Marshaller jaxbMarshallerR = jaxbContextR.createMarshaller();
             jaxbMarshallerR.setProperty(Marshaller.JAXB_FRAGMENT, true);
             StringWriter swR = new StringWriter();
