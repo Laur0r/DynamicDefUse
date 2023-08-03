@@ -392,22 +392,31 @@ public class CommandRegistry {
         parameterNames[i] = "arg" + parameterNumber;
         parameterNumber++;
       }
+      boolean containsArray = false;
       for(int i = 0; i < parameters.size(); i++){
         String parameter = parameters.get(i);
-        String p = indent.repeat(2) + parameter + " a"+parameterNumber;
+        String p = indent.repeat(2) + parameter + " " +  parameterNames[i];
         String mulibRememberPrefix = " = Mulib.rememberedFree";
         switch (parameter) {
-          case "int": p+= mulibRememberPrefix + "Int(\"arg"+parameterNames[i]+"\");";break;
-          case "double": p+= mulibRememberPrefix + "Double(\"arg"+parameterNames[i]+"\");";break;
-          case "byte":p+= mulibRememberPrefix + "Byte(\"arg"+parameterNames[i]+"\");";break;
-          case "boolean":p+= mulibRememberPrefix + "Boolean(\"arg"+parameterNames[i]+"\");";break;
-          case "short":p+= mulibRememberPrefix + "Short(\"arg"+parameterNames[i]+"\");";break;
-          case "long":p+= mulibRememberPrefix + "Long(\"arg"+parameterNames[i]+"\");";break;
-          case "char": p+= mulibRememberPrefix + "Char(\"arg"+parameterNames[i]+"\");"; break;
-          default: p+= mulibRememberPrefix + "Object(\"arg"+parameterNames[i]+"\", " + parameter + ".class);";
+          case "int": p+= mulibRememberPrefix + "Int(\""+parameterNames[i]+"\");";break;
+          case "double": p+= mulibRememberPrefix + "Double(\""+parameterNames[i]+"\");";break;
+          case "byte":p+= mulibRememberPrefix + "Byte(\""+parameterNames[i]+"\");";break;
+          case "boolean":p+= mulibRememberPrefix + "Boolean(\""+parameterNames[i]+"\");";break;
+          case "short":p+= mulibRememberPrefix + "Short(\""+parameterNames[i]+"\");";break;
+          case "long":p+= mulibRememberPrefix + "Long(\""+parameterNames[i]+"\");";break;
+          case "char": p+= mulibRememberPrefix + "Char(\""+parameterNames[i]+"\");"; break;
+          default: p+= mulibRememberPrefix + "Object(\""+parameterNames[i]+"\", " + parameter + ".class);";
+        }
+        if(parameter.contains("[")){
+          containsArray = true;
         }
         p += ls;
         line = createTextEditAndIncrementLine(edits, line, p);
+      }
+
+      if(containsArray) {
+        String arrayComment = indent.repeat(2)+"// To restrict the array size use: Mulib.assume(array.lenght<...);"+ls;
+        line = createTextEditAndIncrementLine(edits, line, arrayComment);
       }
 
       final String methodCall;
