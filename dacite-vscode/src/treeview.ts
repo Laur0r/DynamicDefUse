@@ -253,7 +253,6 @@ class DaciteTreeDataProvider implements TreeDataProvider<string> {
           //console.log("test "+n.nodeUri+" "+n.contextValue);
           if(this.docUri.length == 0 && n.contextValue && this.viewId != "notCoveredDUC"){
             this.docUri = n.contextValue;
-            console.log("docUri "+this.docUri);
             const params: ExecuteCommandParams = {
               command: 'dacite.symbolicTrigger',
               arguments: [this.docUri]
@@ -261,7 +260,6 @@ class DaciteTreeDataProvider implements TreeDataProvider<string> {
             vscode.commands.registerCommand("dacite.symbolicTrigger2", () => this.client.sendRequest(ExecuteCommandRequest.type,params));
           }
         });
-        console.log(result.nodes);
         return result.nodes.map((n) => n.nodeUri).filter(notEmpty);
       });
   }
