@@ -9,6 +9,10 @@ import de.wwu.mulib.search.executors.SearchStrategy;
 import de.wwu.mulib.search.trees.ChoiceOptionDeques;
 import de.wwu.mulib.search.trees.Solution;
 import de.wwu.mulib.solving.Solvers;
+import de.wwu.mulib.tcg.TcgConfig;
+import de.wwu.mulib.tcg.TestCase;
+import de.wwu.mulib.tcg.TestCases;
+import de.wwu.mulib.tcg.TestCasesStringGenerator;
 import jakarta.xml.bind.*;
 import org.w3c.dom.Document;
 import org.xml.sax.InputSource;
@@ -24,7 +28,10 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import java.io.*;
+import java.lang.reflect.Method;
+import java.net.MalformedURLException;
 import java.net.URL;
+import java.net.URLClassLoader;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
@@ -138,6 +145,54 @@ public class SymbolicExec {
             Unmarshaller jaxbUnmarshaller = jaxbContext.createUnmarshaller();
             String test = Files.readString(Paths.get("SymbolicDUCs.xml"));
             var chainCollection = (dacite.lsp.defUseData.transformation.DefUseChains) jaxbUnmarshaller.unmarshal(new StringReader(test));
+            Set<XMLSolution> uniqueSolutions = new HashSet<>();
+            for(dacite.lsp.defUseData.transformation.DefUseChain chain :chainCollection.getChains()) {
+                XMLSolution solution = chain.getSolution();
+                Object returnValue = solution.returnValue;
+                if (returnValue == null && solution.returnValueArray != null) {
+                    returnValue = solution.returnValueArray;
+                } else if (returnValue == null) {
+                    returnValue = new Object[0];
+                }
+                Map<String, Object> labels = new HashMap<>();
+                if (solution.labels != null) {
+                    labels.putAll(solution.labels);
+                }
+                if (solution.labelsArray != null) {
+                    labels.putAll(solution.labelsArray);
+                }
+                XMLSolution compSolution = new XMLSolution(solution.exceptional, returnValue, labels);
+                uniqueSolutions.add(compSolution);
+            }
+            List<TestCase> testCaseList = new ArrayList<>();
+            for(XMLSolution solution : uniqueSolutions){
+                TcgConfig config = TcgConfig.builder().build();
+                TestCase testCase = new TestCase(solution.exceptional,solution.labels,solution.returnValue, new BitSet(),config);
+                testCaseList.add(testCase);
+            }
+
+            Class myclass = null;
+            try {
+                URL url2 = new URL("file:/home/l_troo01/Development/Forschung/TestAnalysis/out/production/TestAnalysis/");
+                logger.info(String.valueOf(url2));
+                URLClassLoader classLoader = new URLClassLoader(new URL[]{url2});
+                myclass = classLoader.loadClass("tryme.Sort");
+            } catch (ClassNotFoundException e) {
+                throw new RuntimeException(e);
+            } catch (MalformedURLException e) {
+                throw new RuntimeException(e);
+            }
+            Method[] methods = myclass.getDeclaredMethods();
+            Method methodUnderTest = null;
+            for(Method method : methods){
+                if(method.getName().equals("sort")){
+                    methodUnderTest = method;
+                }
+            }
+            TestCases testCases = new TestCases(testCaseList,methodUnderTest);
+            TcgConfig config = TcgConfig.builder().build();
+            TestCasesStringGenerator tcg = new TestCasesStringGenerator(testCases, config);
+            logger.info(tcg.generateTestClassStringRepresentation());
             System.out.println(chainCollection);
         }
         catch (Exception e) {
@@ -173,19 +228,11 @@ public class SymbolicExec {
         }
     }
 
-    private static void parseSolution(XMLStreamWriter xsw, Solution solution){
+    private static void parseSolution(XMLStreamWriter xsw, XMLSolution solution){
         try {
-            XMLSolution s = new XMLSolution();
-            if(solution!= null){
-                s.setSolution(solution);
-            }
             Set<Class<?>> classes = new HashSet<>();
             int i = 0;
-            for (Map.Entry<String, Object> o : solution.labels.getIdToLabel().entrySet()) {
-                //if (o.getKey().equals("returnValue")) {
-                //    i++;
-                //    continue;
-                //}
+            for (Map.Entry<String, Object> o : solution.labels.entrySet()) {
                 if (o.getValue() == null) {
                     classes.add(Object.class);
                 } else {
@@ -198,7 +245,7 @@ public class SymbolicExec {
             Marshaller jaxbMarshallerR = jaxbContextR.createMarshaller();
             jaxbMarshallerR.setProperty(Marshaller.JAXB_FRAGMENT, true);
             StringWriter swR = new StringWriter();
-            jaxbMarshallerR.marshal(s, swR);
+            jaxbMarshallerR.marshal(solution, swR);
             xsw.writeCharacters(swR.toString());
         } catch (JAXBException e) {
             e.printStackTrace();
