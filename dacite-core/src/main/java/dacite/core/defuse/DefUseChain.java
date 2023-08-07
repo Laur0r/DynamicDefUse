@@ -1,5 +1,6 @@
 package dacite.core.defuse;
 
+import dacite.lsp.defUseData.transformation.XMLSolution;
 import de.wwu.mulib.search.trees.Solution;
 import jakarta.xml.bind.annotation.XmlElement;
 
@@ -12,17 +13,17 @@ public class DefUseChain {
     // the usage
     private DefUseVariable use;
 
-    protected Solution solution;
+    protected XMLSolution solution;
 
     public DefUseChain(DefUseVariable def, DefUseVariable use){
         this.def = def;
         this.use = use;
     }
 
-    public void setSolution(Solution solution){
+    public void setSolution(XMLSolution solution){
         this.solution = solution;
     }
-    public Solution getSolution(){return solution;}
+    public XMLSolution getSolution(){return solution;}
 
     public String toString(){
         String output = "";

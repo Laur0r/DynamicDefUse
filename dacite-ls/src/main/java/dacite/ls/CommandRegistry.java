@@ -4,8 +4,15 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 
 import dacite.lsp.DaciteExtendedLanguageClient;
+import dacite.lsp.defUseData.transformation.XMLSolution;
 import dacite.lsp.tvp.TreeViewDidChangeParams;
 import dacite.lsp.tvp.TreeViewNode;
+import de.wwu.mulib.Mulib;
+import de.wwu.mulib.search.trees.Solution;
+import de.wwu.mulib.tcg.TcgConfig;
+import de.wwu.mulib.tcg.TestCase;
+import de.wwu.mulib.tcg.TestCases;
+import de.wwu.mulib.tcg.TestCasesStringGenerator;
 import org.eclipse.lsp4j.*;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.objectweb.asm.ClassReader;
@@ -17,6 +24,8 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.InputStream;
+import java.lang.reflect.Method;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.file.Files;
@@ -239,6 +248,7 @@ public class CommandRegistry {
           }
 
       case generateTestCases:
+        logger.info("generateTestCases");
         textDocumentUri = args.size() > 0 ? ((JsonPrimitive) args.get(0)).getAsString() : null;
         if (textDocumentUri != null && textDocumentUri.startsWith("file://")) {
           CodeAnalyser analyser = new CodeAnalyser(TextDocumentItemProvider.get(textDocumentUri).getText());
@@ -264,7 +274,12 @@ public class CommandRegistry {
           if(!projectFile.exists()){
             throw new RuntimeException("Class directory not found for executed File");
           }
-          // TODO generate TestCase String and give to client
+
+          String uri = textDocumentUri.substring(0,textDocumentUri.lastIndexOf("/"));
+          List<Either<TextDocumentEdit, ResourceOperation>> changes = generateTestCases(projectFile, packageName, className, uri);
+          WorkspaceEdit edit = new WorkspaceEdit();
+          edit.setDocumentChanges(changes);
+          client.applyEdit(new ApplyWorkspaceEditParams(edit));
           return CompletableFuture.completedFuture(null);
         }
 
@@ -299,63 +314,7 @@ public class CommandRegistry {
   }
 
   private static List<TextEdit> generateSearchRegions(File project, String classname){
-    String packageName = classname.substring(0, classname.lastIndexOf("."));
-    ClassReader reader;
-    try {
-      //logger.info(classname);
-      URL url = project.toURI().toURL();
-      logger.info(String.valueOf(url));
-      URLClassLoader classLoader = new URLClassLoader(new URL[]{url});
-      //logger.info(String.valueOf(classLoader.getURLs()[0]));
-      //Class myclass = classLoader.loadClass(classname);
-      logger.info(classname.replace('.', '/') + ".class");
-      InputStream input = classLoader.getResourceAsStream(classname.replace('.', '/') + ".class");
-      //logger.info(input.toString());
-      reader = new ClassReader(input);
-    } catch (Exception e) {
-      throw new RuntimeException(e);
-    }
-    ClassNode classNode = new ClassNode();
-    reader.accept(classNode, 0);
-    Map<String, List<String>> invokedMethods = new HashMap<>();
-    for(MethodNode mnode : classNode.methods) {
-      //logger.info(mnode.name);
-      if (mnode.visibleAnnotations != null) {
-        for (AnnotationNode an : mnode.visibleAnnotations) {
-          if (an.desc.equals("Lorg/junit/Test;")) {
-            InsnList insns = mnode.instructions;
-            Iterator<AbstractInsnNode> j = insns.iterator();
-            while (j.hasNext()) {
-              AbstractInsnNode in = j.next();
-              if (in instanceof MethodInsnNode) {
-                MethodInsnNode methodins = (MethodInsnNode) in;
-                if(methodins.owner.contains(packageName) && !methodins.name.equals("<init>")){
-                  String name = methodins.owner + "." + methodins.name;
-                  if(methodins.owner.contains("/")){
-                    name = methodins.owner.substring(methodins.owner.lastIndexOf("/")+1)+"." + methodins.name;
-                  }
-                  Type[] types = Type.getArgumentTypes(methodins.desc);
-                  List<String> list = new ArrayList<>();
-                  if(methodins.getOpcode() == Opcodes.INVOKESTATIC){
-                    list.add("static");
-                  } else if(methodins.getOpcode() == Opcodes.INVOKEINTERFACE){
-                    list.add("interface");
-                  } else {
-                    list.add("object");
-                  }
-                  String returnType = Type.getReturnType(methodins.desc).getClassName();
-                  list.add(returnType);
-                  List<String> list2 = Arrays.stream(types).map(Type::getClassName).collect(Collectors.toList());
-                  list.addAll(list2);
-                  invokedMethods.put(name, list);
-                }
-                //logger.info(methodins.owner + "." + methodins.name);
-              }
-            }
-          }
-        }
-      }
-    }
+    Map<String, List<String>> invokedMethods = analyseJUnitTest(project,classname);
     List<TextEdit> edits = new ArrayList<>();
     int line = 0;
     String ls = System.lineSeparator();
@@ -435,7 +394,8 @@ public class CommandRegistry {
       }
 
       methodS.append(methodCall).append("(");
-      for(int i=0; i<parameters.size();i++){
+      int argStart = isNonStaticMethod ? 1 : 0;
+      for(int i=argStart; i<(parameters.size()+argStart);i++){
         methodS.append("arg").append(i).append(",");
       }
       if(!parameters.isEmpty()){
@@ -486,6 +446,118 @@ public class CommandRegistry {
     TextEdit textEdit2 = new TextEdit(range,object);
     edits.add(textEdit2);
     return line + 2;
+  }
+
+  private static Map<String, List<String>> analyseJUnitTest(File project, String classname){
+    String packageName = classname.substring(0, classname.lastIndexOf("."));
+    ClassReader reader;
+    try {
+      //logger.info(classname);
+      URL url = project.toURI().toURL();
+      logger.info(String.valueOf(url));
+      URLClassLoader classLoader = new URLClassLoader(new URL[]{url});
+      InputStream input = classLoader.getResourceAsStream(classname.replace('.', '/') + ".class");
+      //logger.info(input.toString());
+      reader = new ClassReader(input);
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+    ClassNode classNode = new ClassNode();
+    reader.accept(classNode, 0);
+    Map<String, List<String>> invokedMethods = new HashMap<>();
+    for(MethodNode mnode : classNode.methods) {
+      //logger.info(mnode.name);
+      if (mnode.visibleAnnotations != null) {
+        for (AnnotationNode an : mnode.visibleAnnotations) {
+          if (an.desc.equals("Lorg/junit/Test;")) {
+            InsnList insns = mnode.instructions;
+            Iterator<AbstractInsnNode> j = insns.iterator();
+            while (j.hasNext()) {
+              AbstractInsnNode in = j.next();
+              if (in instanceof MethodInsnNode) {
+                MethodInsnNode methodins = (MethodInsnNode) in;
+                if(methodins.owner.contains(packageName) && !methodins.name.equals("<init>")){
+                  String name = methodins.owner + "." + methodins.name;
+                  if(methodins.owner.contains("/")){
+                    name = methodins.owner.substring(methodins.owner.lastIndexOf("/")+1)+"." + methodins.name;
+                  }
+                  Type[] types = Type.getArgumentTypes(methodins.desc);
+                  List<String> list = new ArrayList<>();
+                  if(methodins.getOpcode() == Opcodes.INVOKESTATIC){
+                    list.add("static");
+                  } else if(methodins.getOpcode() == Opcodes.INVOKEINTERFACE){
+                    list.add("interface");
+                  } else {
+                    list.add("object");
+                  }
+                  String returnType = Type.getReturnType(methodins.desc).getClassName();
+                  list.add(returnType);
+                  List<String> list2 = Arrays.stream(types).map(Type::getClassName).collect(Collectors.toList());
+                  list.addAll(list2);
+                  invokedMethods.put(name, list);
+                }
+                //logger.info(methodins.owner + "." + methodins.name);
+              }
+            }
+          }
+        }
+      }
+    }
+    return invokedMethods;
+  }
+
+  private static List<Either<TextDocumentEdit, ResourceOperation>> generateTestCases(File project, String packageName, String classname, String uri){
+    Set<XMLSolution> solutions = DefUseAnalysisProvider.getSolutions();
+    List<TestCase> testCaseList = new ArrayList<>();
+    for(XMLSolution solution : solutions){
+      TcgConfig config = TcgConfig.builder().build();
+      TestCase testCase = new TestCase(solution.exceptional,solution.labels,solution.returnValue, new BitSet(),config);
+      testCaseList.add(testCase);
+    }
+    Map<String, List<String>> invokedMethods = analyseJUnitTest(project,packageName +"."+classname);
+    Iterator<Map.Entry<String, List<String>>> iterator = invokedMethods.entrySet().iterator();
+    Map.Entry<String, List<String>> firstMethod = iterator.next(); // TODO Loop for multiple drivers
+
+    String testingClassName = firstMethod.getKey().substring(0,firstMethod.getKey().lastIndexOf("."));
+    String testingMethodName = firstMethod.getKey().substring(firstMethod.getKey().lastIndexOf(".")+1);
+    List<String> parameters = firstMethod.getValue();
+    parameters = parameters.subList(1, parameters.size()-1);
+    logger.info(parameters.toString());
+
+    Class myclass = null;
+    try {
+      URL url = project.toURI().toURL();
+      logger.info(String.valueOf(url));
+      URLClassLoader classLoader = new URLClassLoader(new URL[]{url});
+      myclass = classLoader.loadClass(packageName+"."+testingClassName);
+    } catch (ClassNotFoundException e) {
+      throw new RuntimeException(e);
+    } catch (MalformedURLException e) {
+      throw new RuntimeException(e);
+    }
+    Method[] methods = myclass.getDeclaredMethods();
+    Method methodUnderTest = null;
+    for(Method method : methods){
+      if(method.getName().equals(testingMethodName)){
+        methodUnderTest = method;
+      }
+    }
+    TestCases testCases = new TestCases(testCaseList,methodUnderTest);
+    TcgConfig config = TcgConfig.builder().build();
+    TestCasesStringGenerator tcg = new TestCasesStringGenerator(testCases, config);
+    String test = tcg.generateTestClassStringRepresentation();
+    logger.info(test);
+    List<TextEdit> testEdits = new ArrayList<>();
+    createTextEditAndIncrementLine(testEdits, 0, test);
+
+    uri += testingClassName + "DaciteTest.java";
+    CreateFile createFile = new CreateFile(uri, new CreateFileOptions(true,false));
+
+    TextDocumentEdit documentEdit = new TextDocumentEdit(new VersionedTextDocumentIdentifier(uri,1), testEdits);
+    List<Either<TextDocumentEdit, ResourceOperation>> changes = new ArrayList<>();
+    changes.add(Either.forRight(createFile));
+    changes.add(Either.forLeft(documentEdit));
+    return changes;
   }
 
 }

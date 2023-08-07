@@ -2,6 +2,7 @@ package dacite.ls;
 
 import com.google.gson.JsonObject;
 
+import dacite.lsp.defUseData.transformation.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -17,10 +18,6 @@ import dacite.lsp.defUseData.DefUseClass;
 import dacite.lsp.defUseData.DefUseData;
 import dacite.lsp.defUseData.DefUseMethod;
 import dacite.lsp.defUseData.DefUseVar;
-import dacite.lsp.defUseData.transformation.DefUseChain;
-import dacite.lsp.defUseData.transformation.DefUseChains;
-import dacite.lsp.defUseData.transformation.DefUseVariable;
-import dacite.lsp.defUseData.transformation.DefUseVariableRole;
 import jakarta.xml.bind.JAXBContext;
 import jakarta.xml.bind.JAXBException;
 import jakarta.xml.bind.Unmarshaller;
@@ -37,6 +34,8 @@ public class DefUseAnalysisProvider {
   private static List<DefUseChain> notCoveredChains = new ArrayList<>();
 
   private static List<DefUseClass> notCoveredClasses = new ArrayList<>();
+
+  private static int maxNumberChains;
 
   private static final String[] indexcolors = new String[]{
           "#1c1c1c", "#F6BE00", "#18c1d6", "#FF34FF", "#FF4A46", "#008941", "#006FA6", "#A30059",
@@ -128,6 +127,7 @@ public class DefUseAnalysisProvider {
       def.setEditorHighlight(false);
       use.setEditorHighlight(false);
     });
+    maxNumberChains = notCoveredChains.size();
 
     List<DefUseChain> chains = new ArrayList<>();
     for(DefUseChain chain: notCoveredChains){
@@ -158,6 +158,29 @@ public class DefUseAnalysisProvider {
 
   public static List<DefUseClass> getNotCoveredClasses() {
     return notCoveredClasses;
+  }
+
+  public static Set<XMLSolution> getSolutions(){
+    Set<XMLSolution> solutions = new HashSet<XMLSolution>();
+    for(DefUseChain chain :notCoveredChains){
+      XMLSolution solution = chain.getSolution();
+      Object returnValue = solution.returnValue;
+      if(returnValue == null && solution.returnValueArray!=null){
+        returnValue = solution.returnValueArray;
+      } else if(returnValue == null){
+        returnValue= new Object[0];
+      }
+      Map<String, Object> labels = new HashMap<>();
+      if(solution.labels != null){
+        labels.putAll(solution.labels);
+      }
+      if(solution.labelsArray != null){
+        labels.putAll(solution.labelsArray);
+      }
+      XMLSolution compSolution = new XMLSolution(solution.exceptional, returnValue, labels);
+      solutions.add(compSolution);
+    }
+    return solutions;
   }
 
   public static List<DefUseVariable> getDefUseVariables(boolean covered) {

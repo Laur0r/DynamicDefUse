@@ -1,5 +1,6 @@
 package dacite.core.defuse;
 
+import dacite.lsp.defUseData.transformation.XMLSolution;
 import de.wwu.mulib.exceptions.NotYetImplementedException;
 import de.wwu.mulib.search.executors.MulibExecutor;
 import de.wwu.mulib.search.trees.PathSolution;
@@ -458,7 +459,7 @@ public class DefUseAnalyser {
      * @param method method where this usage occured
      * @param solution PathSolution with which this chain is passed
      */
-    protected static void registerUse(DefUseVariable def, DefUseVariable use, int index, String name, String method, Solution solution){
+    protected static void registerUse(DefUseVariable def, DefUseVariable use, int index, String name, String method, PathSolution solution){
         // if no definition was found for this method, find definition of allocations in other methods
         if(def == null && interMethods.size() != 0){
             def = getAllocDef(method, index, name, use.value);
@@ -466,7 +467,9 @@ public class DefUseAnalyser {
         // if a definition was found and DUC does not exist, add DUC
         if(def != null){
             DefUseChain chain = new DefUseChain(def, use);
-            chain.setSolution(solution);
+            XMLSolution s = new XMLSolution();
+            s.setSolution(solution);
+            chain.setSolution(s);
             if(!chains.containsSimilar(chain)){
                 chains.addChain(chain);
             }
@@ -760,13 +763,15 @@ public class DefUseAnalyser {
             } else {
                 def = symbolicDefs.getLastDefinition(var.variableIndex, var.method, var.value, var.variableName, var.timeRef);
             }
-            registerUse(def, var, var.variableIndex, var.variableName, var.method, pathSolution.getSolution());
+            registerUse(def, var, var.variableIndex, var.variableName, var.method, pathSolution);
         }
         symbolicDefs = new DefSet();
         symbolicUsages = new ArrayDeque<>();
         for(DefUseChain chain:chains.getDefUseChains()){
             if(chain.getSolution() == null){
-                chain.setSolution(pathSolution.getSolution());
+                XMLSolution solution = new XMLSolution();
+                solution.setSolution(pathSolution);
+                chain.setSolution(solution);
             }
         }
         /*for (SubstitutedVar sv : symbolics) {
