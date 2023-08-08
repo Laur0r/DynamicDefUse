@@ -7,8 +7,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.awt.Color;
-import java.io.IOException;
-import java.io.StringReader;
+import java.io.*;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
@@ -57,59 +58,65 @@ public class DefUseAnalysisProvider {
           "#C895C5", "#320033", "#FF6832", "#66E1D3", "#CFCDAC", "#D0AC94", "#7ED379", "#012C58"
   };
 
-  public static void processXmlFile(String path, boolean covered) throws JAXBException, IOException {
+  public static void processXmlFile(String path) throws JAXBException, IOException {
     JAXBContext jaxbContext = JAXBContext.newInstance(DefUseChains.class);
     Unmarshaller jaxbUnmarshaller = jaxbContext.createUnmarshaller();
     String test = Files.readString(Paths.get(path));
     var chainCollection = (DefUseChains) jaxbUnmarshaller.unmarshal(new StringReader(test));
-    if(covered) {
-      defUseChains = chainCollection.getChains();
-      defUseClasses = transformDefUse(defUseChains);
-    } else {
-      notCoveredChains = chainCollection.getChains();
-    }
+    defUseChains = chainCollection.getChains();
+    defUseClasses = transformDefUse(defUseChains);
 
-    if(covered){
-      // Augment parsed information and pre-process
-      defUseChains.forEach(chain -> {
-        var def = chain.getDef();
-        var use = chain.getUse();
+    // Augment parsed information and pre-process
+    defUseChains.forEach(chain -> {
+      var def = chain.getDef();
+      var use = chain.getUse();
 
-        // Set backlink
-        def.setChain(chain);
-        use.setChain(chain);
+      // Set backlink
+      def.setChain(chain);
+      use.setChain(chain);
 
-        // Set role
-        def.setRole(DefUseVariableRole.DEFINITION);
-        use.setRole(DefUseVariableRole.USAGE);
+      // Set role
+      def.setRole(DefUseVariableRole.DEFINITION);
+      use.setRole(DefUseVariableRole.USAGE);
 
-        // Set visibility of highlights
-        def.setEditorHighlight(false);
-        use.setEditorHighlight(false);
-      });
+      // Set visibility of highlights
+      def.setEditorHighlight(false);
+      use.setEditorHighlight(false);
+    });
 
-      int i = 0;
-      for (HashMap<DefUseVariable, List<DefUseVariable>> defuse : getVariableMapping(true).values()) {
-        String color;
-        if(i<indexcolors.length){
-            color = indexcolors[i];//Color.decode(indexcolors[i]);
-        } else {
-            Random random = new Random();
-            color = "rgb("+random.nextInt(256)+","+ random.nextInt(256)+","+ random.nextInt(256)+")";
-        }
-
-        defuse.forEach((def, uses) -> {
-          def.setColor(color);
-          uses.forEach(it -> {it.setColor(color); it.getChain().getDef().setColor(color);});
-        });
-        i++;
+    int i = 0;
+    for (HashMap<DefUseVariable, List<DefUseVariable>> defuse : getVariableMapping(true).values()) {
+      String color;
+      if(i<indexcolors.length){
+        color = indexcolors[i];//Color.decode(indexcolors[i]);
+      } else {
+        Random random = new Random();
+        color = "rgb("+random.nextInt(256)+","+ random.nextInt(256)+","+ random.nextInt(256)+")";
       }
+
+      defuse.forEach((def, uses) -> {
+        def.setColor(color);
+        uses.forEach(it -> {it.setColor(color); it.getChain().getDef().setColor(color);});
+      });
+      i++;
     }
-    //logger.info(defUseChains.toString());
   }
 
-  public static void deriveNotCoveredChains(String path) throws JAXBException, IOException {
-    processXmlFile(path, false);
+  public static void processXmlFileSymbolic(String path, File project) throws JAXBException, IOException {
+    String pathDir = path.substring(0, path.lastIndexOf("/"));
+    Set<Class<?>> classes = parseClassesFromSolution(pathDir, project);
+    classes.add(DefUseChains.class);
+    logger.info(classes.toString());
+    JAXBContext jaxbContext = JAXBContext.newInstance(classes.toArray(new Class[]{}));
+    Unmarshaller jaxbUnmarshaller = jaxbContext.createUnmarshaller();
+    String test = Files.readString(Paths.get(path));
+    var chainCollection = (DefUseChains) jaxbUnmarshaller.unmarshal(new StringReader(test));
+    notCoveredChains = chainCollection.getChains();
+  }
+
+  public static void deriveNotCoveredChains(String path, File project) throws JAXBException, IOException {
+    processXmlFileSymbolic(path, project);
+
     // Augment parsed information and pre-process
     notCoveredChains.forEach(chain -> {
       var def = chain.getDef();
@@ -504,6 +511,37 @@ public class DefUseAnalysisProvider {
 
   public static void setTextDocumentUriTrigger(String textDocumentUriTrigger) {
     DefUseAnalysisProvider.textDocumentUriTrigger = textDocumentUriTrigger;
+  }
+
+  public static Set<Class<?>> parseClassesFromSolution(String path, File project){
+    FileInputStream stream = null;
+    Set<Class<?>> classes = new HashSet<>();
+    try {
+      stream = new FileInputStream(path+"/DaciteSolutionClasses.txt");
+    } catch (FileNotFoundException e) {
+      e.printStackTrace();
+    }
+    BufferedReader reader = new BufferedReader(new InputStreamReader(stream));
+    String strLine;
+    ArrayList<String> lines = new ArrayList<String>();
+    try {
+      while ((strLine = reader.readLine()) != null) {
+        URL url = project.toURI().toURL();
+        URLClassLoader classLoader = new URLClassLoader(new URL[]{url});
+        Class<?> clazz = classLoader.loadClass(strLine);
+        classes.add(clazz);
+      }
+    } catch (IOException e) {
+      e.printStackTrace();
+    } catch (ClassNotFoundException e) {
+      throw new RuntimeException(e);
+    }
+    try {
+      reader.close();
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+    return classes;
   }
 
 }
