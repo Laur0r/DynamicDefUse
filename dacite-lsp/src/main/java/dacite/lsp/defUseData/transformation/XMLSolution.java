@@ -23,14 +23,8 @@ public class XMLSolution {
     public Object returnValue;
 
     @XmlElement
-    public Object[] returnValueArray;
-
-    @XmlElement
     //@XmlJavaTypeAdapter(XMLLabelAdapter.class)
     public Map<String, Object> labels;
-
-    @XmlElement
-    public Map<String, Object[]> labelsArray;
 
     public XMLSolution(){
 
@@ -43,29 +37,13 @@ public class XMLSolution {
     }
 
     public void setSolution(PathSolution solution){
-        exceptional = solution instanceof ExceptionPathSolution;
-        if(solution.getSolution().returnValue.getClass().isArray()){
-            returnValueArray = new Object[Array.getLength(solution.getSolution().returnValue)];
-            for(int i=0; i< Array.getLength(solution.getSolution().returnValue); i++){
-                returnValueArray[i] = Array.get(solution.getSolution().returnValue,i);
-            }
-        } else {
-            this.returnValue = solution.getSolution().returnValue;
-        }
+        this.exceptional = solution instanceof ExceptionPathSolution;
+        this.returnValue = solution.getSolution().returnValue;
         labels = new HashMap<>();
-        labelsArray = new HashMap<>();
         for(Map.Entry<String,Object> entry : solution.getSolution().labels.getIdToLabel().entrySet()){
             String key = entry.getKey();
             Object obj = entry.getValue();
-            if(obj.getClass().isArray()){
-                Object[] array = new Object[Array.getLength(obj)];
-                for(int i=0; i< Array.getLength(obj); i++){
-                    array[i] = Array.get(obj,i);
-                }
-                labelsArray.put(key, array);
-            } else{
-                labels.put(key, obj);
-            }
+            labels.put(key, obj);
         }
     }
 
