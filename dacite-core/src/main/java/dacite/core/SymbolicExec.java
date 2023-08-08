@@ -121,6 +121,9 @@ public class SymbolicExec {
             xsw = xof.createXMLStreamWriter(new BufferedOutputStream(new FileOutputStream("SymbolicDUCs.xml")));
             xsw.writeStartDocument();
             xsw.writeStartElement("DefUseChains");
+            if(DefUseAnalyser.chains.getDefUseChains().size() >0) {
+                getClassesOfSolution(DefUseAnalyser.chains.getDefUseChains().get(0).getSolution());
+            }
 
             for (DefUseChain chain : DefUseAnalyser.chains.getDefUseChains()) {
                 xsw.writeStartElement("DefUseChain");
@@ -130,70 +133,13 @@ public class SymbolicExec {
                 xsw.writeStartElement("use");
                 parseDefUseVariable(xsw, chain.getUse());
                 xsw.writeEndElement();
-                //xsw.writeStartElement("solution");
                 parseSolution(xsw, chain.getSolution());
-                //xsw.writeEndElement();
                 xsw.writeEndElement();
             }
             xsw.writeEndElement();
             xsw.writeEndDocument();
             xsw.flush();
             xsw.close();
-            //format("file.xml");
-
-            JAXBContext jaxbContext = JAXBContext.newInstance(dacite.lsp.defUseData.transformation.DefUseChains.class);
-            Unmarshaller jaxbUnmarshaller = jaxbContext.createUnmarshaller();
-            String test = Files.readString(Paths.get("SymbolicDUCs.xml"));
-            var chainCollection = (dacite.lsp.defUseData.transformation.DefUseChains) jaxbUnmarshaller.unmarshal(new StringReader(test));
-            Set<XMLSolution> uniqueSolutions = new HashSet<>();
-            for(dacite.lsp.defUseData.transformation.DefUseChain chain :chainCollection.getChains()) {
-                XMLSolution solution = chain.getSolution();
-                Object returnValue = solution.returnValue;
-                if (returnValue == null && solution.returnValueArray != null) {
-                    returnValue = solution.returnValueArray;
-                } else if (returnValue == null) {
-                    returnValue = new Object[0];
-                }
-                Map<String, Object> labels = new HashMap<>();
-                if (solution.labels != null) {
-                    labels.putAll(solution.labels);
-                }
-                if (solution.labelsArray != null) {
-                    labels.putAll(solution.labelsArray);
-                }
-                XMLSolution compSolution = new XMLSolution(solution.exceptional, returnValue, labels);
-                uniqueSolutions.add(compSolution);
-            }
-            List<TestCase> testCaseList = new ArrayList<>();
-            for(XMLSolution solution : uniqueSolutions){
-                TcgConfig config = TcgConfig.builder().build();
-                TestCase testCase = new TestCase(solution.exceptional,solution.labels,solution.returnValue, new BitSet(),config);
-                testCaseList.add(testCase);
-            }
-
-            Class myclass = null;
-            try {
-                URL url2 = new URL("file:/home/l_troo01/Development/Forschung/TestAnalysis/out/production/TestAnalysis/");
-                logger.info(String.valueOf(url2));
-                URLClassLoader classLoader = new URLClassLoader(new URL[]{url2});
-                myclass = classLoader.loadClass("tryme.Sort");
-            } catch (ClassNotFoundException e) {
-                throw new RuntimeException(e);
-            } catch (MalformedURLException e) {
-                throw new RuntimeException(e);
-            }
-            Method[] methods = myclass.getDeclaredMethods();
-            Method methodUnderTest = null;
-            for(Method method : methods){
-                if(method.getName().equals("sort")){
-                    methodUnderTest = method;
-                }
-            }
-            TestCases testCases = new TestCases(testCaseList,methodUnderTest);
-            TcgConfig config = TcgConfig.builder().build();
-            TestCasesStringGenerator tcg = new TestCasesStringGenerator(testCases, config);
-            logger.info(tcg.generateTestClassStringRepresentation());
-            System.out.println(chainCollection);
         }
         catch (Exception e) {
             logger.info("Unable to write the file: " + e.getMessage());
@@ -230,16 +176,7 @@ public class SymbolicExec {
 
     private static void parseSolution(XMLStreamWriter xsw, XMLSolution solution){
         try {
-            Set<Class<?>> classes = new HashSet<>();
-            int i = 0;
-            for (Map.Entry<String, Object> o : solution.labels.entrySet()) {
-                if (o.getValue() == null) {
-                    classes.add(Object.class);
-                } else {
-                    classes.add(o.getValue().getClass());
-                }
-                i++;
-            }
+            Set<Class<?>> classes = parseClassesFromSolution();
             classes.add(XMLSolution.class);
             JAXBContext jaxbContextR = JAXBContext.newInstance(classes.toArray(Class[]::new));
             Marshaller jaxbMarshallerR = jaxbContextR.createMarshaller();
@@ -254,29 +191,67 @@ public class SymbolicExec {
         }
     }
 
-    private static void format(String file) {
-        logger.info("hat String gebaut");
-        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-        DocumentBuilder builder = null;
+    private static void getClassesOfSolution(XMLSolution solution){
         try {
-            builder = factory.newDocumentBuilder();
-            Document document = builder.parse(new InputSource(new InputStreamReader(new FileInputStream(file))));
-
-            // Gets a new transformer instance
-            javax.xml.transform.Transformer xformer = TransformerFactory.newInstance().newTransformer();
-            // Sets XML formatting
-            //xformer.setOutputProperty(OutputKeys.METHOD, "xml");
-            // Sets indent
-            //xformer.setOutputProperty(OutputKeys.INDENT, "yes");
-            Source source = new DOMSource(document);
-            StringWriter writer = new StringWriter();
-            xformer.transform(source, new StreamResult(writer));
-            logger.info("sollte Ergebnis geprintet haben");
-            System.out.println(writer.getBuffer().toString());
-        } catch (Exception e) {
-            logger.info(e.getMessage());
+            Set<String> classes = new HashSet<>();
+            for (Map.Entry<String, Object> o : solution.labels.entrySet()) {
+                if (!(o.getValue() == null)) {
+                    classes.add(o.getValue().getClass().getName());
+                }
+            }
+            for(Map.Entry<String, Object[]> o : solution.labelsArray.entrySet()){
+                if (!(o.getValue() == null)) {
+                    classes.add(o.getValue().getClass().getName());
+                }
+            }
+            if(solution.returnValue != null){
+                classes.add(solution.returnValue.getClass().getName());
+            }
+            if(solution.returnValueArray!= null){
+                classes.add(solution.returnValueArray.getClass().getName());
+            }
+            BufferedWriter writer = new BufferedWriter(new FileWriter("DaciteSolutionClasses.txt"));
+            for (String className : classes) {
+                writer.write(className);
+                writer.newLine();
+            }
+            writer.close();
+        } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    public static Set<Class<?>> parseClassesFromSolution(){
+        FileInputStream stream = null;
+        Set<Class<?>> classes = new HashSet<>();
+        try {
+            stream = new FileInputStream("DaciteSolutionClasses.txt");
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+        BufferedReader reader = new BufferedReader(new InputStreamReader(stream));
+        String strLine;
+        ArrayList<String> lines = new ArrayList<String>();
+        try {
+            while ((strLine = reader.readLine()) != null) {
+                // Classloader works only for Objects not arrays
+                if(strLine.contains("[") && strLine.contains(";")){
+                    classes.add(Class.forName(strLine));
+                } else {
+                    classes.add(SymbolicExec.class.getClassLoader().loadClass(strLine));
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (ClassNotFoundException e) {
+            throw new RuntimeException(e);
+        }
+        try {
+            reader.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return classes;
     }
 
 
