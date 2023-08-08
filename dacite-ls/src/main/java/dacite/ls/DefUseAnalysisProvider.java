@@ -172,17 +172,12 @@ public class DefUseAnalysisProvider {
     for(DefUseChain chain :notCoveredChains){
       XMLSolution solution = chain.getSolution();
       Object returnValue = solution.returnValue;
-      if(returnValue == null && solution.returnValueArray!=null){
-        returnValue = solution.returnValueArray;
-      } else if(returnValue == null){
+      if(returnValue == null){
         returnValue= new Object[0];
       }
       Map<String, Object> labels = new HashMap<>();
       if(solution.labels != null){
         labels.putAll(solution.labels);
-      }
-      if(solution.labelsArray != null){
-        labels.putAll(solution.labelsArray);
       }
       XMLSolution compSolution = new XMLSolution(solution.exceptional, returnValue, labels);
       solutions.add(compSolution);
@@ -526,10 +521,14 @@ public class DefUseAnalysisProvider {
     ArrayList<String> lines = new ArrayList<String>();
     try {
       while ((strLine = reader.readLine()) != null) {
-        URL url = project.toURI().toURL();
-        URLClassLoader classLoader = new URLClassLoader(new URL[]{url});
-        Class<?> clazz = classLoader.loadClass(strLine);
-        classes.add(clazz);
+        if(strLine.contains("[")){
+          classes.add(Class.forName(strLine));
+        } else {
+          URL url = project.toURI().toURL();
+          URLClassLoader classLoader = new URLClassLoader(new URL[]{url});
+          Class<?> clazz = classLoader.loadClass(strLine);
+          classes.add(clazz);
+        }
       }
     } catch (IOException e) {
       e.printStackTrace();

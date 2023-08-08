@@ -199,17 +199,9 @@ public class SymbolicExec {
                     classes.add(o.getValue().getClass().getName());
                 }
             }
-            /*for(Map.Entry<String, Object[]> o : solution.labelsArray.entrySet()){
-                if (!(o.getValue() == null)) {
-                    classes.add(o.getValue().getClass().getName());
-                }
-            }
             if(solution.returnValue != null){
                 classes.add(solution.returnValue.getClass().getName());
             }
-            if(solution.returnValueArray!= null){
-                classes.add(solution.returnValueArray.getClass().getName());
-            }*/
             BufferedWriter writer = new BufferedWriter(new FileWriter("DaciteSolutionClasses.txt"));
             for (String className : classes) {
                 writer.write(className);
@@ -235,7 +227,7 @@ public class SymbolicExec {
         try {
             while ((strLine = reader.readLine()) != null) {
                 // Classloader works only for Objects not arrays
-                if(strLine.contains("[") && strLine.contains(";")){
+                if(strLine.contains("[")){
                     classes.add(Class.forName(strLine));
                 } else {
                     classes.add(SymbolicExec.class.getClassLoader().loadClass(strLine));
