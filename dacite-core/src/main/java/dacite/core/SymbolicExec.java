@@ -199,7 +199,7 @@ public class SymbolicExec {
                     classes.add(o.getValue().getClass().getName());
                 }
             }
-            for(Map.Entry<String, Object[]> o : solution.labelsArray.entrySet()){
+            /*for(Map.Entry<String, Object[]> o : solution.labelsArray.entrySet()){
                 if (!(o.getValue() == null)) {
                     classes.add(o.getValue().getClass().getName());
                 }
@@ -209,7 +209,7 @@ public class SymbolicExec {
             }
             if(solution.returnValueArray!= null){
                 classes.add(solution.returnValueArray.getClass().getName());
-            }
+            }*/
             BufferedWriter writer = new BufferedWriter(new FileWriter("DaciteSolutionClasses.txt"));
             for (String className : classes) {
                 writer.write(className);
