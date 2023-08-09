@@ -128,7 +128,7 @@ public class CommandRegistry {
             String stdOut = processOutput.toString().trim();
              */
 
-              DefUseAnalysisProvider.processXmlFile(projectDir + "coveredDUCs.xml", true);
+              DefUseAnalysisProvider.processXmlFile(projectDir + "coveredDUCs.xml");
               DefUseAnalysisProvider.setTextDocumentUriTrigger(textDocumentUri);
               TreeViewNode node = new TreeViewNode("defUseChains","", "");
               TreeViewDidChangeParams paramsChange = new TreeViewDidChangeParams(new TreeViewNode[]{node});
@@ -196,7 +196,8 @@ public class CommandRegistry {
             logger.info("{}: process {} started", "executed command", pb.command());
             logger.info("process exited with status {}", process.waitFor());
 
-            DefUseAnalysisProvider.deriveNotCoveredChains(projectDir + "SymbolicDUCs.xml");
+            File projectFile = getProjectClassDir(textDocumentUri);
+            DefUseAnalysisProvider.deriveNotCoveredChains(projectDir + "SymbolicDUCs.xml", projectFile);
             TreeViewNode node = new TreeViewNode("notCoveredDUC","", "");
             TreeViewDidChangeParams paramsChange = new TreeViewDidChangeParams(new TreeViewNode[]{node});
             client.treeViewDidChange(paramsChange);
@@ -214,24 +215,7 @@ public class CommandRegistry {
             String className = analyser.extractClassName();
             String packageName = analyser.extractPackageName();
 
-            // Extract project's root directory
-            Path textDocumentPath = Paths.get(textDocumentUri.replace("file://", ""));
-            String projectDirStart = textDocumentPath.getParent().toString();
-            projectDirStart = projectDirStart.substring(0, projectDirStart.lastIndexOf("/src/"));
-            String projectName = projectDirStart.substring(projectDirStart.lastIndexOf("/")+1);
-            String projectDir = projectDirStart+"/out/production/"+projectName;
-            File projectFile = new File(projectDir);
-            if(!projectFile.exists()){
-              projectDir = projectDirStart+"/build/classes/java/main/"+projectName;
-              projectFile = new File(projectDir);
-            }
-            if(!projectFile.exists()){
-              projectDir = projectDirStart+"/target/classes/"+projectName;
-              projectFile = new File(projectDir);
-            }
-            if(!projectFile.exists()){
-              throw new RuntimeException("Class directory not found for executed File");
-            }
+            File projectFile = getProjectClassDir(textDocumentUri);
             String uri = textDocumentUri.substring(0,textDocumentUri.lastIndexOf("/"));
             uri += "/DaciteSymbolicDriverFor" + className + ".java";
             CreateFile createFile = new CreateFile(uri, new CreateFileOptions(true,false));
@@ -255,27 +239,9 @@ public class CommandRegistry {
           //analyser.methodVisitor();
           String className = analyser.extractClassName();
           String packageName = analyser.extractPackageName();
-
-          // Extract project's root directory
-          Path textDocumentPath = Paths.get(textDocumentUri.replace("file://", ""));
-          String projectDirStart = textDocumentPath.getParent().toString();
-          projectDirStart = projectDirStart.substring(0, projectDirStart.lastIndexOf("/src/"));
-          String projectName = projectDirStart.substring(projectDirStart.lastIndexOf("/")+1);
-          String projectDir = projectDirStart+"/out/production/"+projectName;
-          File projectFile = new File(projectDir);
-          if(!projectFile.exists()){
-            projectDir = projectDirStart+"/build/classes/java/main/"+projectName;
-            projectFile = new File(projectDir);
-          }
-          if(!projectFile.exists()){
-            projectDir = projectDirStart+"/target/classes/"+projectName;
-            projectFile = new File(projectDir);
-          }
-          if(!projectFile.exists()){
-            throw new RuntimeException("Class directory not found for executed File");
-          }
-
+          File projectFile = getProjectClassDir(textDocumentUri);
           String uri = textDocumentUri.substring(0,textDocumentUri.lastIndexOf("/"));
+
           List<Either<TextDocumentEdit, ResourceOperation>> changes = generateTestCases(projectFile, packageName, className, uri);
           WorkspaceEdit edit = new WorkspaceEdit();
           edit.setDocumentChanges(changes);
@@ -543,14 +509,13 @@ public class CommandRegistry {
       }
     }
     TestCases testCases = new TestCases(testCaseList,methodUnderTest);
-    TcgConfig config = TcgConfig.builder().build();
+    TcgConfig config = TcgConfig.builder().setDaciteTcg(true).build();
     TestCasesStringGenerator tcg = new TestCasesStringGenerator(testCases, config);
     String test = tcg.generateTestClassStringRepresentation();
-    logger.info(test);
     List<TextEdit> testEdits = new ArrayList<>();
     createTextEditAndIncrementLine(testEdits, 0, test);
 
-    uri += testingClassName + "DaciteTest.java";
+    uri += "/Test"+testingClassName + "Dacite.java";
     CreateFile createFile = new CreateFile(uri, new CreateFileOptions(true,false));
 
     TextDocumentEdit documentEdit = new TextDocumentEdit(new VersionedTextDocumentIdentifier(uri,1), testEdits);
@@ -558,6 +523,28 @@ public class CommandRegistry {
     changes.add(Either.forRight(createFile));
     changes.add(Either.forLeft(documentEdit));
     return changes;
+  }
+
+  private static File getProjectClassDir(String textDocumentUri){
+    // Extract project's source directory
+    Path textDocumentPath = Paths.get(textDocumentUri.replace("file://", ""));
+    String projectDirStart = textDocumentPath.getParent().toString();
+    projectDirStart = projectDirStart.substring(0, projectDirStart.lastIndexOf("/src/"));
+    String projectName = projectDirStart.substring(projectDirStart.lastIndexOf("/")+1);
+    String projectDir = projectDirStart+"/out/production/"+projectName;
+    File projectFile = new File(projectDir);
+    if(!projectFile.exists()){
+      projectDir = projectDirStart+"/build/classes/java/main/"+projectName;
+      projectFile = new File(projectDir);
+    }
+    if(!projectFile.exists()){
+      projectDir = projectDirStart+"/target/classes/"+projectName;
+      projectFile = new File(projectDir);
+    }
+    if(!projectFile.exists()){
+      throw new RuntimeException("Class directory not found for executed File");
+    }
+    return projectFile;
   }
 
 }
