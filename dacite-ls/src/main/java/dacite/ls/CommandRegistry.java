@@ -2,13 +2,10 @@ package dacite.ls;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
-
 import dacite.lsp.DaciteExtendedLanguageClient;
 import dacite.lsp.defUseData.transformation.XMLSolution;
 import dacite.lsp.tvp.TreeViewDidChangeParams;
 import dacite.lsp.tvp.TreeViewNode;
-import de.wwu.mulib.Mulib;
-import de.wwu.mulib.search.trees.Solution;
 import de.wwu.mulib.tcg.TcgConfig;
 import de.wwu.mulib.tcg.TestCase;
 import de.wwu.mulib.tcg.TestCases;
@@ -509,7 +506,7 @@ public class CommandRegistry {
       }
     }
     TestCases testCases = new TestCases(testCaseList,methodUnderTest);
-    TcgConfig config = TcgConfig.builder().setDaciteTcg(true).build();
+    TcgConfig config = TcgConfig.builder().setTestClassPostfix("Dacite").build();
     TestCasesStringGenerator tcg = new TestCasesStringGenerator(testCases, config);
     String test = tcg.generateTestClassStringRepresentation();
     List<TextEdit> testEdits = new ArrayList<>();
