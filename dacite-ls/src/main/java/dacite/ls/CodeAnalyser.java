@@ -78,7 +78,11 @@ public class CodeAnalyser {
           }
         } else if(e instanceof FieldAccessExpr) {
           FieldAccessExpr name = (FieldAccessExpr) e;
-          if (name.toString().equals(variableName)) {
+          String fieldName = name.toString();
+          if(fieldName.contains("this.")){
+            fieldName = fieldName.substring(fieldName.indexOf(".")+1);
+          }
+          if (fieldName.equals(variableName)) {
             name.getRange().ifPresent(range -> positions.add(range.begin));
           }
         } else {
