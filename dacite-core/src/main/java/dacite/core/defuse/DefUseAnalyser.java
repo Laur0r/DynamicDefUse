@@ -790,6 +790,11 @@ public class DefUseAnalyser {
         }*/
     }
 
+    public static void resetSymbolicValues() {
+        symbolicDefs = new DefSet();
+        symbolicUsages = new ArrayDeque<>();
+    }
+
     private static DefUseVariable findSymbolicUse(String method, int linenumber, Object value, boolean removed){
         for(DefUseVariable use : symbolicUsages){
             if(use.getLinenumber() == linenumber && use.getMethod().equals(method) &&

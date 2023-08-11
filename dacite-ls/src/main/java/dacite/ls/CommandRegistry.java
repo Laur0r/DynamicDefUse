@@ -470,10 +470,10 @@ public class CommandRegistry {
   }
 
   private static List<Either<TextDocumentEdit, ResourceOperation>> generateTestCases(File project, String packageName, String classname, String uri){
-    Set<XMLSolution> solutions = DefUseAnalysisProvider.getSolutions();
+    List<XMLSolution> solutions = DefUseAnalysisProvider.getSolutions();
     List<TestCase> testCaseList = new ArrayList<>();
     for(XMLSolution solution : solutions){
-      TcgConfig config = TcgConfig.builder().build();
+      TcgConfig config = TcgConfig.builder().setTestClassPostfix("Dacite").build();
       TestCase testCase = new TestCase(solution.exceptional,solution.labels,solution.returnValue, new BitSet(),config);
       testCaseList.add(testCase);
     }
@@ -485,12 +485,10 @@ public class CommandRegistry {
     String testingMethodName = firstMethod.getKey().substring(firstMethod.getKey().lastIndexOf(".")+1);
     List<String> parameters = firstMethod.getValue();
     parameters = parameters.subList(1, parameters.size()-1);
-    logger.info(parameters.toString());
 
     Class myclass = null;
     try {
       URL url = project.toURI().toURL();
-      logger.info(String.valueOf(url));
       URLClassLoader classLoader = new URLClassLoader(new URL[]{url});
       myclass = classLoader.loadClass(packageName+"."+testingClassName);
     } catch (ClassNotFoundException e) {
