@@ -1,5 +1,12 @@
 package dacite.core.defuse;
 
+import com.github.javaparser.StaticJavaParser;
+import com.github.javaparser.ast.CompilationUnit;
+import com.github.javaparser.ast.Node;
+import com.github.javaparser.ast.expr.BinaryExpr;
+import com.github.javaparser.ast.expr.IntegerLiteralExpr;
+import com.github.javaparser.ast.expr.MethodCallExpr;
+import com.github.javaparser.ast.stmt.ExpressionStmt;
 import dacite.lsp.defUseData.transformation.XMLSolution;
 import de.wwu.mulib.exceptions.NotYetImplementedException;
 import de.wwu.mulib.search.executors.MulibExecutor;
@@ -12,8 +19,13 @@ import de.wwu.mulib.substitutions.primitives.ConcSnumber;
 import de.wwu.mulib.substitutions.primitives.Sint;
 import de.wwu.mulib.substitutions.primitives.Sprimitive;
 
+import java.io.File;
+import java.net.URI;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.*;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 /**
  * Class responsible for analyzing the data flow
@@ -38,6 +50,8 @@ public class DefUseAnalyser {
     // allocation of aliases
     protected static Map<Object,AliasAlloc> aliases;
 
+    protected static Map<String, CompilationUnit> sourceCode;
+
     protected static long counter;
 
     static{
@@ -47,6 +61,7 @@ public class DefUseAnalyser {
         symbolicUsages = new ArrayDeque<>();
         interMethods = new InterMethodAllocDequeue();
         aliases = new HashMap<Object, AliasAlloc>();
+        sourceCode = new HashMap<String, CompilationUnit>();
         counter = 0;
     }
 
@@ -428,6 +443,21 @@ public class DefUseAnalyser {
         }
     }
 
+    public static void visitSourceCode(String className, String path){
+        if(!sourceCode.containsKey(className)){
+            File file = new File(path+className+".java");
+            try {
+                if (file.exists()) {
+                    String code = Files.readString(file.toPath());
+                    CompilationUnit unit = StaticJavaParser.parse(code);
+                    sourceCode.put(className, unit);
+                }
+            } catch (Exception e){
+                logger.warning(e.getMessage());
+            }
+        }
+    }
+
     /**
      * Given a usage and its most recent definition, these form a DUC and are added to chains.
      * @param def most recent definition
@@ -528,7 +558,11 @@ public class DefUseAnalyser {
                 if(alloc.newMethod.equals(method) && (alloc.newName == null || alloc.newName.equals(varname)) && parameter == alloc.parameter) {
                     if(alloc.value == value || (value != null && isPrimitiveOrWrapper(value) && value.equals(alloc.value))){
                         // get variable usage for parameter when method is called at call site
-                        DefUseVariable result = chains.findUse(alloc.currentMethod, alloc.linenumber, value, alloc.isRemoved); // TODO Erkennung von Operationen in Methodenaufrufen?
+                        String newName = getInterParameter(alloc.currentMethod.substring(0, alloc.currentMethod.lastIndexOf(".")), alloc.linenumber, parameter);
+                        if(newName.isEmpty()){
+                            continue;
+                        }
+                        DefUseVariable result = chains.findUse(alloc.currentMethod, alloc.linenumber, value, newName, alloc.isRemoved);
                         // if this exists a method allocation is registered instead of a definition
                         if(result != null) {
                             alloc.newIndex = index;
@@ -559,6 +593,24 @@ public class DefUseAnalyser {
         registerDef(def);
     }
 
+    public static String getInterParameter(String className, int linenumber, int parameter){
+        CompilationUnit unit = sourceCode.get(className);
+        List<Node> methods = unit.findAll(MethodCallExpr.class).stream().filter(it -> {
+            var range = it.getRange().orElse(null);
+            return range != null && range.begin.line == linenumber;
+        }).collect(Collectors.toList());
+        if(methods.size()==1){
+            MethodCallExpr method = (MethodCallExpr) methods.get(0);
+            Node argument = method.getArgument(parameter);
+            if(argument instanceof BinaryExpr || argument instanceof IntegerLiteralExpr){
+                return "";
+            } else {
+                return argument.toString();
+            }
+        }
+        return "";
+    }
+
     /**
      * Method parameter is registered at the entry of the called method. If this parameter was defined elsewhere and is
      * passed on to this method, this is not considered as a definition but registered as an allocation over the boundary
@@ -581,7 +633,14 @@ public class DefUseAnalyser {
                             ((PartnerClass) value).__mulib__getId() == ((PartnerClass) alloc.value).__mulib__getId()))){
                         // get variable usage for parameter when method is called at call site
                         // TODO assign symbolic values later on as allocation?
-                        DefUseVariable result = findSymbolicUse(alloc.currentMethod, alloc.linenumber, value, alloc.isRemoved); // TODO Erkennung von Operationen in Methodenaufrufen?
+                        String newName = getInterParameter(alloc.currentMethod.substring(0, alloc.currentMethod.lastIndexOf(".")), alloc.linenumber, parameter);
+                        if(newName.isEmpty()){
+                            continue;
+                        }
+                        DefUseVariable result = findSymbolicUse(alloc.currentMethod, alloc.linenumber, value, alloc.isRemoved);
+                        if(result == null){
+                            result = chains.findUse(alloc.currentMethod, alloc.linenumber, value, newName, alloc.isRemoved);
+                        }
                         // if this exists a method allocation is registered instead of a definition
                         if(result != null) {
                             alloc.newIndex = index;

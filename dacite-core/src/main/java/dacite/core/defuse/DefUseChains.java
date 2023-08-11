@@ -77,13 +77,13 @@ public class DefUseChains {
      * @param removed boolean indicating whether this usage was already removed from chains
      * @return variable usage
      */
-    public DefUseVariable findUse(String method, int linenumber, Object value, boolean removed){
+    public DefUseVariable findUse(String method, int linenumber, Object value, String name, boolean removed){
         ListIterator iterator = defUseChains.listIterator(defUseChains.size());
         while (iterator.hasPrevious()){
             DefUseChain chain = (DefUseChain) iterator.previous();
         //for(DefUseChain chain : defUseChains){
             DefUseVariable use = chain.getUse();
-            if(use.getLinenumber() == linenumber && use.getMethod().equals(method) &&
+            if(use.getLinenumber() == linenumber && use.getMethod().equals(method) && use.getVariableName().equals(name) &&
                     (use.getValue() == value || value != null && DefUseAnalyser.isPrimitiveOrWrapper(value) && value.equals(use.getValue()))){
                 if(!removed){
                     defUseChains.remove(chain);
