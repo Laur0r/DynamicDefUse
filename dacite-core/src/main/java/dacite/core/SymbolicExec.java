@@ -28,11 +28,13 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import java.io.*;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.logging.Logger;
@@ -73,7 +75,7 @@ public class SymbolicExec {
         sourceFileList.add(file);
         StandardJavaFileManager fileManager = compiler.getStandardFileManager( null, null, null );
         Iterable<? extends JavaFileObject> javaSource = fileManager.getJavaFileObjectsFromFiles( sourceFileList );
-        Iterable<String> options = Arrays.asList("-d", sourcePath);
+        Iterable<String> options = Arrays.asList("-d", sourcePath, "--release", "11");
         JavaCompiler.CompilationTask task = compiler.getTask(null, fileManager, null, options, null, javaSource);
         task.call();
 
@@ -98,12 +100,16 @@ public class SymbolicExec {
                         .setTRANSF_VALIDATE_TRANSFORMATION(true)
                         .setGLOBAL_SEARCH_STRATEGY(SearchStrategy.IDDSAS)
                         .setCHOICE_OPTION_DEQUE_TYPE(ChoiceOptionDeques.DIRECT_ACCESS)
-                        .setGLOBAL_SOLVER_TYPE(Solvers.Z3_GLOBAL_LEARNING)
-                        .setINCR_ACTUAL_CP_BUDGET(16)
+                        .setGLOBAL_SOLVER_TYPE(Solvers.Z3_INCREMENTAL)
+                        .setINCR_ACTUAL_CP_BUDGET(8)
                         .setTRANSF_USE_DEFAULT_MODEL_CLASSES(true)
                         .setHIGH_LEVEL_FREE_ARRAY_THEORY(true)
-                        //.setSECONDS_PER_INVOCATION(5)
-                        .setFIXED_ACTUAL_CP_BUDGET(16)
+                        .setSECONDS_PER_INVOCATION(5)
+                        .setFIXED_ACTUAL_CP_BUDGET(64)
+                        //.setMAX_EXCEEDED_BUDGETS(150_000)
+                        .setBACKTRACK_CALLBACK((a0, a1, a2) -> DefUseAnalyser.resetSymbolicValues())
+                        .setFAIL_CALLBACK((a0, a1, a2) -> DefUseAnalyser.resetSymbolicValues())
+                        .setEXCEEDED_BUDGET_CALLBACK((a0, a1, a2) -> DefUseAnalyser.resetSymbolicValues())
                         .setTRANSF_TREAT_SPECIAL_METHOD_CALLS(true)
                         .setTRANSF_IGNORE_CLASSES(List.of(DefUseAnalyser.class, ParameterCollector.class))
                         .setPATH_SOLUTION_CALLBACK(DefUseAnalyser::resolveLabels)
@@ -140,10 +146,29 @@ public class SymbolicExec {
             xsw.writeEndDocument();
             xsw.flush();
             xsw.close();
+
+            /*Set<Class<?>> classes = parseClassesFromSolution();
+            classes.add(dacite.lsp.defUseData.transformation.DefUseChains.class);
+            logger.info(classes.toString());
+            JAXBContext jaxbContext = JAXBContext.newInstance(classes.toArray(new Class[]{}));
+            Unmarshaller jaxbUnmarshaller = jaxbContext.createUnmarshaller();
+            String test = Files.readString(Path.of("SymbolicDUCs.xml"));
+            var chainCollection = (dacite.lsp.defUseData.transformation.DefUseChains) jaxbUnmarshaller.unmarshal(new StringReader(test));
+            System.out.println("test");*/
         }
         catch (Exception e) {
             logger.info("Unable to write the file: " + e.getMessage());
         }
+
+        sourceFileList = new ArrayList<File>();
+        for(File f: packagedir.listFiles()) {
+            if (!f.isDirectory()) {
+                sourceFileList.add(f);
+            }
+        }
+        javaSource = fileManager.getJavaFileObjectsFromFiles( sourceFileList );
+        JavaCompiler.CompilationTask taskRecompile = compiler.getTask(null, fileManager, null, options, null, javaSource);
+        taskRecompile.call();
 
     }
 
@@ -196,7 +221,15 @@ public class SymbolicExec {
             Set<String> classes = new HashSet<>();
             for (Map.Entry<String, Object> o : solution.labels.entrySet()) {
                 if (!(o.getValue() == null)) {
-                    classes.add(o.getValue().getClass().getName());
+                    Class clazz = o.getValue().getClass();
+                    classes.add(clazz.getName());
+                    if(!isPrimitiveOrPrimitiveWrapperOrString(clazz)){
+                        for(Field f: clazz.getDeclaredFields()){
+                            if(!f.getType().isPrimitive()){
+                                classes.add(f.getType().getName());
+                            }
+                        }
+                    }
                 }
             }
             if(solution.returnValue != null){
@@ -227,7 +260,7 @@ public class SymbolicExec {
         try {
             while ((strLine = reader.readLine()) != null) {
                 // Classloader works only for Objects not arrays
-                if(strLine.contains("[")){
+                if(strLine.contains("[") || strLine.equals("int")){
                     classes.add(Class.forName(strLine));
                 } else {
                     classes.add(SymbolicExec.class.getClassLoader().loadClass(strLine));
@@ -246,6 +279,12 @@ public class SymbolicExec {
         return classes;
     }
 
+    public static boolean isPrimitiveOrPrimitiveWrapperOrString(Class<?> type) {
+        return (type.isPrimitive() && type != void.class) ||
+                type == Double.class || type == Float.class || type == Long.class ||
+                type == Integer.class || type == Short.class || type == Character.class ||
+                type == Byte.class || type == Boolean.class || type == String.class;
+    }
 
 }
 

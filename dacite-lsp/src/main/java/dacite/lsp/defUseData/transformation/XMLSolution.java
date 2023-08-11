@@ -47,5 +47,19 @@ public class XMLSolution {
         }
     }
 
+    @Override
+    public boolean equals(Object obj){
+        if(!(obj instanceof XMLSolution)){
+            return false;
+        } else {
+          XMLSolution s = (XMLSolution) obj;
+          if(s.exceptional == this.exceptional && s.returnValue.equals(this.returnValue) && s.labels.equals(this.labels)){
+              return true;
+          } else {
+              return false;
+          }
+        }
+    }
+
 
 }

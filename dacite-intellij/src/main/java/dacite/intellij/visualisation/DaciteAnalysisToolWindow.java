@@ -129,7 +129,7 @@ public class DaciteAnalysisToolWindow {
         CompletableFuture<TreeViewChildrenResult> request = requestManager.treeViewChildren(params);
         if(request != null){
             try{
-                TreeViewChildrenResult result = request.get(getTimeout(INIT), TimeUnit.MILLISECONDS);
+                TreeViewChildrenResult result = request.get(100000, TimeUnit.MILLISECONDS);
                 for(TreeViewNode child : result.getNodes()){
                     DefaultMutableTreeNode node = new DefaultMutableTreeNode(child);
                     top.add(node);
