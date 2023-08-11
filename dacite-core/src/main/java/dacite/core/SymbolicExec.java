@@ -57,6 +57,7 @@ public class SymbolicExec {
         File packagedir = new File(projectpath+packagename);
         URL url = null;
         Transformer transformer = new Transformer();
+        transformer.setDir(projectpath+packagename.substring(0,packagename.length()-2));
         Map<String,String> remap = new HashMap<>();
         for(File f: packagedir.listFiles()){
             if(!f.isDirectory()){
@@ -104,7 +105,7 @@ public class SymbolicExec {
                         .setINCR_ACTUAL_CP_BUDGET(8)
                         .setTRANSF_USE_DEFAULT_MODEL_CLASSES(true)
                         .setHIGH_LEVEL_FREE_ARRAY_THEORY(true)
-                        .setSECONDS_PER_INVOCATION(5)
+                        //.setSECONDS_PER_INVOCATION(5)
                         .setFIXED_ACTUAL_CP_BUDGET(64)
                         //.setMAX_EXCEEDED_BUDGETS(150_000)
                         .setBACKTRACK_CALLBACK((a0, a1, a2) -> DefUseAnalyser.resetSymbolicValues())
@@ -201,14 +202,16 @@ public class SymbolicExec {
 
     private static void parseSolution(XMLStreamWriter xsw, XMLSolution solution){
         try {
-            Set<Class<?>> classes = parseClassesFromSolution();
-            classes.add(XMLSolution.class);
-            JAXBContext jaxbContextR = JAXBContext.newInstance(classes.toArray(Class[]::new));
-            Marshaller jaxbMarshallerR = jaxbContextR.createMarshaller();
-            jaxbMarshallerR.setProperty(Marshaller.JAXB_FRAGMENT, true);
-            StringWriter swR = new StringWriter();
-            jaxbMarshallerR.marshal(solution, swR);
-            xsw.writeCharacters(swR.toString());
+            if(solution != null){
+                Set<Class<?>> classes = parseClassesFromSolution();
+                classes.add(XMLSolution.class);
+                JAXBContext jaxbContextR = JAXBContext.newInstance(classes.toArray(Class[]::new));
+                Marshaller jaxbMarshallerR = jaxbContextR.createMarshaller();
+                jaxbMarshallerR.setProperty(Marshaller.JAXB_FRAGMENT, true);
+                StringWriter swR = new StringWriter();
+                jaxbMarshallerR.marshal(solution, swR);
+                xsw.writeCharacters(swR.toString());
+            }
         } catch (JAXBException e) {
             e.printStackTrace();
         } catch (XMLStreamException e) {
