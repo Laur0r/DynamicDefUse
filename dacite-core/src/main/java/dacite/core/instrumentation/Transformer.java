@@ -22,6 +22,8 @@ import java.util.logging.Logger;
 public class Transformer implements ClassFileTransformer {
 
 	static Logger logger = Logger.getLogger(Logger.GLOBAL_LOGGER_NAME);
+
+	private String path;
 	private String dir;
 	private String classname;
 
@@ -199,6 +201,9 @@ public class Transformer implements ClassFileTransformer {
 			}
 			// Register method Parameter for DefUse by aligning first local variables with parameter types
 			InsnList methodStart = new InsnList();
+			methodStart.add(new LdcInsnNode(classname));
+			methodStart.add(new LdcInsnNode(path));
+			methodStart.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/defuse/DefUseAnalyser", "visitSourceCode", "(Ljava/lang/String;Ljava/lang/String;)V", false));
 			InsnList methodintermediate = new InsnList();
 			Type[] types = Type.getArgumentTypes(mnode.desc);
 			int typeindex = 0;
@@ -594,7 +599,8 @@ public class Transformer implements ClassFileTransformer {
 		return null;
 	}
 
-	public void setDir(String dir){
-		this.dir = dir;
+	public void setDir(String path){
+		this.path = path.substring(0,path.lastIndexOf("/")+1);
+		this.dir = path.substring(path.lastIndexOf("/")+1)+"/";
 	}
 }
