@@ -1,7 +1,6 @@
 package dacite.core.defuse;
 
 import dacite.lsp.defUseData.transformation.XMLSolution;
-import de.wwu.mulib.search.trees.Solution;
 import jakarta.xml.bind.annotation.XmlElement;
 
 /**
