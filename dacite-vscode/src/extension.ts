@@ -2,18 +2,21 @@
 
 import * as path from 'path';
 import * as os from 'os';
-import { ExtensionContext, window, workspace, StatusBarAlignment, TextEditor, StatusBarItem } from 'vscode';
+import { ExtensionContext, window, workspace, StatusBarAlignment, TextEditor, StatusBarItem, ThemeColor, Range, TextEditorDecorationType } from 'vscode';
 
 import {
   LanguageClient,
   LanguageClientOptions,
-  ServerOptions
+  ServerOptions,
+  TextDocumentIdentifier
 } from 'vscode-languageclient/node';
 import { TreeViews } from './DaciteTreeViewProtocol';
 import { startTreeView } from './treeview';
+import { InlayHintDecoration } from './InlayHintDecoration';
 
 let languageClient: LanguageClient;
 let treeViews: TreeViews | undefined;
+let decorationTypes = new Map<string, TextEditorDecorationType>();
 
 export async function activate(context: ExtensionContext) {
   const executable = os.platform() === 'win32' ? 'dacite-ls.bat' : 'dacite-ls';
@@ -40,6 +43,47 @@ export async function activate(context: ExtensionContext) {
      synchronize: {
       fileEvents: workspace.createFileSystemWatcher('**/*.java'),
     },
+    middleware: {
+      async provideInlayHints(document, viewPort, token, next) {
+        const identifier: TextDocumentIdentifier = {
+          uri: document.uri.toString()
+        };
+
+        const inlayHints = await next(document, viewPort, token);
+
+        inlayHints?.forEach((inlayHint) => {          
+          languageClient.sendRequest(InlayHintDecoration.type, {identifier: identifier, position: inlayHint.position})
+            .then((decoration) => {
+              const key = `${document.uri}.${inlayHint.position.line}.${inlayHint.position.character}`;
+
+              if(decoration) {
+                let decorationType = decorationTypes.get(key);
+                if(!decorationType) {
+                  decorationType = window.createTextEditorDecorationType({
+                    before: {
+                      contentText: inlayHint.label.toString(),
+                      color: decoration.color,
+                      backgroundColor: new ThemeColor("editorInlayHint.background"),
+                      textDecoration: ';background-clip: content-box;padding-right:0.5rem;',
+                    },
+                  });
+
+                  decorationTypes.set(key, decorationType);
+                }
+
+                window.activeTextEditor?.setDecorations(
+                  decorationType,
+                  [new Range(inlayHint.position, inlayHint.position)]
+                );
+              }
+          });
+        });
+        
+        // We use our own rendering and, thus, disable the execution of VS Code's standard rending
+        // by not passing any inlay hints
+        return undefined;
+      },
+    }
   };
 
   languageClient = new LanguageClient(
