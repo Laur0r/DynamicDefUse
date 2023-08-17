@@ -2,16 +2,10 @@ package dacite.lsp.defUseData.transformation;
 
 import de.wwu.mulib.search.trees.ExceptionPathSolution;
 import de.wwu.mulib.search.trees.PathSolution;
-import de.wwu.mulib.search.trees.Solution;
 import jakarta.xml.bind.annotation.XmlElement;
 import jakarta.xml.bind.annotation.XmlRootElement;
-import jakarta.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
-import org.glassfish.jaxb.runtime.v2.runtime.unmarshaller.XsiNilLoader;
 
-import java.lang.reflect.Array;
-import java.util.Arrays;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 @XmlRootElement

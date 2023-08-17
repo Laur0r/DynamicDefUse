@@ -7,35 +7,21 @@ import de.wwu.mulib.Mulib;
 import de.wwu.mulib.MulibConfig;
 import de.wwu.mulib.search.executors.SearchStrategy;
 import de.wwu.mulib.search.trees.ChoiceOptionDeques;
-import de.wwu.mulib.search.trees.Solution;
 import de.wwu.mulib.solving.Solvers;
-import de.wwu.mulib.tcg.TcgConfig;
-import de.wwu.mulib.tcg.TestCase;
-import de.wwu.mulib.tcg.TestCases;
-import de.wwu.mulib.tcg.TestCasesStringGenerator;
-import jakarta.xml.bind.*;
-import org.w3c.dom.Document;
-import org.xml.sax.InputSource;
+import jakarta.xml.bind.JAXBContext;
+import jakarta.xml.bind.JAXBException;
+import jakarta.xml.bind.Marshaller;
 
-import javax.tools.*;
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
+import javax.tools.JavaCompiler;
+import javax.tools.JavaFileObject;
+import javax.tools.StandardJavaFileManager;
+import javax.tools.ToolProvider;
 import javax.xml.stream.XMLOutputFactory;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
-import javax.xml.transform.Source;
-import javax.xml.transform.TransformerFactory;
-import javax.xml.transform.dom.DOMSource;
-import javax.xml.transform.stream.StreamResult;
 import java.io.*;
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
-import java.net.MalformedURLException;
 import java.net.URL;
-import java.net.URLClassLoader;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.*;
 import java.util.logging.Logger;
 
@@ -99,21 +85,22 @@ public class SymbolicExec {
 //                        .setTRANSF_LOAD_WITH_SYSTEM_CLASSLOADER(true)
 //                        .setTRANSF_OVERWRITE_FILE_FOR_SYSTEM_CLASSLOADER(true)
                         .setTRANSF_VALIDATE_TRANSFORMATION(true)
-                        .setGLOBAL_SEARCH_STRATEGY(SearchStrategy.IDDSAS)
-                        .setCHOICE_OPTION_DEQUE_TYPE(ChoiceOptionDeques.DIRECT_ACCESS)
-                        .setGLOBAL_SOLVER_TYPE(Solvers.Z3_INCREMENTAL)
-                        .setINCR_ACTUAL_CP_BUDGET(8)
+                        .setSEARCH_MAIN_STRATEGY(SearchStrategy.IDDSAS)
+                        .setSEARCH_CHOICE_OPTION_DEQUE_TYPE(ChoiceOptionDeques.DIRECT_ACCESS)
+                        .setSOLVER_GLOBAL_TYPE(Solvers.Z3_INCREMENTAL)
+                        .setBUDGET_INCR_ACTUAL_CP(8)
                         .setTRANSF_USE_DEFAULT_MODEL_CLASSES(true)
-                        .setHIGH_LEVEL_FREE_ARRAY_THEORY(true)
+                        .setSOLVER_HIGH_LEVEL_SYMBOLIC_OBJECT_APPROACH(true)
                         //.setSECONDS_PER_INVOCATION(5)
-                        .setFIXED_ACTUAL_CP_BUDGET(64)
+                        .setBUDGET_FIXED_ACTUAL_CP(64)
                         //.setMAX_EXCEEDED_BUDGETS(150_000)
-                        .setBACKTRACK_CALLBACK((a0, a1, a2) -> DefUseAnalyser.resetSymbolicValues())
-                        .setFAIL_CALLBACK((a0, a1, a2) -> DefUseAnalyser.resetSymbolicValues())
-                        .setEXCEEDED_BUDGET_CALLBACK((a0, a1, a2) -> DefUseAnalyser.resetSymbolicValues())
+                        .setCALLBACK_BACKTRACK((a0, a1, a2) -> DefUseAnalyser.resetSymbolicValues())
+                        .setCALLBACK_FAIL((a0, a1, a2) -> DefUseAnalyser.resetSymbolicValues())
+                        .setCALLBACK_EXCEEDED_BUDGET((a0, a1, a2) -> DefUseAnalyser.resetSymbolicValues())
+                        .setBUDGET_FIXED_ACTUAL_CP(16)
                         .setTRANSF_TREAT_SPECIAL_METHOD_CALLS(true)
                         .setTRANSF_IGNORE_CLASSES(List.of(DefUseAnalyser.class, ParameterCollector.class))
-                        .setPATH_SOLUTION_CALLBACK(DefUseAnalyser::resolveLabels)
+                        .setCALLBACK_PATH_SOLUTION(DefUseAnalyser::resolveLabels)
                 ;
         Mulib.executeMulib("driver0", cls, builder); //// TODO Use loop for different driver-methods
         DefUseAnalyser.check();

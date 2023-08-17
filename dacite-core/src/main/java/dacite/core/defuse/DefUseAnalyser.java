@@ -11,13 +11,11 @@ import dacite.lsp.defUseData.transformation.XMLSolution;
 import de.wwu.mulib.exceptions.NotYetImplementedException;
 import de.wwu.mulib.search.executors.MulibExecutor;
 import de.wwu.mulib.search.trees.PathSolution;
-import de.wwu.mulib.search.trees.Solution;
 import de.wwu.mulib.solving.solvers.SolverManager;
 import de.wwu.mulib.substitutions.PartnerClass;
 import de.wwu.mulib.substitutions.SubstitutedVar;
 import de.wwu.mulib.substitutions.primitives.ConcSnumber;
 import de.wwu.mulib.substitutions.primitives.Sint;
-import de.wwu.mulib.substitutions.primitives.Sprimitive;
 
 import java.io.File;
 import java.net.URI;
