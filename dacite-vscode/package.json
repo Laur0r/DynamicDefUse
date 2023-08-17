@@ -12,7 +12,7 @@
     "url": "https://github.com/dacite-defuse/DynamicDefUse/issues"
   },
   "engines": {
-    "vscode": "^1.22.0"
+    "vscode": "^1.81.0"
   },
   "categories": [
     "Programming Languages",
