@@ -104,114 +104,16 @@ public class DaciteTextDocumentService
     List<InlayHint> inlayHints = new ArrayList<>();
     highlightedDefUseVariables = new HashMap<>();
 
-    var codeAnalyser = new CodeAnalyser(TextDocumentItemProvider.get(params.getTextDocument()).getText());
+    String text = "";
+    if(TextDocumentItemProvider.get(params.getTextDocument()) != null){
+      text = TextDocumentItemProvider.get(params.getTextDocument()).getText();
+    }
+    var codeAnalyser = new CodeAnalyser(text);
     var className = codeAnalyser.extractClassName();
     var packageName = codeAnalyser.extractPackageName();
 
-    Set<com.github.javaparser.Position> globalDefPositions = new HashSet<>();
-    var defUseVariableMap = DefUseAnalysisProvider.getUniqueDefUseVariablesByLine(packageName, className);
-    // First use grouping by line number...
-    defUseVariableMap.forEach((lineNumber, defUseVariables) -> {
-      // ...then group by variable name and try to match with positions obtained from parsing
-      DefUseAnalysisProvider.groupByVariableNamesAndSort(defUseVariables)
-          .forEach((variableName, groupedDefUseVariables) -> {
-            //logger.info(variableName+" "+groupedDefUseVariables.size());
-            // TODO: move the following fix into DefUseVariable class?
-            if(variableName.contains("[")){
-              variableName = variableName.substring(0, variableName.indexOf("["));
-            }
-            List<DefUseVariable> defs = new ArrayList<>();
-            List<DefUseVariable> uses = new ArrayList<>();
-            for(int i = 0; i< groupedDefUseVariables.size(); i++){
-              DefUseVariable var = groupedDefUseVariables.get(i);
-              if(var.getRole() == DefUseVariableRole.DEFINITION){
-                defs.add(var);
-              } else {
-                uses.add(var);
-              }
-            }
-            List<com.github.javaparser.Position> defPositions = new ArrayList<>();
-            //List<Position> defPos = codeAnalyser.extractVariablePositionsAtLine(lineNumber, variableName);
-            if(defs.size() != 0){
-              defPositions = codeAnalyser.extractVariablePositionsAtLine(lineNumber, variableName, true).get(0);
-              globalDefPositions.addAll(defPositions);
-              //logger.info("defPositions: "+defPositions.size());
-              int i = 0;
-              while (i < defs.size() && i < defPositions.size()) {
-                /*if(lineNumber == 39){
-                  logger.info("defPositions: "+defPositions.size());
-                  logger.info("def "+defs.get(i).toString());
-                }*/
-                if(defs.get(i).isEditorHighlight()) {
-                  var defUseVariable = defs.get(i);
-                  var parserPosition = defPositions.get(i);
-                  var label = defUseVariable.getRole() == DefUseVariableRole.DEFINITION ? "Def" : "Use";
-
-                  var lspPos = new Position(parserPosition.line - 1, parserPosition.column - 1);
-                  var hint = new InlayHint(lspPos, Either.forLeft(label));
-                  hint.setPaddingLeft(true);
-                  hint.setPaddingRight(true);
-                  inlayHints.add(hint);
-
-                  if (highlightedDefUseVariables.containsKey(params.getTextDocument())) {
-                    highlightedDefUseVariables.get(params.getTextDocument()).put(lspPos, defUseVariable);
-                  } else {
-                    HashMap<Position, DefUseVariable> newMap = new HashMap<>();
-                    newMap.put(lspPos, defUseVariable);
-                    highlightedDefUseVariables.put(params.getTextDocument(), newMap);
-                  }
-                }
-                i++;
-              }
-            }
-
-            if(uses.size() != 0){
-              var pos = codeAnalyser.extractVariablePositionsAtLine(lineNumber, variableName, false);
-              var usePositionsDup = pos.get(0);
-              var unaryPosition = pos.get(1);
-              if(lineNumber == 15 & variableName.contains("number")){
-                logger.info("uses "+uses.get(0));
-                logger.info("usePositionsDup: "+usePositionsDup.size());
-              }
-              List<com.github.javaparser.Position> usePositions = new ArrayList<>();
-              for(com.github.javaparser.Position p:usePositionsDup){
-                if(!globalDefPositions.contains(p) || unaryPosition.contains(p)){
-                  usePositions.add(p);
-                }
-              }
-              if(lineNumber == 15 & variableName.contains("number")){
-                logger.info("usePositions: "+usePositions.size());
-              }
-              int i = 0;
-              while (i < uses.size() && i < usePositions.size()) {
-                if(lineNumber == 15 & variableName.contains("number")){
-                  logger.info("usePositions: "+usePositions.size());
-                  logger.info("use "+uses.get(i).toString());
-                }
-                if(uses.get(i).isEditorHighlight()) {
-                  var defUseVariable = uses.get(i);
-                  var parserPosition = usePositions.get(i);
-                  var label = defUseVariable.getRole() == DefUseVariableRole.DEFINITION ? "Def" : "Use";
-
-                  var lspPos = new Position(parserPosition.line - 1, parserPosition.column - 1);
-                  var hint = new InlayHint(lspPos, Either.forLeft(label));
-                  hint.setPaddingLeft(true);
-                  hint.setPaddingRight(true);
-                  inlayHints.add(hint);
-
-                  if (highlightedDefUseVariables.containsKey(params.getTextDocument())) {
-                    highlightedDefUseVariables.get(params.getTextDocument()).put(lspPos, defUseVariable);
-                  } else {
-                    HashMap<Position, DefUseVariable> newMap = new HashMap<>();
-                    newMap.put(lspPos, defUseVariable);
-                    highlightedDefUseVariables.put(params.getTextDocument(), newMap);
-                  }
-                }
-                i++;
-              }
-            }
-          });
-    });
+    Map<Integer, List<DefUseVariable>> defUseVariableMap = DefUseAnalysisProvider.getUniqueDefUseVariablesByLine(packageName, className);
+    getInlayHints(defUseVariableMap, inlayHints, params, codeAnalyser);
 
     logger.info("hints {}", inlayHints);
 
@@ -223,13 +125,12 @@ public class DaciteTextDocumentService
     //logger.info("inlayHintDecoration {}", params);
 
     var font = Font.SERIF;
-    var color = new int[] { 255, 0, 0, 255 };
+    String color = Color.BLUE.toString();
 
     if (highlightedDefUseVariables.containsKey(params.getIdentifier())) {
       var defUseVars = highlightedDefUseVariables.get(params.getIdentifier());
       if (defUseVars.containsKey(params.getPosition())) {
-        var awtColor = defUseVars.get(params.getPosition()).getColor();
-        color = new int[] { awtColor.getRed(), awtColor.getGreen(), awtColor.getBlue(), awtColor.getAlpha() };
+        color = defUseVars.get(params.getPosition()).getColor();
       }
     }
 
@@ -372,5 +273,102 @@ public class DaciteTextDocumentService
       }
     }
     return CompletableFuture.completedFuture(null);
+  }
+
+  @Override
+  public void treeViewDidChange(TreeViewDidChangeParams params) {
+
+  }
+
+  private void getInlayHints(Map<Integer, List<DefUseVariable>> map, List<InlayHint> inlayHints, InlayHintParams params, CodeAnalyser codeAnalyser){
+    Set<com.github.javaparser.Position> globalDefPositions = new HashSet<>();
+    map.forEach((lineNumber, defUseVariables) -> {
+      // ...then group by variable name and try to match with positions obtained from parsing
+      DefUseAnalysisProvider.groupByVariableNamesAndSort(defUseVariables)
+              .forEach((variableName, groupedDefUseVariables) -> {
+                logger.info("ln "+lineNumber+" "+variableName+" "+groupedDefUseVariables.size());
+                // TODO: move the following fix into DefUseVariable class?
+                if(variableName.contains("[")){
+                  variableName = variableName.substring(0, variableName.indexOf("["));
+                }
+                if(variableName.contains(".")){
+                  variableName = variableName.substring(variableName.indexOf(".")+1);
+                }
+                List<DefUseVariable> defs = new ArrayList<>();
+                List<DefUseVariable> uses = new ArrayList<>();
+                for(int i = 0; i< groupedDefUseVariables.size(); i++){
+                  DefUseVariable var = groupedDefUseVariables.get(i);
+                  if(var.getRole() == DefUseVariableRole.DEFINITION){
+                    defs.add(var);
+                  } else {
+                    uses.add(var);
+                  }
+                }
+                List<com.github.javaparser.Position> defPositions = new ArrayList<>();
+                //List<Position> defPos = codeAnalyser.extractVariablePositionsAtLine(lineNumber, variableName);
+                if(defs.size() != 0){
+                  defPositions = codeAnalyser.extractVariablePositionsAtLine(lineNumber, variableName, true).get(0);
+                  globalDefPositions.addAll(defPositions);
+                  int i = 0;
+                  while (i < defs.size() && i < defPositions.size()) {
+                    if(defs.get(i).isEditorHighlight()) {
+                      var defUseVariable = defs.get(i);
+                      var parserPosition = defPositions.get(i);
+                      var label = defUseVariable.getRole() == DefUseVariableRole.DEFINITION ? "Def" : "Use";
+
+                      var lspPos = new Position(parserPosition.line - 1, parserPosition.column - 1);
+                      var hint = new InlayHint(lspPos, Either.forLeft(label));
+                      hint.setPaddingLeft(true);
+                      hint.setPaddingRight(true);
+                      inlayHints.add(hint);
+
+                      if (highlightedDefUseVariables.containsKey(params.getTextDocument())) {
+                        highlightedDefUseVariables.get(params.getTextDocument()).put(lspPos, defUseVariable);
+                      } else {
+                        HashMap<Position, DefUseVariable> newMap = new HashMap<>();
+                        newMap.put(lspPos, defUseVariable);
+                        highlightedDefUseVariables.put(params.getTextDocument(), newMap);
+                      }
+                    }
+                    i++;
+                  }
+                }
+
+                if(uses.size() != 0){
+                  var pos = codeAnalyser.extractVariablePositionsAtLine(lineNumber, variableName, false);
+                  var usePositionsDup = pos.get(0);
+                  var unaryPosition = pos.get(1);
+                  List<com.github.javaparser.Position> usePositions = new ArrayList<>();
+                  for(com.github.javaparser.Position p:usePositionsDup){
+                    if(!globalDefPositions.contains(p) || unaryPosition.contains(p)){
+                      usePositions.add(p);
+                    }
+                  }
+                  int i = 0;
+                  while (i < uses.size() && i < usePositions.size()) {
+                    if(uses.get(i).isEditorHighlight()) {
+                      var defUseVariable = uses.get(i);
+                      var parserPosition = usePositions.get(i);
+                      var label = defUseVariable.getRole() == DefUseVariableRole.DEFINITION ? "Def" : "Use";
+
+                      var lspPos = new Position(parserPosition.line - 1, parserPosition.column - 1);
+                      var hint = new InlayHint(lspPos, Either.forLeft(label));
+                      hint.setPaddingLeft(true);
+                      hint.setPaddingRight(true);
+                      inlayHints.add(hint);
+
+                      if (highlightedDefUseVariables.containsKey(params.getTextDocument())) {
+                        highlightedDefUseVariables.get(params.getTextDocument()).put(lspPos, defUseVariable);
+                      } else {
+                        HashMap<Position, DefUseVariable> newMap = new HashMap<>();
+                        newMap.put(lspPos, defUseVariable);
+                        highlightedDefUseVariables.put(params.getTextDocument(), newMap);
+                      }
+                    }
+                    i++;
+                  }
+                }
+              });
+    });
   }
 }

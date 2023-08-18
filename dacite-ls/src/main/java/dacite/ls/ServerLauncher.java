@@ -1,5 +1,7 @@
 package dacite.ls;
 
+import dacite.lsp.DaciteExtendedLanguageClient;
+import dacite.lsp.DaciteLauncher;
 import org.eclipse.lsp4j.jsonrpc.Launcher;
 import org.eclipse.lsp4j.launch.LSPLauncher;
 import org.eclipse.lsp4j.services.LanguageClient;
@@ -12,10 +14,10 @@ public class ServerLauncher {
   public static void main(String[] args) throws ExecutionException, InterruptedException {
     // Create server launcher
     DaciteLanguageServer server = new DaciteLanguageServer();
-    Launcher<LanguageClient> launcher = LSPLauncher.createServerLauncher(server, System.in, System.out);
+    Launcher<DaciteExtendedLanguageClient> launcher = DaciteLauncher.createServerLauncher(server, System.in, System.out);
 
     // Connect to client
-    LanguageClient client = launcher.getRemoteProxy();
+    DaciteExtendedLanguageClient client = launcher.getRemoteProxy();
     server.connect(client);
 
     // Start listening

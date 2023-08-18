@@ -45,7 +45,7 @@ public class DaciteLSPExtensionManager implements LSPExtensionManager {
 
   @Override
   public LanguageClient getExtendedClientFor(ClientContext context) {
-    return new DefaultLanguageClient(context);
+    return new DaciteLanguageClient(context);
   }
 
 }

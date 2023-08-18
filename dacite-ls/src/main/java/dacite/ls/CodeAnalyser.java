@@ -49,14 +49,9 @@ public class CodeAnalyser {
     List<Position> positions = new ArrayList<>();
     List<List<Position>> output = new ArrayList<>();
     List<Node> nodes = extractNodesAtLine(lineNumber);
-    if(lineNumber == 15){
-      logger.info("ln: "+lineNumber+" name: "+variableName);
-    }
+
     for(int i=0; i<nodes.size();i++){
       Node node = nodes.get(i);
-      if(lineNumber == 15){
-        logger.info(node.toString() + " " + node.getClass().getSimpleName());
-      }
       if (node instanceof AssignExpr) {
         // Expression = Expression
         Expression e;

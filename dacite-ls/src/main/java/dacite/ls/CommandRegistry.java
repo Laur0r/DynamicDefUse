@@ -3,7 +3,11 @@ package dacite.ls;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 
+import dacite.lsp.DaciteExtendedLanguageClient;
+import dacite.lsp.tvp.TreeViewDidChangeParams;
+import dacite.lsp.tvp.TreeViewNode;
 import org.eclipse.lsp4j.ExecuteCommandParams;
+import org.eclipse.lsp4j.services.LanguageClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,7 +35,7 @@ public class CommandRegistry {
     return Arrays.stream(Command.values()).map(it -> COMMAND_PREFIX + it.name()).collect(Collectors.toList());
   }
 
-  public static CompletableFuture<Object> execute(ExecuteCommandParams params) {
+  public static CompletableFuture<Object> execute(ExecuteCommandParams params, DaciteExtendedLanguageClient client) {
     logger.info("{}", params);
 
     var command = Command.valueOf(params.getCommand().replaceFirst(COMMAND_PREFIX, ""));
@@ -103,6 +107,10 @@ public class CommandRegistry {
            */
 
             DefUseAnalysisProvider.processXmlFile(projectDir + "file.xml");
+            DefUseAnalysisProvider.setTextDocumentUriTrigger(textDocumentUri);
+            TreeViewNode node = new TreeViewNode("defUseChains","", "");
+            TreeViewDidChangeParams paramsChange = new TreeViewDidChangeParams(new TreeViewNode[]{node});
+            client.treeViewDidChange(paramsChange);
           }
         } catch (Exception e) {
           logger.error(e.getMessage());
