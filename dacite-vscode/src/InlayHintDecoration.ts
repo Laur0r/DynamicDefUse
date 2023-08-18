@@ -12,7 +12,7 @@ export interface InlayHintDecorationParams {
 }
 
 export interface InlayHintDecorationResult {
-    color: number[],
+    color: string,
     fontStyle: string
 }
 
