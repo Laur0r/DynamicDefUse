@@ -102,7 +102,7 @@ public class SymbolicExec {
                         .setTRANSF_IGNORE_CLASSES(List.of(DefUseAnalyser.class, ParameterCollector.class))
                         .setCALLBACK_PATH_SOLUTION(DefUseAnalyser::resolveLabels)
                 ;
-        Mulib.getPathSolutions("driver0", cls, builder); //// TODO Use loop for different driver-methods
+        Mulib.getPathSolutions(cls, "driver0", builder); //// TODO Use loop for different driver-methods
         DefUseAnalyser.check();
 
         logger.info("run through symbolic method");
