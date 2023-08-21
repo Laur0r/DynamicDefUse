@@ -1,6 +1,6 @@
 package dacite.lsp.defUseData.transformation;
 
-import de.wwu.mulib.search.trees.ExceptionPathSolution;
+import de.wwu.mulib.search.trees.ThrowablePathSolution;
 import de.wwu.mulib.search.trees.PathSolution;
 import jakarta.xml.bind.annotation.XmlElement;
 import jakarta.xml.bind.annotation.XmlRootElement;
@@ -31,7 +31,7 @@ public class XMLSolution {
     }
 
     public void setSolution(PathSolution solution){
-        this.exceptional = solution instanceof ExceptionPathSolution;
+        this.exceptional = solution instanceof ThrowablePathSolution;
         this.returnValue = solution.getSolution().returnValue;
         labels = new HashMap<>();
         for(Map.Entry<String,Object> entry : solution.getSolution().labels.getIdToLabel().entrySet()){
