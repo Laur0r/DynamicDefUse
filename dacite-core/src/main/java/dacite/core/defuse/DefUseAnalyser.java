@@ -12,7 +12,7 @@ import de.wwu.mulib.search.executors.MulibExecutor;
 import de.wwu.mulib.search.trees.PathSolution;
 import de.wwu.mulib.solving.solvers.SolverManager;
 import de.wwu.mulib.substitutions.PartnerClass;
-import de.wwu.mulib.substitutions.SubstitutedVar;
+import de.wwu.mulib.substitutions.Substituted;
 import de.wwu.mulib.substitutions.primitives.ConcSnumber;
 import de.wwu.mulib.substitutions.primitives.Sint;
 
@@ -70,7 +70,7 @@ public class DefUseAnalyser {
      * @param varname name of the defined variable
      */
     public static void visitDef(Object value, int index, int linenumber, int instruction, String method, String varname){
-        if(value instanceof SubstitutedVar){
+        if(value instanceof Substituted){
             DefUseVariable symbolicDef = symbolicDefs.symbolicContains(value, index, linenumber, instruction, method);
             if(symbolicDef != null){
                 defs.removeDef(symbolicDef);
@@ -107,7 +107,7 @@ public class DefUseAnalyser {
     public static void visitUse(Object value, int index, int linenumber, int instruction, String method, String varname){
         DefUseVariable use = new DefUseVariable(linenumber, instruction, index, value, method, varname);
         // get most recent variable definition for this usage
-        if(value instanceof SubstitutedVar){
+        if(value instanceof Substituted){
             // can be compared similar to concrete values
             if(value instanceof ConcSnumber || (value instanceof PartnerClass && ((PartnerClass) value).__mulib__getId()
                     instanceof Sint.ConcSint)){
@@ -159,7 +159,7 @@ public class DefUseAnalyser {
         DefUseField use = new DefUseField(linenumber, instruction, -1, value, method, name, null, classname);
         DefUseVariable def = null;
         // get most recent field definition for this usage
-        if(value instanceof SubstitutedVar){
+        if(value instanceof Substituted){
             // can be compared similar to concrete values
             if(value instanceof ConcSnumber || (value instanceof PartnerClass && ((PartnerClass) value).__mulib__getId()
                     instanceof Sint.ConcSint)){
@@ -188,7 +188,7 @@ public class DefUseAnalyser {
     public static void visitStaticFieldDef(Object value, String name, int linenumber, int instruction, String method, String classname){
         DefUseVariable def = null;
         // TODO value oder instance SubstitutedVar? Oder geht immer nur beides oder nichts?
-        if(value instanceof SubstitutedVar){
+        if(value instanceof Substituted){
             def = symbolicDefs.containsSymbolicField(value, -1, name, linenumber, instruction,null);
             // if definition already exists, it is removed and added to the beginning to keep track of the most recent definition
             if(def != null){
@@ -225,7 +225,7 @@ public class DefUseAnalyser {
         String instanceName = chains.removeAload(instance, linenumber, method);
         DefUseVariable def = null;
         // TODO value oder instance SubstitutedVar? Oder geht immer nur beides oder nichts?
-        if(value instanceof SubstitutedVar){
+        if(value instanceof Substituted){
             def = symbolicDefs.containsSymbolicField(value, -1, name, linenumber, instruction, instance);
             if(def != null){
                 symbolicDefs.removeDef(def);
@@ -261,7 +261,7 @@ public class DefUseAnalyser {
         String instanceName = chains.removeAload(instance, linenumber, method);
         DefUseField use = new DefUseField(linenumber, instruction, -1, value, method, name, instance, instanceName);
         DefUseVariable def = null;
-        if(value instanceof SubstitutedVar){
+        if(value instanceof Substituted){
             if(value instanceof ConcSnumber || (value instanceof PartnerClass && ((PartnerClass) value).__mulib__getId()
                     instanceof Sint.ConcSint)){
                 def = symbolicDefs.getLastSymbolicDefinitionFields(-1, name, value, instance);
@@ -315,7 +315,7 @@ public class DefUseAnalyser {
         DefUseField use = new DefUseField(linenumber, instruction, index, value, method, arrayName+"[", array, arrayName);
         DefUseVariable def = null;
         // get most recent field definition for this usage
-        if(value instanceof SubstitutedVar){
+        if(value instanceof Substituted){
             if(value instanceof ConcSnumber || (value instanceof PartnerClass && ((PartnerClass) value).__mulib__getId()
                     instanceof Sint.ConcSint)){
                 def = symbolicDefs.getLastSymbolicDefinitionFields(index, "", value, array);
@@ -361,7 +361,7 @@ public class DefUseAnalyser {
             arrayName = null;
         }
         DefUseVariable def = null;
-        if(value instanceof SubstitutedVar){
+        if(value instanceof Substituted){
             def = symbolicDefs.containsSymbolicField(value, index, "", linenumber, instruction, array);
             // if definition already exists, it is removed and added to the beginning to keep track of the most recent definition
             if(def != null){
@@ -431,7 +431,7 @@ public class DefUseAnalyser {
      * @param parameter integer indicating which number parameter this is
      */
     public static void visitParameter(Object value, int index, int linenumber, String method, String varname, int parameter){
-        if(value instanceof SubstitutedVar){
+        if(value instanceof Substituted){
             registerSymbolicParameter(value, index, linenumber, method, varname, parameter);
         } else {
             registerParameter(value, index, linenumber, method, varname, parameter);
@@ -511,7 +511,7 @@ public class DefUseAnalyser {
         AliasAlloc alloc = aliases.get(def.getValue());
         if(alloc == null) {
             DefUseVariable alias = null;
-            if(def.getValue() instanceof SubstitutedVar){
+            if(def.getValue() instanceof Substituted){
                 alias = symbolicDefs.hasSymbolicAlias(def);
             } else {
                 // check if there exists an alias
@@ -526,7 +526,7 @@ public class DefUseAnalyser {
         } else {
             alloc.addAlias(def.getVariableName(), def.getVariableIndex());
         }
-        if(def.getValue() instanceof SubstitutedVar){
+        if(def.getValue() instanceof Substituted){
             def.setTimeRef(counter);
             symbolicDefs.addDef(def);
             counter++;
@@ -717,7 +717,7 @@ public class DefUseAnalyser {
                 // get last definition within the calling method
                 if(alloc.isField) {
                     def = defs.getLastDefinitionFields(alloc.currentIndex, alloc.currentName, alloc.value, null);
-                } else if(alloc.value instanceof SubstitutedVar){
+                } else if(alloc.value instanceof Substituted){
                     def = symbolicDefs.getLastSymbolicDefinition(alloc.currentIndex, alloc.currentMethod, alloc.value, alloc.currentName);
                 } else {
                     def = defs.getLastDefinition(alloc.currentIndex, alloc.currentMethod, alloc.value, alloc.currentName);
@@ -754,7 +754,7 @@ public class DefUseAnalyser {
                 // get last definition within the calling method
                 if(alloc.isField) {
                     def = defs.getLastDefinitionFields(alloc.currentIndex, alloc.currentName, alloc.value, null);
-                } else if(alloc.value instanceof SubstitutedVar){
+                } else if(alloc.value instanceof Substituted){
                     def = symbolicDefs.getLastDefinition(alloc.currentIndex, alloc.currentMethod, subValue, alloc.currentName);
                 } else {
                     def = defs.getLastDefinition(alloc.currentIndex, alloc.currentMethod, alloc.value, alloc.currentName);
@@ -798,11 +798,11 @@ public class DefUseAnalyser {
         return null;
     }
 
-    private static List<SubstitutedVar> symbolics = new ArrayList<>();
+    private static List<Substituted> symbolics = new ArrayList<>();
     public static void resolveLabels(MulibExecutor mulibExecutor, PathSolution pathSolution, SolverManager s) {
 
         for(DefUseVariable def : symbolicDefs.defs){
-            if((def.getValue() instanceof SubstitutedVar)){ //&& !(def.getValue() instanceof ConcSnumber) && !(def.getValue() instanceof PartnerClass && ((PartnerClass) def.getValue()).__mulib__getId()
+            if((def.getValue() instanceof Substituted)){ //&& !(def.getValue() instanceof ConcSnumber) && !(def.getValue() instanceof PartnerClass && ((PartnerClass) def.getValue()).__mulib__getId()
                     //instanceof Sint.ConcSint)){
                 // TODO ist das jetzt zB int oder ConcSint?
                 def.setValue(s.getLabel(def.getValue()));
