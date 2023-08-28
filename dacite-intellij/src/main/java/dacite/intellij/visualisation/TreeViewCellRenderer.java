@@ -35,7 +35,7 @@ public class TreeViewCellRenderer extends DefaultTreeCellRenderer {
     public Component getTreeCellRendererComponent(JTree tree, Object value, boolean selected,
                                                   boolean expanded, boolean leaf, int row, boolean hasFocus) {
         Component returnValue = null;
-        if ((value != null) && (value instanceof DefaultMutableTreeNode)) {
+        if (value instanceof DefaultMutableTreeNode) {
             TreeViewNode e = (TreeViewNode) ((DefaultMutableTreeNode) value).getUserObject();
             String label = e.getLabel();
             if(e.getIcon() != null){
@@ -93,7 +93,7 @@ public class TreeViewCellRenderer extends DefaultTreeCellRenderer {
         }
         if (returnValue == null) {
             returnValue = super.getTreeCellRendererComponent(tree, value, selected, expanded,
-                    leaf, row, hasFocus);
+                   leaf , row, hasFocus);
         }
         return returnValue;
     }

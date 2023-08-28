@@ -4,6 +4,10 @@ import static org.wso2.lsp4intellij.requests.Timeout.getTimeout;
 import static org.wso2.lsp4intellij.requests.Timeouts.INIT;
 import static org.wso2.lsp4intellij.requests.Timeouts.REFERENCES;
 
+import com.intellij.icons.AllIcons;
+import com.intellij.openapi.actionSystem.ActionManager;
+import com.intellij.openapi.actionSystem.AnAction;
+import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.actionSystem.PlatformCoreDataKeys;
 import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.editor.EditorCustomElementRenderer;
@@ -73,10 +77,14 @@ public class DaciteAnalysisToolWindow {
     private DaciteLSPRequestManager requestManager;
 
     private Tree tree;
+    private ToolWindow toolWindow;
+
+    private AnAction symbAction;
 
     public DaciteAnalysisToolWindow(ToolWindow toolWindow, Project project, RequestManager requestManager) {
         this.project = project;
         this.requestManager = (DaciteLSPRequestManager) requestManager;
+        this.toolWindow = toolWindow;
         myToolWindowContent = new JPanel();
         myToolWindowContent.setLayout(new BoxLayout(myToolWindowContent, BoxLayout.Y_AXIS));
         tree = createTree("defUseChains");
@@ -87,8 +95,9 @@ public class DaciteAnalysisToolWindow {
         treeView.setBorder(etchedTitledBorder);
         myToolWindowContent.add(treeView, BorderLayout.CENTER);
         JButton button = new JButton("Run Symbolic Analysis");
-        button.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
+        symbAction = new AnAction("Run Dacite Symbolic Analysis", "Symbolic analysis of def-use chains", AllIcons.Actions.StartMemoryProfile) {
+            @Override
+            public void actionPerformed(@NotNull AnActionEvent e) {
                 DefaultMutableTreeNode node = (DefaultMutableTreeNode) ((DefaultMutableTreeNode) tree.getModel().getRoot()).getChildAt(0);
                 String uri = ((TreeViewNode) node.getUserObject()).getContextValue();
                 Set<LanguageServerWrapper> wrapper = IntellijLanguageClient.getAllServerWrappersFor(FileUtils.projectToUri(project));
@@ -98,8 +107,9 @@ public class DaciteAnalysisToolWindow {
                 }
                 CompletableFuture<Object> result = requestManager.executeCommand(new ExecuteCommandParams("dacite.symbolicTrigger",List.of(uri)));
             }
-        } );
-        myToolWindowContent.add(button, BorderLayout.PAGE_END);
+        };
+
+        toolWindow.setTitleActions(List.of(symbAction));
 
     }
 
@@ -123,7 +133,8 @@ public class DaciteAnalysisToolWindow {
         myToolWindowContent.repaint();
     }
 
-    private void createTreeViewChildren(DefaultMutableTreeNode top){
+    private void
+    createTreeViewChildren(DefaultMutableTreeNode top){
         TreeViewNode parent = (TreeViewNode) top.getUserObject();
         TreeViewChildrenParams params = new TreeViewChildrenParams(parent.getViewId(), parent.getNodeUri());
         CompletableFuture<TreeViewChildrenResult> request = requestManager.treeViewChildren(params);
@@ -235,7 +246,6 @@ public class DaciteAnalysisToolWindow {
                 new DefaultMutableTreeNode(root);
         createTreeViewChildren(top);
         Tree tree = new Tree(top);
-        ((DefaultTreeModel)tree.getModel()).setAsksAllowsChildren(true);
         tree.setCellRenderer(new TreeViewCellRenderer());
         TreeViewCellEditor editor = new TreeViewCellEditor();
         editor.addChangeListener(new CellEditorListener() {
@@ -278,9 +288,12 @@ public class DaciteAnalysisToolWindow {
         Border etchedBorder = BorderFactory.createEtchedBorder();
         Border etchedTitledBorder = BorderFactory.createTitledBorder(etchedBorder, borderTitle);
         treeView2.setBorder(etchedTitledBorder);
-        JButton button = new JButton("Generate JUnit tests");
-        button.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
+        myToolWindowContent.add(treeView2, BorderLayout.PAGE_START);
+        myToolWindowContent.setComponentZOrder(treeView2, 0);
+
+        AnAction action = new AnAction("Generate JUnit Tests for Non-Covered DUCs", "Symbolic analysis of def-use chains", AllIcons.Toolwindows.ToolWindowCoverage) {
+            @Override
+            public void actionPerformed(@NotNull AnActionEvent e) {
                 DefaultMutableTreeNode node = (DefaultMutableTreeNode) ((DefaultMutableTreeNode) tree.getModel().getRoot()).getChildAt(0);
                 String uri = ((TreeViewNode) node.getUserObject()).getContextValue();
                 Set<LanguageServerWrapper> wrapper = IntellijLanguageClient.getAllServerWrappersFor(FileUtils.projectToUri(project));
@@ -290,16 +303,9 @@ public class DaciteAnalysisToolWindow {
                 }
                 CompletableFuture<Object> result = requestManager.executeCommand(new ExecuteCommandParams("dacite.generateTestCases",List.of(uri)));
             }
-        } );
+        };
 
-        if(myToolWindowContent.getComponentCount() == 3) {
-            myToolWindowContent.remove(0);
-            myToolWindowContent.getComponent(0);
-        }
-        myToolWindowContent.add(treeView2, BorderLayout.PAGE_START);
-        myToolWindowContent.setComponentZOrder(treeView2, 0);
-        myToolWindowContent.add(button, BorderLayout.PAGE_START);
-        myToolWindowContent.setComponentZOrder(button, 1);
+        toolWindow.setTitleActions(List.of(action, symbAction));
         return myToolWindowContent;
     }
 }
