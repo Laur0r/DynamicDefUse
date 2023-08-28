@@ -397,6 +397,7 @@ public class DefUseAnalysisProvider {
         for (DefUseVar var : m.getVariables()) {
           var.setNumberChains(var.getData().size());
           m.addNumberChains(var.getNumberChains());
+          var.sort();
         }
         cl.addNumberChains(m.getNumberChains());
       }

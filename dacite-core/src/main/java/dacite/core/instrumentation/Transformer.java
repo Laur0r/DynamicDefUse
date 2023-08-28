@@ -4,19 +4,7 @@ import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
-import org.objectweb.asm.tree.AbstractInsnNode;
-import org.objectweb.asm.tree.ClassNode;
-import org.objectweb.asm.tree.FieldInsnNode;
-import org.objectweb.asm.tree.IincInsnNode;
-import org.objectweb.asm.tree.InsnList;
-import org.objectweb.asm.tree.InsnNode;
-import org.objectweb.asm.tree.IntInsnNode;
-import org.objectweb.asm.tree.LdcInsnNode;
-import org.objectweb.asm.tree.LineNumberNode;
-import org.objectweb.asm.tree.LocalVariableNode;
-import org.objectweb.asm.tree.MethodInsnNode;
-import org.objectweb.asm.tree.MethodNode;
-import org.objectweb.asm.tree.VarInsnNode;
+import org.objectweb.asm.tree.*;
 
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
@@ -48,6 +36,19 @@ public class Transformer implements ClassFileTransformer {
 				}
 				if (mnode.name.equals("<init>")) {
 					//continue;
+				}
+
+				if(mnode.visibleAnnotations != null){
+					boolean test = false;
+					for(AnnotationNode annotation: mnode.visibleAnnotations){
+						if(annotation.desc.equals("Lorg/junit/Test;")){
+							test = true;
+							break;
+						}
+					}
+					if(test){
+						continue;
+					}
 				}
 
 				AbstractInsnNode firstIns = insns.getFirst();
