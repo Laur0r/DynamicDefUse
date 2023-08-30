@@ -3,23 +3,14 @@ package dacite.core;
 import dacite.core.defuse.*;
 import dacite.core.instrumentation.Transformer;
 import dacite.lsp.defUseData.transformation.XMLSolution;
-import dacite.lsp.defUseData.transformation.XMLSolutions;
 import de.wwu.mulib.Mulib;
 import de.wwu.mulib.MulibConfig;
 import de.wwu.mulib.search.executors.SearchStrategy;
 import de.wwu.mulib.search.trees.ChoiceOptionDeques;
 import de.wwu.mulib.solving.Solvers;
-import de.wwu.mulib.tcg.TcgConfig;
-import de.wwu.mulib.tcg.TestCase;
-import de.wwu.mulib.tcg.TestCases;
-import de.wwu.mulib.tcg.TestCasesStringGenerator;
-import de.wwu.mulib.tcg.testsetreducer.CombinedTestSetReducer;
-import de.wwu.mulib.tcg.testsetreducer.SimpleBackwardsTestSetReducer;
-import de.wwu.mulib.tcg.testsetreducer.SimpleForwardsTestSetReducer;
 import jakarta.xml.bind.JAXBContext;
 import jakarta.xml.bind.JAXBException;
 import jakarta.xml.bind.Marshaller;
-import jakarta.xml.bind.Unmarshaller;
 
 import javax.tools.JavaCompiler;
 import javax.tools.JavaFileObject;
@@ -32,10 +23,6 @@ import java.io.*;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.net.URL;
-import java.net.URLClassLoader;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.*;
 import java.util.logging.Logger;
 
@@ -53,20 +40,24 @@ public class SymbolicExec {
         File file = new File(projectpath+packagename+classname);
         logger.info("file1 "+file.getPath()+" "+file.exists());
 
-        //logger.info(dir);
+        // Get sourcepath
         File packagedir = new File(projectpath+packagename);
         URL url = null;
         Transformer transformer = new Transformer();
         transformer.setDir(projectpath+packagename.substring(0,packagename.length()-2));
-        Map<String,String> remap = new HashMap<>();
-        for(File f: packagedir.listFiles()){
+        if(packagedir.listFiles() == null){
+            throw new RuntimeException("there are not files in "+projectpath+packagename);
+        }
+        for(File f: Objects.requireNonNull(packagedir.listFiles())){
             if(!f.isDirectory()){
                 String name = f.getName().substring(0,f.getName().lastIndexOf("."));
-                //remap.put(packagename+name, packagename+"dacite_"+name);
                 if(!f.getName().contains("DaciteSymbolicDriver") && url == null){
                     url = Class.forName(packagename.replace("/",".")+name).getResource(name+".class");
                 }
             }
+        }
+        if(url == null){
+            throw new RuntimeException("Source path of classes not found in "+projectpath+packagename);
         }
         String sourcePath = url.getPath().substring(0,url.getPath().indexOf(packagename));
 
@@ -80,10 +71,11 @@ public class SymbolicExec {
         JavaCompiler.CompilationTask task = compiler.getTask(null, fileManager, null, options, null, javaSource);
         task.call();
 
-        for(File f: packagedir.listFiles()){
+        // Transform all files for Analysis
+        for(File f: Objects.requireNonNull(packagedir.listFiles())){
             if(!f.isDirectory()){
                 String name = f.getName().substring(0,f.getName().lastIndexOf("."));
-                transformer.transformSymbolic(packagename.replace("/",".")+name, remap, sourcePath);
+                transformer.transformSymbolic(packagename.replace("/",".")+name, sourcePath);
             }
         }
 
@@ -92,6 +84,7 @@ public class SymbolicExec {
         Object instance = cls.getDeclaredConstructor().newInstance();
         logger.info(instance.toString());
 
+        // Symbolic Execution with Mulib
         MulibConfig.MulibConfigBuilder builder =
                 MulibConfig.builder()
                         .setTRANSF_WRITE_TO_FILE(true)
@@ -117,12 +110,16 @@ public class SymbolicExec {
                         .setTRANSF_IGNORE_CLASSES(List.of(DefUseAnalyser.class, ParameterCollector.class))
                         .setCALLBACK_PATH_SOLUTION(DefUseAnalyser::resolveLabels)
                 ;
-        Mulib.getPathSolutions(cls, "driver0", builder); //// TODO Use loop for different driver-methods
-        DefUseAnalyser.check();
+        for(Method method: cls.getDeclaredMethods()){
+            if(method.getName().contains("dacite_symbolic_driver")){
+                Mulib.getPathSolutions(cls, method.getName(), builder);
+            }
+        }
 
         logger.info("run through symbolic method");
         DefUseAnalyser.check();
-        // write xml file
+
+        // Write xml files for output
         XMLOutputFactory xof = XMLOutputFactory.newInstance();
         XMLStreamWriter xsw = null;
         xof.setProperty("escapeCharacters", false);
@@ -156,56 +153,13 @@ public class SymbolicExec {
             xsw.writeEndDocument();
             xsw.flush();
             xsw.close();
-
-            /*Set<Class<?>> classes = parseClassesFromSolution();
-            classes.add(dacite.lsp.defUseData.transformation.DefUseChains.class);
-            classes.add(XMLSolution.class);
-            classes.add(XMLSolutions.class);
-            logger.info(classes.toString());
-            JAXBContext jaxbContext = JAXBContext.newInstance(classes.toArray(new Class[]{}));
-            Unmarshaller jaxbUnmarshaller = jaxbContext.createUnmarshaller();
-            String test = Files.readString(Path.of("SymbolicDUCs.xml"));
-            var chainCollection = (dacite.lsp.defUseData.transformation.DefUseChains) jaxbUnmarshaller.unmarshal(new StringReader(test));
-            String test2 = Files.readString(Path.of("SymbolicSolutions.xml"));
-            XMLSolutions solutionList = (XMLSolutions) jaxbUnmarshaller.unmarshal(new StringReader(test2));
-            for(dacite.lsp.defUseData.transformation.DefUseChain ch:chainCollection.getChains()){
-                String solutionIds = ch.getSolutionIds();
-                String[] array = solutionIds.split(",");
-                List<XMLSolution> solutionsChain  = new ArrayList<>();
-                for(String a:array){
-                    int index = Integer.parseInt(a);
-                    solutionsChain.add(solutionList.getXmlSolutions().get(index));
-                }
-                ch.setSolution(solutionsChain);
-            }
-            List<TestCase> testCaseList = new ArrayList<>();
-            for(XMLSolution solution : solutions){
-                TcgConfig config = TcgConfig.builder().setTestClassPostfix("Dacite").build();
-                TestCase testCase = new TestCase(solution.exceptional,solution.labels,solution.returnValue, getBitSet(solution, chainCollection),config);
-                testCaseList.add(testCase);
-            }
-            Class<?> myclass = Class.forName("dacite.core.tests.Fibonacci");
-            Method[] methods = myclass.getDeclaredMethods();
-            Method methodUnderTest = null;
-            for(Method method : methods){
-                if(method.getName().equals("fibonacci")){
-                    methodUnderTest = method;
-                }
-            }
-            TestCases testCases = new TestCases(testCaseList,methodUnderTest);
-            TcgConfig config = TcgConfig.builder().setTestClassPostfix("Dacite")
-                    .setTestSetReducer(new CombinedTestSetReducer(new SimpleForwardsTestSetReducer(),
-                            new SimpleBackwardsTestSetReducer())).build();
-            TestCasesStringGenerator tcg = new TestCasesStringGenerator(testCases, config);
-            String testing = tcg.generateTestClassStringRepresentation();
-            System.out.println("test");*/
         }
         catch (Exception e) {
             logger.info("Unable to write the file: " + e.getMessage());
         }
 
         sourceFileList = new ArrayList<File>();
-        for(File f: packagedir.listFiles()) {
+        for(File f: Objects.requireNonNull(packagedir.listFiles())) {
             if (!f.isDirectory()) {
                 sourceFileList.add(f);
             }
@@ -266,9 +220,7 @@ public class SymbolicExec {
             }
         } catch (JAXBException e) {
             e.printStackTrace();
-        } catch (XMLStreamException e) {
-            throw new RuntimeException(e);
-        } catch (FileNotFoundException e) {
+        } catch (XMLStreamException | FileNotFoundException e) {
             throw new RuntimeException(e);
         }
     }
@@ -310,7 +262,7 @@ public class SymbolicExec {
                 Set<String> classes = new HashSet<>();
                 for (Map.Entry<String, Object> o : solution.labels.entrySet()) {
                     if (!(o.getValue() == null)) {
-                        Class clazz = o.getValue().getClass();
+                        Class<?> clazz = o.getValue().getClass();
                         classes.add(clazz.getName());
                         if(!isPrimitiveOrPrimitiveWrapperOrString(clazz)){
                             for(Field f: clazz.getDeclaredFields()){
@@ -341,13 +293,8 @@ public class SymbolicExec {
         Set<Class<?>> classes = new HashSet<>();
         try {
             stream = new FileInputStream("DaciteSolutionClasses.txt");
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        }
-        BufferedReader reader = new BufferedReader(new InputStreamReader(stream));
-        String strLine;
-        ArrayList<String> lines = new ArrayList<String>();
-        try {
+            BufferedReader reader = new BufferedReader(new InputStreamReader(stream));
+            String strLine;
             while ((strLine = reader.readLine()) != null) {
                 // Classloader works only for Objects not arrays
                 if(strLine.contains("[") || strLine.equals("int")){
@@ -356,15 +303,11 @@ public class SymbolicExec {
                     classes.add(SymbolicExec.class.getClassLoader().loadClass(strLine));
                 }
             }
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (ClassNotFoundException e) {
-            throw new RuntimeException(e);
-        }
-        try {
             reader.close();
-        } catch (IOException e) {
+        } catch (FileNotFoundException e) {
             e.printStackTrace();
+        } catch (IOException | ClassNotFoundException e) {
+            throw new RuntimeException(e);
         }
         return classes;
     }

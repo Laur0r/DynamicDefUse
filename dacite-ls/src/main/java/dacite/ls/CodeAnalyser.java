@@ -10,11 +10,19 @@ import com.github.javaparser.ast.expr.*;
 import com.github.javaparser.ast.stmt.BlockStmt;
 import com.github.javaparser.ast.visitor.VoidVisitorAdapter;
 import com.github.javaparser.printer.YamlPrinter;
+import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.MethodVisitor;
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Type;
+import org.objectweb.asm.tree.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
+import java.io.InputStream;
 import java.lang.annotation.Annotation;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -175,5 +183,63 @@ public class CodeAnalyser {
       var range = it.getRange().orElse(null);
       return range != null && range.begin.line == lineNumber;
     }).collect(Collectors.toList());
+  }
+
+  public static Map<String, List<String>> analyseJUnitTest(File project, String classname){
+    String packageName = classname.substring(0, classname.lastIndexOf("."));
+    ClassReader reader;
+    try {
+      //logger.info(classname);
+      URL url = project.toURI().toURL();
+      logger.info(String.valueOf(url));
+      URLClassLoader classLoader = new URLClassLoader(new URL[]{url});
+      InputStream input = classLoader.getResourceAsStream(classname.replace('.', '/') + ".class");
+      //logger.info(input.toString());
+      reader = new ClassReader(input);
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+    ClassNode classNode = new ClassNode();
+    reader.accept(classNode, 0);
+    Map<String, List<String>> invokedMethods = new HashMap<>();
+    for(MethodNode mnode : classNode.methods) {
+      //logger.info(mnode.name);
+      if (mnode.visibleAnnotations != null) {
+        for (AnnotationNode an : mnode.visibleAnnotations) {
+          if (an.desc.equals("Lorg/junit/Test;")) {
+            InsnList insns = mnode.instructions;
+            Iterator<AbstractInsnNode> j = insns.iterator();
+            while (j.hasNext()) {
+              AbstractInsnNode in = j.next();
+              if (in instanceof MethodInsnNode) {
+                MethodInsnNode methodins = (MethodInsnNode) in;
+                if(methodins.owner.contains(packageName) && !methodins.name.equals("<init>")){
+                  String name = methodins.owner + "." + methodins.name;
+                  if(methodins.owner.contains("/")){
+                    name = methodins.owner.substring(methodins.owner.lastIndexOf("/")+1)+"." + methodins.name;
+                  }
+                  Type[] types = Type.getArgumentTypes(methodins.desc);
+                  List<String> list = new ArrayList<>();
+                  if(methodins.getOpcode() == Opcodes.INVOKESTATIC){
+                    list.add("static");
+                  } else if(methodins.getOpcode() == Opcodes.INVOKEINTERFACE){
+                    list.add("interface");
+                  } else {
+                    list.add("object");
+                  }
+                  String returnType = Type.getReturnType(methodins.desc).getClassName();
+                  list.add(returnType);
+                  List<String> list2 = Arrays.stream(types).map(Type::getClassName).collect(Collectors.toList());
+                  list.addAll(list2);
+                  invokedMethods.put(name, list);
+                }
+                //logger.info(methodins.owner + "." + methodins.name);
+              }
+            }
+          }
+        }
+      }
+    }
+    return invokedMethods;
   }
 }
