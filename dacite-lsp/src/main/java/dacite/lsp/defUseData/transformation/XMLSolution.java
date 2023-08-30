@@ -8,7 +8,7 @@ import jakarta.xml.bind.annotation.XmlRootElement;
 import java.util.HashMap;
 import java.util.Map;
 
-@XmlRootElement
+@XmlRootElement(name="xmlsolution")
 public class XMLSolution {
 
     @XmlElement

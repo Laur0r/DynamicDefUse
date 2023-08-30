@@ -11,6 +11,7 @@ import java.io.*;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -106,11 +107,25 @@ public class DefUseAnalysisProvider {
     String pathDir = path.substring(0, path.lastIndexOf("/"));
     Set<Class<?>> classes = parseClassesFromSolution(pathDir, project);
     classes.add(DefUseChains.class);
+    classes.add(XMLSolution.class);
+    classes.add(XMLSolutions.class);
     logger.info(classes.toString());
     JAXBContext jaxbContext = JAXBContext.newInstance(classes.toArray(new Class[]{}));
     Unmarshaller jaxbUnmarshaller = jaxbContext.createUnmarshaller();
-    String test = Files.readString(Paths.get(path));
-    var chainCollection = (DefUseChains) jaxbUnmarshaller.unmarshal(new StringReader(test));
+    String chainFile = Files.readString(Paths.get(path));
+    DefUseChains chainCollection = (DefUseChains) jaxbUnmarshaller.unmarshal(new StringReader(chainFile));
+    String solutionFile = Files.readString(Path.of(pathDir+"/SymbolicSolutions.xml"));
+    XMLSolutions solutionList = (XMLSolutions) jaxbUnmarshaller.unmarshal(new StringReader(solutionFile));
+    for(DefUseChain ch:chainCollection.getChains()){
+      String solutionIds = ch.getSolutionIds();
+      String[] array = solutionIds.split(",");
+      List<XMLSolution> solutionsChain  = new ArrayList<>();
+      for(String a:array){
+        int index = Integer.parseInt(a);
+        solutionsChain.add(solutionList.getXmlSolutions().get(index));
+      }
+      ch.setSolution(solutionsChain);
+    }
     notCoveredChains = chainCollection.getChains();
   }
 
@@ -170,21 +185,25 @@ public class DefUseAnalysisProvider {
   public static List<XMLSolution> getSolutions(){
     List<XMLSolution> solutions = new ArrayList<>();
     for(DefUseChain chain :notCoveredChains){
-      XMLSolution solution = chain.getSolution();
-      Object returnValue = solution.returnValue;
-      if(returnValue == null){
-        returnValue= new Object[0];
-      }
-      Map<String, Object> labels = new HashMap<>();
-      if(solution.labels != null){
-        labels.putAll(solution.labels);
-      }
-      XMLSolution compSolution = new XMLSolution(solution.exceptional, returnValue, labels);
-      if(!solutions.contains(compSolution)){
-        solutions.add(compSolution);
+      List<XMLSolution> solution = chain.getSolution();
+      for(XMLSolution s: solution){
+        if(!solutions.contains(s)){
+          solutions.add(s);
+        }
       }
     }
     return solutions;
+  }
+
+  public static BitSet getBitSet(XMLSolution solution){
+    BitSet bitset = new BitSet();
+    for(DefUseChain chain :notCoveredChains){
+      if(chain.getSolution().contains(solution)){
+        bitset.set((int) chain.getId());
+      }
+    }
+    logger.info(String.valueOf(bitset));
+    return bitset;
   }
 
   public static List<DefUseVariable> getDefUseVariables(boolean covered) {

@@ -469,8 +469,11 @@ public class DefUseAnalyser {
         // if a definition was found and DUC does not exist, add DUC
         if(def != null){
             DefUseChain chain = new DefUseChain(def, use);
-            if(!chains.containsSimilar(chain)){
+            DefUseChain c = chains.containsSimilar(chain);
+            if(c == null){
                 chains.addChain(chain);
+            } else {
+                c.setPassedAgain(true);
             }
         }
     }
@@ -495,8 +498,11 @@ public class DefUseAnalyser {
             XMLSolution s = new XMLSolution();
             s.setSolution(solution);
             chain.setSolution(s);
-            if(!chains.containsSimilar(chain)){
+            DefUseChain c = chains.containsSimilar(chain);
+            if(c == null){
                 chains.addChain(chain);
+            } else if(!c.getSolutions().contains(s)){
+                c.setSolution(s);
             }
         }
     }
@@ -590,6 +596,9 @@ public class DefUseAnalyser {
 
     public static String getInterParameter(String className, int linenumber, int parameter){
         CompilationUnit unit = sourceCode.get(className);
+        if(unit == null){
+            return "";
+        }
         List<Node> methods = unit.findAll(MethodCallExpr.class).stream().filter(it -> {
             var range = it.getRange().orElse(null);
             return range != null && range.begin.line == linenumber;
@@ -822,26 +831,13 @@ public class DefUseAnalyser {
         symbolicDefs = new DefSet();
         symbolicUsages = new ArrayDeque<>();
         for(DefUseChain chain:chains.getDefUseChains()){
-            if(chain.getSolution() == null){
-                XMLSolution solution = new XMLSolution();
-                solution.setSolution(pathSolution);
+            XMLSolution solution = new XMLSolution();
+            solution.setSolution(pathSolution);
+            if(chain.getSolutions().size() == 0 || (chain.getPassedAgain() && !chain.getSolutions().contains(solution))){
                 chain.setSolution(solution);
             }
+            chain.setPassedAgain(false);
         }
-        /*for (SubstitutedVar sv : symbolics) {
-            if (sv instanceof Sprimitive) {
-                if (sv instanceof ConcSnumber) {
-                    // TODO Das hier muss nicht gelistet sein; - mit equals vergleichen, Wert auslesen
-                }
-            } if (sv instanceof PartnerClass) {
-                // TODO Für Sarray und für PartnerClass (Sarray ist Subtype) gilt: WENN die Id konkret (ConcSint) ist
-                //  dann kann man mit der ID den check nutzen. erstmal nicht '==', sondern:
-                //  ((PartnerClass) sv).__mulib__getId() ==
-                //  Man kann prüfen, ob eine ID symbolisch ist, indem man id auf Sym prüft, oder
-                //  ((PartnerClass) sv).__mulib__defaultIsSymbolic()
-            }
-            Object realValue = s.getLabel(sv);
-        }*/
     }
 
     public static void resetSymbolicValues() {

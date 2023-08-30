@@ -55,17 +55,17 @@ public class DefUseChains {
      * @param chain DUC to compare
      * @return boolean whether it contains a similar DUC
      */
-    public boolean containsSimilar(DefUseChain chain){
+    public DefUseChain containsSimilar(DefUseChain chain){
         for(DefUseChain c :defUseChains){
             if(chain.getDef().variableIndex == c.getDef().variableIndex && chain.getDef().method.equals(c.getDef().method)
                     && chain.getDef().linenumber == c.getDef().linenumber && chain.getDef().instruction == c.getDef().instruction
                     && chain.getDef().getVariableName().equals(c.getDef().getVariableName()) && chain.getUse().method.equals(c.getUse().method)
                     && chain.getUse().linenumber == c.getUse().linenumber && chain.getUse().instruction == c.getUse().instruction
                     && chain.getUse().getVariableName().equals(c.getUse().getVariableName())){
-                return true;
+                return c;
             }
         }
-        return false;
+        return null;
     }
 
     /**

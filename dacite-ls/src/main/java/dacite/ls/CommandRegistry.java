@@ -10,6 +10,9 @@ import de.wwu.mulib.tcg.TcgConfig;
 import de.wwu.mulib.tcg.TestCase;
 import de.wwu.mulib.tcg.TestCases;
 import de.wwu.mulib.tcg.TestCasesStringGenerator;
+import de.wwu.mulib.tcg.testsetreducer.CombinedTestSetReducer;
+import de.wwu.mulib.tcg.testsetreducer.SimpleBackwardsTestSetReducer;
+import de.wwu.mulib.tcg.testsetreducer.SimpleForwardsTestSetReducer;
 import org.eclipse.lsp4j.*;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.objectweb.asm.ClassReader;
@@ -473,8 +476,10 @@ public class CommandRegistry {
     List<XMLSolution> solutions = DefUseAnalysisProvider.getSolutions();
     List<TestCase> testCaseList = new ArrayList<>();
     for(XMLSolution solution : solutions){
-      TcgConfig config = TcgConfig.builder().setTestClassPostfix("Dacite").build();
-      TestCase testCase = new TestCase(solution.exceptional,solution.labels,solution.returnValue, new BitSet(),config);
+      TcgConfig config = TcgConfig.builder().setTestClassPostfix("Dacite")
+              .setTestSetReducer(new CombinedTestSetReducer(new SimpleForwardsTestSetReducer(), new SimpleBackwardsTestSetReducer())).
+                      build();
+      TestCase testCase = new TestCase(solution.exceptional,solution.labels,solution.returnValue, DefUseAnalysisProvider.getBitSet(solution),config);
       testCaseList.add(testCase);
     }
     Map<String, List<String>> invokedMethods = analyseJUnitTest(project,packageName +"."+classname);
@@ -504,7 +509,9 @@ public class CommandRegistry {
       }
     }
     TestCases testCases = new TestCases(testCaseList,methodUnderTest);
-    TcgConfig config = TcgConfig.builder().setTestClassPostfix("Dacite").build();
+    TcgConfig config = TcgConfig.builder().setTestClassPostfix("Dacite").
+            setTestSetReducer(new CombinedTestSetReducer(new SimpleForwardsTestSetReducer(),
+                    new SimpleBackwardsTestSetReducer())).build();
     TestCasesStringGenerator tcg = new TestCasesStringGenerator(testCases, config);
     String test = tcg.generateTestClassStringRepresentation();
     List<TextEdit> testEdits = new ArrayList<>();

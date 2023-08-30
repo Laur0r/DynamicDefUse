@@ -3,11 +3,17 @@ package dacite.lsp.defUseData.transformation;
 import jakarta.xml.bind.annotation.XmlElement;
 import jakarta.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
 
+import java.util.List;
+
 public class DefUseChain {
     private DefUseVariable def;
     private DefUseVariable use;
 
-    private XMLSolution solution;
+    private long id;
+
+    private String solutionIds;
+
+    private List<XMLSolution> solution;
 
     @XmlElement
     public DefUseVariable getDef() {
@@ -28,17 +34,35 @@ public class DefUseChain {
     }
 
     @XmlElement(name="xmlSolution")
-    public XMLSolution getSolution() {
+    public List<XMLSolution> getSolution() {
         return solution;
     }
 
-    public void setSolution(XMLSolution solution) {
-        this.solution = solution;
+    public void setSolution(List<XMLSolution> solution) {
+        this.solution =solution;
+    }
+
+    @XmlElement
+    public String getSolutionIds() {
+        return solutionIds;
+    }
+
+    public void setSolutionIds(String solutionIds) {
+        this.solutionIds =solutionIds;
+    }
+
+    @XmlElement
+    public long getId() {
+        return id;
+    }
+
+    public void setId(long id) {
+        this.id = id;
     }
 
     public String toString(){
         String output = "";
-        output += "   DefUse var "+use.getVariableIndex()+": Def name="+def.getVariableName()+" Method "+def.getMethod()+" ln=" + def.getLinenumber()+" ins="+def.getInstruction()+" color="+def.getColor() +" --> Use: Method "+use.getMethod()+" ln=" + use.getLinenumber()+" ins="+use.getInstruction()+
+        output += "  id="+id+ " DefUse var "+use.getVariableIndex()+": Def name="+def.getVariableName()+" Method "+def.getMethod()+" ln=" + def.getLinenumber()+" ins="+def.getInstruction()+" color="+def.getColor() +" --> Use: Method "+use.getMethod()+" ln=" + use.getLinenumber()+" ins="+use.getInstruction()+
                 " name="+use.getVariableName();
         return output;
     }
