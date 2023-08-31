@@ -3,26 +3,37 @@ package dacite.core.defuse;
 import dacite.lsp.defUseData.transformation.XMLSolution;
 import jakarta.xml.bind.annotation.XmlElement;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
+
 /**
  * Class representing a DefUseChain (DUC)
  */
 public class DefUseChain {
+
+    private static final AtomicLong count = new AtomicLong(0);
+    private final long id;
     // the definition
     private DefUseVariable def;
     // the usage
     private DefUseVariable use;
 
-    protected XMLSolution solution;
+    private boolean passedAgain;
+
+    protected List<XMLSolution> solutions;
 
     public DefUseChain(DefUseVariable def, DefUseVariable use){
         this.def = def;
         this.use = use;
+        this.id = count.incrementAndGet();
+        solutions = new ArrayList<>();
     }
 
     public void setSolution(XMLSolution solution){
-        this.solution = solution;
+        this.solutions.add(solution);
     }
-    public XMLSolution getSolution(){return solution;}
+    public List<XMLSolution> getSolutions(){return solutions;}
 
     public String toString(){
         String output = "";
@@ -38,6 +49,13 @@ public class DefUseChain {
     public DefUseVariable getDef(){
         return def;
     }
+
+    @XmlElement
+    public long getId(){return id;}
+
+    public void setPassedAgain(boolean passed) {this.passedAgain = passed;}
+
+    public boolean getPassedAgain(){return passedAgain;}
 
     public boolean equals(DefUseChain chain){
         return chain.getUse().equals(this.use) && chain.getDef().equals(this.def);

@@ -1,5 +1,8 @@
 package dacite.intellij.visualisation;
 
+import com.intellij.openapi.actionSystem.ActionManager;
+import com.intellij.openapi.actionSystem.AnAction;
+import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.wm.ToolWindow;
 import com.intellij.openapi.wm.ToolWindowFactory;
@@ -13,6 +16,7 @@ import org.wso2.lsp4intellij.client.languageserver.wrapper.LanguageServerWrapper
 import org.wso2.lsp4intellij.utils.FileUtils;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 
 import dacite.lsp.defUseData.DefUseClass;
@@ -34,7 +38,7 @@ public class DaciteToolWindowFactory implements ToolWindowFactory {
         }
         DaciteAnalysisToolWindow daciteAnalysisToolWindow = new DaciteAnalysisToolWindow(toolWindow, project, requestManager);
         ContentFactory contentFactory = ContentFactory.getInstance();
-        Content content = contentFactory.createContent(daciteAnalysisToolWindow.getContent(), "", false);
+        Content content = contentFactory.createContent(daciteAnalysisToolWindow.getContent(), "Dacite Analysis", false);
         toolWindow.getContentManager().addContent(content);
     }
 
@@ -53,7 +57,7 @@ public class DaciteToolWindowFactory implements ToolWindowFactory {
         }
         DaciteAnalysisToolWindow daciteAnalysisToolWindow = new DaciteAnalysisToolWindow(toolWindow, project, requestManager);
         ContentFactory contentFactory = ContentFactory.getInstance();
-        Content content = contentFactory.createContent(daciteAnalysisToolWindow.addNotCoveredView(), "", false);
+        Content content = contentFactory.createContent(daciteAnalysisToolWindow.addNotCoveredView(), "Dacite Analysis", false);
         toolWindow.getContentManager().addContent(content);
         toolWindow.show();
     }
