@@ -10,6 +10,8 @@ import de.wwu.mulib.tcg.testsetreducer.SimpleBackwardsTestSetReducer;
 import de.wwu.mulib.tcg.testsetreducer.SimpleForwardsTestSetReducer;
 import org.eclipse.lsp4j.*;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.lang.reflect.Method;
@@ -22,6 +24,8 @@ import java.util.List;
 import java.util.Map;
 
 public class DaciteTextGenerator {
+
+    private static final Logger logger = LoggerFactory.getLogger(DaciteTextGenerator.class);
 
     public static List<TextEdit> generateSearchRegions(File project, String classname){
         Map<String, List<String>> invokedMethods = CodeAnalyser.analyseJUnitTest(project,classname);

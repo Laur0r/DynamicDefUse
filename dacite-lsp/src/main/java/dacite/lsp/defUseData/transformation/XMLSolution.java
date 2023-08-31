@@ -47,7 +47,8 @@ public class XMLSolution {
             return false;
         } else {
           XMLSolution s = (XMLSolution) obj;
-          if(s.exceptional == this.exceptional && s.returnValue.equals(this.returnValue) && s.labels.equals(this.labels)){
+          if(s.exceptional == this.exceptional && ((s.returnValue != null && s.returnValue.equals(this.returnValue)) || (s.returnValue == null && this.returnValue == null))
+                  && ((s.labels != null && s.labels.equals(this.labels)) || s.labels == null && this.labels == null)){
               return true;
           } else {
               return false;
