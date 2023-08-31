@@ -243,10 +243,10 @@ public class Transformer implements ClassFileTransformer {
 	 */
 	protected void boxing(Type type, int varIndex, InsnList il, boolean withLoad){
 		switch (type.getSort()) {
-			case Type.BOOLEAN:
+			/*case Type.BOOLEAN:
 				if(withLoad) il.add(new VarInsnNode(type.getOpcode(Opcodes.ILOAD), varIndex));
 				il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "java/lang/Boolean", "valueOf", "(Z)Ljava/lang/Boolean;", false));
-				break;
+				break;*/
 			case Type.BYTE:
 				if(withLoad) il.add(new VarInsnNode(type.getOpcode(Opcodes.ILOAD), varIndex));
 				il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "java/lang/Byte", "valueOf", "(B)Ljava/lang/Byte;", false));
@@ -260,6 +260,7 @@ public class Transformer implements ClassFileTransformer {
 				il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "java/lang/Short", "valueOf", "(S)Ljava/lang/Short;",false));
 				break;
 			case Type.INT:
+			case Type.BOOLEAN:
 				if(withLoad) il.add(new VarInsnNode(type.getOpcode(Opcodes.ILOAD), varIndex));
 				il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "java/lang/Integer", "valueOf", "(I)Ljava/lang/Integer;",false));
 				break;
@@ -586,8 +587,9 @@ public class Transformer implements ClassFileTransformer {
 		return null;
 	}
 
-	public void setDir(String path){
-		this.path = path.substring(0,path.lastIndexOf("/")+1);
-		this.dir = path.substring(path.lastIndexOf("/")+1)+"/";
+	public void setDir(String paths){
+		String[] path = paths.split(";");
+		this.path = path[0];
+		this.dir = path[1];
 	}
 }

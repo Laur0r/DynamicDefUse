@@ -332,9 +332,9 @@ public class DaciteTextDocumentService
                 if(variableName.contains("[")){
                   variableName = variableName.substring(0, variableName.indexOf("["));
                 }
-                if(variableName.contains(".")){
+                /*if(variableName.contains(".")){
                   variableName = variableName.substring(variableName.indexOf(".")+1);
-                }
+                }*/
                 List<DefUseVariable> defs = new ArrayList<>();
                 List<DefUseVariable> uses = new ArrayList<>();
                 for(int i = 0; i< groupedDefUseVariables.size(); i++){

@@ -44,7 +44,7 @@ public class SymbolicExec {
         File packagedir = new File(projectpath+packagename);
         URL url = null;
         Transformer transformer = new Transformer();
-        transformer.setDir(projectpath+packagename.substring(0,packagename.length()-2));
+        transformer.setDir(projectpath+";"+packagename.substring(0,packagename.length()-2));
         if(packagedir.listFiles() == null){
             throw new RuntimeException("there are not files in "+projectpath+packagename);
         }
@@ -99,7 +99,7 @@ public class SymbolicExec {
                         .setTRANSF_USE_DEFAULT_MODEL_CLASSES(true)
                         .setSOLVER_HIGH_LEVEL_SYMBOLIC_OBJECT_APPROACH(true)
                         .setBUDGET_GLOBAL_TIME_IN_SECONDS(5)
-                        .setBUDGET_FIXED_ACTUAL_CP(32)
+                        .setBUDGET_FIXED_ACTUAL_CP(64)
                         //.setVALS_SYMSINT_DOMAIN(-10000000, 1000000)
                         //.setBUDGET_MAX_EXCEEDED(150_000)
                         .setCALLBACK_BACKTRACK((a0, a1, a2) -> DefUseAnalyser.resetSymbolicValues())
