@@ -108,6 +108,7 @@ public class SymbolicExec {
                         //.setBUDGET_FIXED_ACTUAL_CP(16)
                         .setTRANSF_TREAT_SPECIAL_METHOD_CALLS(true)
                         .setTRANSF_IGNORE_CLASSES(List.of(DefUseAnalyser.class, ParameterCollector.class))
+                        .setTRANSF_TRY_USE_MORE_GENERAL_METHOD_FOR(List.of(DefUseAnalyser.class, ParameterCollector.class))
                         .setCALLBACK_PATH_SOLUTION(DefUseAnalyser::resolveLabels)
                 ;
         for(Method method: cls.getDeclaredMethods()){
