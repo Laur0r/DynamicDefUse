@@ -54,9 +54,7 @@ public class DefUseMain {
 		String packagename = args[1].replace(".","/");
 		String classname = args[2];
 		File file = new File(projectdir+packagename+classname+".java");
-		//ClassLoader.getSystemResource(packagename.replace("/",".")+classname+".class");
-		//Class.forName(packagename.replace("/",".")+classname);
-		//ClassLoader t = Thread.currentThread().getContextClassLoader();
+
 		URL url = ClassLoader.getSystemResource(packagename+classname+".class");
 		String sourcePath = url.getPath().substring(0,url.getPath().indexOf(packagename));
 		List<File> sourceFileList = new ArrayList<File>();
@@ -70,12 +68,11 @@ public class DefUseMain {
 		JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
 		StandardJavaFileManager fileManager = compiler.getStandardFileManager( null, null, null );
 		Iterable<? extends JavaFileObject> javaSource = fileManager.getJavaFileObjectsFromFiles( sourceFileList );
-		Iterable<String> options = Arrays.asList("-d", sourcePath, "-g");
+		Iterable<String> options = Arrays.asList("-d", sourcePath, "--release", "11", "-g");
 		JavaCompiler.CompilationTask task = compiler.getTask(null, fileManager, null, options, null, javaSource);
 		task.call();
 
 		try {
-			// TODO projectpath mit übergeben und Klasse vor dem Laden neu kompilieren
 			junitCore.run(Class.forName(packagename.replace("/",".")+classname));
 		} catch (ClassNotFoundException e) {
 			e.printStackTrace();

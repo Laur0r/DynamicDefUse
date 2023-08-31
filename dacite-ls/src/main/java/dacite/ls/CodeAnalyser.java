@@ -186,7 +186,7 @@ public class CodeAnalyser {
   }
 
   public static Map<String, List<String>> analyseJUnitTest(File project, String classname){
-    String packageName = classname.substring(0, classname.lastIndexOf("."));
+    String packageName = classname.substring(0, classname.lastIndexOf(".")).replace(".","/");
     ClassReader reader;
     try {
       //logger.info(classname);
@@ -203,7 +203,6 @@ public class CodeAnalyser {
     reader.accept(classNode, 0);
     Map<String, List<String>> invokedMethods = new HashMap<>();
     for(MethodNode mnode : classNode.methods) {
-      //logger.info(mnode.name);
       if (mnode.visibleAnnotations != null) {
         for (AnnotationNode an : mnode.visibleAnnotations) {
           if (an.desc.equals("Lorg/junit/Test;")) {
@@ -233,7 +232,6 @@ public class CodeAnalyser {
                   list.addAll(list2);
                   invokedMethods.put(name, list);
                 }
-                //logger.info(methodins.owner + "." + methodins.name);
               }
             }
           }
