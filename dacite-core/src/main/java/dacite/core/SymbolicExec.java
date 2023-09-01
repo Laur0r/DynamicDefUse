@@ -67,7 +67,7 @@ public class SymbolicExec {
         sourceFileList.add(file);
         StandardJavaFileManager fileManager = compiler.getStandardFileManager( null, null, null );
         Iterable<? extends JavaFileObject> javaSource = fileManager.getJavaFileObjectsFromFiles( sourceFileList );
-        Iterable<String> options = Arrays.asList("-d", sourcePath, "--release", "11");
+        Iterable<String> options = Arrays.asList("-d", sourcePath, "--release", "11", "-g");
         JavaCompiler.CompilationTask task = compiler.getTask(null, fileManager, null, options, null, javaSource);
         task.call();
 
