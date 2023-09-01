@@ -31,8 +31,4 @@ public interface DaciteTreeViewService {
   default CompletableFuture<RevealResult> treeViewReveal(TextDocumentPositionParams params) {
     throw new UnsupportedOperationException();
   }
-
-  @JsonNotification
-  void treeViewDidChange(TreeViewDidChangeParams params);
-
 }
