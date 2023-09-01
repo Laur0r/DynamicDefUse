@@ -14,7 +14,6 @@ import org.eclipse.lsp4j.PublishDiagnosticsParams;
 import org.eclipse.lsp4j.ShowMessageRequestParams;
 import org.eclipse.lsp4j.TextDocumentItem;
 import org.eclipse.lsp4j.WorkspaceFolder;
-import org.eclipse.lsp4j.services.LanguageClient;
 import org.junit.jupiter.api.AfterEach;
 
 import java.io.File;
@@ -26,6 +25,13 @@ import java.util.List;
 import java.util.Random;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+
+import dacite.lsp.DaciteExtendedLanguageClient;
+import dacite.lsp.tvp.TreeViewChildrenParams;
+import dacite.lsp.tvp.TreeViewChildrenResult;
+import dacite.lsp.tvp.TreeViewDidChangeParams;
+import dacite.lsp.tvp.TreeViewParentParams;
+import dacite.lsp.tvp.TreeViewParentResult;
 
 public abstract class AbstractLanguageServerTest {
 
@@ -86,7 +92,7 @@ public abstract class AbstractLanguageServerTest {
     return languageServer;
   }
 
-  private final class TestLanguageClient implements LanguageClient {
+  private final class TestLanguageClient implements DaciteExtendedLanguageClient {
 
     @Override
     public void telemetryEvent(Object object) {
@@ -113,6 +119,20 @@ public abstract class AbstractLanguageServerTest {
 
     }
 
+    @Override
+    public CompletableFuture<TreeViewChildrenResult> treeViewChildren(TreeViewChildrenParams params) {
+      return null;
+    }
+
+    @Override
+    public CompletableFuture<TreeViewParentResult> treeViewParent(TreeViewParentParams params) {
+      return null;
+    }
+
+    @Override
+    public void treeViewDidChange(TreeViewDidChangeParams params) {
+
+    }
   }
 
 }

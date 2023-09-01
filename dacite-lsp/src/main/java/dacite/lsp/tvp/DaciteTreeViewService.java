@@ -32,4 +32,7 @@ public interface DaciteTreeViewService {
     throw new UnsupportedOperationException();
   }
 
+  @JsonNotification
+  void treeViewDidChange(TreeViewDidChangeParams params);
+
 }

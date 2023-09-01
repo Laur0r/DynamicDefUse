@@ -1,8 +1,10 @@
 package dacite.core.defuse;
 
+import com.github.javaparser.Range;
 import com.github.javaparser.StaticJavaParser;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.Node;
+import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.expr.BinaryExpr;
 import com.github.javaparser.ast.expr.IntegerLiteralExpr;
 import com.github.javaparser.ast.expr.MethodCallExpr;
@@ -431,6 +433,8 @@ public class DefUseAnalyser {
      * @param parameter integer indicating which number parameter this is
      */
     public static void visitParameter(Object value, int index, int linenumber, String method, String varname, int parameter){
+        int ln = getLinenumberParameter(method, linenumber);
+        linenumber = ln == 0? linenumber : ln;
         if(value instanceof Substituted){
             registerSymbolicParameter(value, index, linenumber, method, varname, parameter);
         } else {
@@ -594,7 +598,7 @@ public class DefUseAnalyser {
         registerDef(def);
     }
 
-    public static String getInterParameter(String className, int linenumber, int parameter){
+    protected static String getInterParameter(String className, int linenumber, int parameter){
         CompilationUnit unit = sourceCode.get(className);
         if(unit == null){
             return "";
@@ -614,6 +618,26 @@ public class DefUseAnalyser {
         }
         return "";
     }
+
+    protected static int getLinenumberParameter(String methodString, int ln){
+        String className = methodString.substring(0, methodString.lastIndexOf("."));
+        String method = methodString.substring(methodString.lastIndexOf(".")+1);
+        int linenumber = 0;
+        CompilationUnit unit = sourceCode.get(className);
+        if(unit == null){
+            return linenumber;
+        }
+        List<Node> methods = unit.findAll(MethodDeclaration.class).stream().filter(it -> it.getNameAsString().equals(method)).collect(Collectors.toList());
+        for(Node n:methods){
+            MethodDeclaration decl = (MethodDeclaration) methods.get(0);
+            Range range = decl.getRange().orElse(null);
+            if(range!= null && range.begin.line > linenumber && ln >= range.begin.line){
+                linenumber = range.begin.line;
+            }
+        }
+        return linenumber;
+    }
+
 
     /**
      * Method parameter is registered at the entry of the called method. If this parameter was defined elsewhere and is
