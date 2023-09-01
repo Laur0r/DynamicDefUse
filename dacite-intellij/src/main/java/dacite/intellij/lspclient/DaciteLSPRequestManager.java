@@ -100,10 +100,4 @@ public class DaciteLSPRequestManager extends DefaultRequestManager
     languageServerWrapper.crashed(e);
   }
 
-  @Override
-  public void treeViewDidChange(TreeViewDidChangeParams params) {
-    System.out.println("notification received!");
-    treeViewService.treeViewDidChange(params);
-  }
-
 }

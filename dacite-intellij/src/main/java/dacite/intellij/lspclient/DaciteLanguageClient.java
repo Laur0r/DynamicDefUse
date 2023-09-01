@@ -17,11 +17,6 @@ public class DaciteLanguageClient extends DefaultLanguageClient {
         super(context);
     }
 
-    @JsonNotification("dacite/treeViewDidChange")
-    public void treeViewDidChange(TreeViewDidChangeParams params) {
-        System.out.println("notification received in Client!");
-    }
-
     @Override
     public CompletableFuture<ApplyWorkspaceEditResponse> applyEdit(ApplyWorkspaceEditParams params) {
         boolean response = DaciteWorkspaceEditHandler.applyEdit(params.getEdit(), "LSP edits");
