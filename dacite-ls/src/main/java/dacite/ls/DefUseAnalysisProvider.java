@@ -103,30 +103,34 @@ public class DefUseAnalysisProvider {
     }
   }
 
-  public static void processXmlFileSymbolic(String path, File project) throws JAXBException, IOException {
-    String pathDir = path.substring(0, path.lastIndexOf("/"));
-    Set<Class<?>> classes = parseClassesFromSolution(pathDir, project);
-    classes.add(DefUseChains.class);
-    classes.add(XMLSolution.class);
-    classes.add(XMLSolutions.class);
-    logger.info(classes.toString());
-    JAXBContext jaxbContext = JAXBContext.newInstance(classes.toArray(new Class[]{}));
-    Unmarshaller jaxbUnmarshaller = jaxbContext.createUnmarshaller();
-    String chainFile = Files.readString(Paths.get(path));
-    DefUseChains chainCollection = (DefUseChains) jaxbUnmarshaller.unmarshal(new StringReader(chainFile));
-    String solutionFile = Files.readString(Path.of(pathDir+"/SymbolicSolutions.xml"));
-    XMLSolutions solutionList = (XMLSolutions) jaxbUnmarshaller.unmarshal(new StringReader(solutionFile));
-    for(DefUseChain ch:chainCollection.getChains()){
-      String solutionIds = ch.getSolutionIds();
-      String[] array = solutionIds.split(",");
-      List<XMLSolution> solutionsChain  = new ArrayList<>();
-      for(String a:array){
-        int index = Integer.parseInt(a);
-        solutionsChain.add(solutionList.getXmlSolutions().get(index));
+  public static void processXmlFileSymbolic(String path, File project) {
+    try{
+      String pathDir = path.substring(0, path.lastIndexOf("/"));
+      Set<Class<?>> classes = parseClassesFromSolution(pathDir, project);
+      classes.add(DefUseChains.class);
+      classes.add(XMLSolution.class);
+      classes.add(XMLSolutions.class);
+      logger.info(classes.toString());
+      JAXBContext jaxbContext = JAXBContext.newInstance(classes.toArray(new Class[]{}));
+      Unmarshaller jaxbUnmarshaller = jaxbContext.createUnmarshaller();
+      String chainFile = Files.readString(Paths.get(path));
+      DefUseChains chainCollection = (DefUseChains) jaxbUnmarshaller.unmarshal(new StringReader(chainFile));
+      String solutionFile = Files.readString(Path.of(pathDir+"/SymbolicSolutions.xml"));
+      XMLSolutions solutionList = (XMLSolutions) jaxbUnmarshaller.unmarshal(new StringReader(solutionFile));
+      for(DefUseChain ch:chainCollection.getChains()){
+        String solutionIds = ch.getSolutionIds();
+        String[] array = solutionIds.split(",");
+        List<XMLSolution> solutionsChain  = new ArrayList<>();
+        for(String a:array){
+          int index = Integer.parseInt(a);
+          solutionsChain.add(solutionList.getXmlSolutions().get(index));
+        }
+        ch.setSolution(solutionsChain);
       }
-      ch.setSolution(solutionsChain);
+      notCoveredChains = chainCollection.getChains();
+    } catch (Exception e){
+      logger.error(e.getMessage(),e);
     }
-    notCoveredChains = chainCollection.getChains();
   }
 
   public static void deriveNotCoveredChains(String path, File project) throws JAXBException, IOException {

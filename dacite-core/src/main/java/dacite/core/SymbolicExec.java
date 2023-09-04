@@ -177,7 +177,7 @@ public class SymbolicExec {
             xsw.writeCharacters(String.valueOf(var.getLinenumber()));
             xsw.writeEndElement();
             xsw.writeStartElement("method");
-            xsw.writeCharacters(String.valueOf(var.getMethod()));
+            xsw.writeCharacters(xmlEscape(var.getMethod()));
             xsw.writeEndElement();
             xsw.writeStartElement("variableIndex");
             xsw.writeCharacters(String.valueOf(var.getVariableIndex()));
@@ -186,7 +186,7 @@ public class SymbolicExec {
             xsw.writeCharacters(String.valueOf(var.getInstruction()));
             xsw.writeEndElement();
             xsw.writeStartElement("variableName");
-            xsw.writeCharacters(String.valueOf(var.getVariableName()));
+            xsw.writeCharacters(xmlEscape(var.getVariableName()));
             xsw.writeEndElement();
             if(var instanceof DefUseField){
                 xsw.writeStartElement("objectName");
@@ -324,6 +324,12 @@ public class SymbolicExec {
                 type == Double.class || type == Float.class || type == Long.class ||
                 type == Integer.class || type == Short.class || type == Character.class ||
                 type == Byte.class || type == Boolean.class || type == String.class;
+    }
+
+    public static String xmlEscape(String input){
+        String output = input.replace("<", "&lt;");
+        output = output.replace(">", "&gt;");
+        return output;
     }
 
 }
