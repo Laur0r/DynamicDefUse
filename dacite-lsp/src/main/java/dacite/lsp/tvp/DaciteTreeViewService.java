@@ -17,6 +17,9 @@ public interface DaciteTreeViewService {
   CompletableFuture<TreeViewParentResult> treeViewParent(TreeViewParentParams params);
 
   @JsonNotification
+  void treeViewDidChange(TreeViewDidChangeParams params);
+
+  @JsonNotification
   default void treeViewVisibilityDidChange(TreeViewVisibilityDidChangeParams params) {
   }
 
@@ -28,8 +31,4 @@ public interface DaciteTreeViewService {
   default CompletableFuture<RevealResult> treeViewReveal(TextDocumentPositionParams params) {
     throw new UnsupportedOperationException();
   }
-
-  @JsonNotification
-  void treeViewDidChange(TreeViewDidChangeParams params);
-
 }
