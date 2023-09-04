@@ -129,7 +129,7 @@ public class SymbolicExec {
             xsw.writeStartDocument();
             xsw.writeStartElement("DefUseChains");
             if(DefUseAnalyser.chains.getDefUseChains().size() >0) {
-                getClassesOfSolution(DefUseAnalyser.chains.getDefUseChains().get(0).getSolutions());
+                getClassesOfSolution(DefUseAnalyser.chains);
             }
             List<XMLSolution> solutions = getSolutions(DefUseAnalyser.chains);
             parseSolution(xof, solutions);
@@ -256,34 +256,40 @@ public class SymbolicExec {
         return solutions;
     }
 
-    private static void getClassesOfSolution(List<XMLSolution> solutions){
-        try {
-            if(solutions.size() != 0){
+    private static void getClassesOfSolution(DefUseChains chains){
+        Set<String> classes = new HashSet<>();
+        for(DefUseChain chain: chains.getDefUseChains()){
+            List<XMLSolution> solutions = chain.getSolutions();
+            if(solutions.size() != 0) {
                 XMLSolution solution = solutions.get(0);
-                Set<String> classes = new HashSet<>();
+
                 for (Map.Entry<String, Object> o : solution.labels.entrySet()) {
                     if (!(o.getValue() == null)) {
                         Class<?> clazz = o.getValue().getClass();
                         classes.add(clazz.getName());
-                        if(!isPrimitiveOrPrimitiveWrapperOrString(clazz)){
-                            for(Field f: clazz.getDeclaredFields()){
-                                if(!f.getType().isPrimitive()){
+                        if (!isPrimitiveOrPrimitiveWrapperOrString(clazz)) {
+                            for (Field f : clazz.getDeclaredFields()) {
+                                if (!f.getType().isPrimitive()) {
                                     classes.add(f.getType().getName());
                                 }
                             }
                         }
                     }
                 }
-                if(solution.returnValue != null){
+                if (solution.returnValue != null) {
                     classes.add(solution.returnValue.getClass().getName());
                 }
-                BufferedWriter writer = new BufferedWriter(new FileWriter("DaciteSolutionClasses.txt"));
-                for (String className : classes) {
-                    writer.write(className);
-                    writer.newLine();
-                }
-                writer.close();
             }
+        }
+
+        try {
+            BufferedWriter writer = new BufferedWriter(new FileWriter("DaciteSolutionClasses.txt"));
+            for (String className : classes) {
+                writer.write(className);
+                writer.newLine();
+            }
+            writer.close();
+
         } catch (IOException e) {
             e.printStackTrace();
         }
