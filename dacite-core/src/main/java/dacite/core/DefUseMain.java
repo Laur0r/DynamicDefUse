@@ -61,7 +61,7 @@ public class DefUseMain {
 		sourceFileList.add(file);
 		File packagedir = new File(projectdir+packagename);
 		for(File f: packagedir.listFiles()){
-			if(!f.isDirectory()){
+			if(!f.isDirectory() && f.getName().contains(".java")){
 				sourceFileList.add(f);
 			}
 		}
