@@ -52,7 +52,7 @@ public class DaciteTextGenerator {
             final String method = entry.getKey();
             String indent = "    ";
 
-            String m = indent + "public static "+returnType+" dacite_symbolic_driver"+counter+"() {"+ls;
+            String m = indent + "public static "+returnType+" dacite_symbolic_driver_"+method.substring(method.lastIndexOf(".")+1)+"() {"+ls;
             line = createTextEditAndIncrementLine(edits, line, m);
             String commentInput = indent.repeat(2) + "/* Input values */"+ls;
             line = createTextEditAndIncrementLine(edits, line, commentInput);
