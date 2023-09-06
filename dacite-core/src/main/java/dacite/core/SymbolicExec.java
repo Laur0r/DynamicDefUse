@@ -11,6 +11,7 @@ import de.wwu.mulib.solving.Solvers;
 import jakarta.xml.bind.JAXBContext;
 import jakarta.xml.bind.JAXBException;
 import jakarta.xml.bind.Marshaller;
+import org.yaml.snakeyaml.Yaml;
 
 import javax.tools.JavaCompiler;
 import javax.tools.JavaFileObject;
@@ -24,9 +25,6 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.*;
 import java.util.logging.Logger;
 
