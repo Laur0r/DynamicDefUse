@@ -5,7 +5,7 @@ import de.wwu.mulib.tcg.TcgConfig;
 import de.wwu.mulib.tcg.TestCase;
 import de.wwu.mulib.tcg.TestCases;
 import de.wwu.mulib.tcg.TestCasesStringGenerator;
-import de.wwu.mulib.tcg.testsetreducer.CombinedTestSetReducer;
+import de.wwu.mulib.tcg.testsetreducer.SequentialCombinedTestSetReducer;
 import de.wwu.mulib.tcg.testsetreducer.SimpleBackwardsTestSetReducer;
 import de.wwu.mulib.tcg.testsetreducer.SimpleForwardsTestSetReducer;
 import org.eclipse.lsp4j.*;
@@ -168,7 +168,7 @@ public class DaciteTextGenerator {
         List<TestCase> testCaseList = new ArrayList<>();
         for(XMLSolution solution : solutions){
             TcgConfig config = TcgConfig.builder().setTestClassPostfix("Dacite")
-                    .setTestSetReducer(new CombinedTestSetReducer(new SimpleForwardsTestSetReducer(), new SimpleBackwardsTestSetReducer())).
+                    .setTestSetReducer(new SequentialCombinedTestSetReducer(new SimpleForwardsTestSetReducer(), new SimpleBackwardsTestSetReducer())).
                     build();
             TestCase testCase = new TestCase(solution.exceptional,solution.labels,solution.returnValue, DefUseAnalysisProvider.getBitSet(solution),config);
             testCaseList.add(testCase);
@@ -197,7 +197,7 @@ public class DaciteTextGenerator {
         }
         TestCases testCases = new TestCases(testCaseList,methodUnderTest);
         TcgConfig config = TcgConfig.builder().setTestClassPostfix("Dacite").
-                setTestSetReducer(new CombinedTestSetReducer(new SimpleForwardsTestSetReducer(),
+                setTestSetReducer(new SequentialCombinedTestSetReducer(new SimpleForwardsTestSetReducer(),
                         new SimpleBackwardsTestSetReducer())).build();
         TestCasesStringGenerator tcg = new TestCasesStringGenerator(testCases, config);
         String test = tcg.generateTestClassStringRepresentation();
