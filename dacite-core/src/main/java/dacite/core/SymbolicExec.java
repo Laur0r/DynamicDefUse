@@ -23,6 +23,10 @@ import java.io.*;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.net.URL;
+import java.net.URLClassLoader;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.logging.Logger;
 
@@ -37,11 +41,34 @@ public class SymbolicExec {
         String projectpath = args[0];
         String packagename = args[1];
         String classname = args[2];
+
+        Yaml yaml = new Yaml();
+        File packagedir = new File(projectpath+packagename);
+        URL urlPackage = packagedir.toURI().toURL();
+        URLClassLoader classLoader = new URLClassLoader(new URL[]{urlPackage});
+        Map<String, Object> config = null;
+        try{
+            InputStream inputStream = classLoader.getResourceAsStream("Dacite_config.yaml");
+            config = yaml.load(inputStream);
+            LinkedHashMap<String, String> daciteConfig = config.get("dacite_config") == null? null : (LinkedHashMap<String, String>) config.get("dacite_config");
+            if(daciteConfig != null){
+                logger.info(daciteConfig.toString());
+                if(daciteConfig.containsKey("package")){
+                    packagedir = new File(projectpath+daciteConfig.get("package").replace(".","/"));
+                    packagename = daciteConfig.get("package").replace(".","/")+"/";
+                }
+            } else {
+                logger.info("no dacite_config");
+            }
+        } catch (Exception e){
+            logger.info("no dacite config found");
+        }
+
+
         File file = new File(projectpath+packagename+classname);
         logger.info("file1 "+file.getPath()+" "+file.exists());
 
         // Get sourcepath
-        File packagedir = new File(projectpath+packagename);
         URL url = null;
         Transformer transformer = new Transformer();
         transformer.setDir(projectpath+";"+packagename.substring(0,packagename.length()-2));
@@ -51,8 +78,9 @@ public class SymbolicExec {
         for(File f: Objects.requireNonNull(packagedir.listFiles())){
             if(!f.isDirectory()){
                 String name = f.getName().substring(0,f.getName().lastIndexOf("."));
-                if(!f.getName().contains("DaciteSymbolicDriver") && url == null){
+                if(!f.getName().contains("DaciteSymbolicDriver")){
                     url = Class.forName(packagename.replace("/",".")+name).getResource(name+".class");
+                    break;
                 }
             }
         }
@@ -73,7 +101,7 @@ public class SymbolicExec {
 
         // Transform all files for Analysis
         for(File f: Objects.requireNonNull(packagedir.listFiles())){
-            if(!f.isDirectory()){
+            if(!f.isDirectory() && f.getName().contains(".java")){
                 String name = f.getName().substring(0,f.getName().lastIndexOf("."));
                 transformer.transformSymbolic(packagename.replace("/",".")+name, sourcePath);
             }
@@ -83,6 +111,25 @@ public class SymbolicExec {
         Class<?> cls = Class.forName(packagename.replace("/",".")+classname.substring(0,classname.indexOf(".")));//+"dacite_"
         Object instance = cls.getDeclaredConstructor().newInstance();
         logger.info(instance.toString());
+
+        // Set Mulib configs
+        int BUDGET_INCR_ACTUAL_CP = 8;
+        int BUDGET_FIXED_ACTUAL_CP = 64;
+        int BUDGET_GLOBAL_TIME_IN_SECONDS = 5;
+        if(config != null){
+            LinkedHashMap<String, Object> mulibConfig = config.get("mulib_config") == null? null : (LinkedHashMap<String, Object>) config.get("mulib_config");
+            if(mulibConfig != null){
+                if(mulibConfig.containsKey("BUDGET_INCR_ACTUAL_CP")){
+                    BUDGET_INCR_ACTUAL_CP = (Integer) mulibConfig.get("BUDGET_INCR_ACTUAL_CP");
+                }
+                if(mulibConfig.containsKey("BUDGET_FIXED_ACTUAL_CP")){
+                    BUDGET_FIXED_ACTUAL_CP = (Integer) mulibConfig.get("BUDGET_FIXED_ACTUAL_CP");
+                }
+                if(mulibConfig.containsKey("BUDGET_GLOBAL_TIME_IN_SECONDS")){
+                    BUDGET_GLOBAL_TIME_IN_SECONDS = (Integer) mulibConfig.get("BUDGET_GLOBAL_TIME_IN_SECONDS");
+                }
+            }
+        }
 
         // Symbolic Execution with Mulib
         MulibConfig.MulibConfigBuilder builder =
@@ -95,11 +142,11 @@ public class SymbolicExec {
                         .setSEARCH_MAIN_STRATEGY(SearchStrategy.IDDSAS)
                         .setSEARCH_CHOICE_OPTION_DEQUE_TYPE(ChoiceOptionDeques.DIRECT_ACCESS)
                         .setSOLVER_GLOBAL_TYPE(Solvers.Z3_INCREMENTAL)
-                        .setBUDGET_INCR_ACTUAL_CP(8)
+                        .setBUDGET_INCR_ACTUAL_CP(BUDGET_INCR_ACTUAL_CP)
                         .setTRANSF_USE_DEFAULT_MODEL_CLASSES(true)
                         .setSOLVER_HIGH_LEVEL_SYMBOLIC_OBJECT_APPROACH(true)
-                        .setBUDGET_GLOBAL_TIME_IN_SECONDS(5)
-                        .setBUDGET_FIXED_ACTUAL_CP(64)
+                        .setBUDGET_GLOBAL_TIME_IN_SECONDS(BUDGET_GLOBAL_TIME_IN_SECONDS)
+                        .setBUDGET_FIXED_ACTUAL_CP(BUDGET_FIXED_ACTUAL_CP)
                         //.setVALS_SYMSINT_DOMAIN(-10000000, 1000000)
                         //.setBUDGET_MAX_EXCEEDED(150_000)
                         .setCALLBACK_BACKTRACK((a0, a1, a2) -> DefUseAnalyser.resetSymbolicValues())
@@ -161,7 +208,7 @@ public class SymbolicExec {
 
         sourceFileList = new ArrayList<File>();
         for(File f: Objects.requireNonNull(packagedir.listFiles())) {
-            if (!f.isDirectory()) {
+            if (!f.isDirectory() && f.getName().contains(".java")) {
                 sourceFileList.add(f);
             }
         }
@@ -177,7 +224,7 @@ public class SymbolicExec {
             xsw.writeCharacters(String.valueOf(var.getLinenumber()));
             xsw.writeEndElement();
             xsw.writeStartElement("method");
-            xsw.writeCharacters(String.valueOf(var.getMethod()));
+            xsw.writeCharacters(xmlEscape(var.getMethod()));
             xsw.writeEndElement();
             xsw.writeStartElement("variableIndex");
             xsw.writeCharacters(String.valueOf(var.getVariableIndex()));
@@ -186,7 +233,7 @@ public class SymbolicExec {
             xsw.writeCharacters(String.valueOf(var.getInstruction()));
             xsw.writeEndElement();
             xsw.writeStartElement("variableName");
-            xsw.writeCharacters(String.valueOf(var.getVariableName()));
+            xsw.writeCharacters(xmlEscape(var.getVariableName()));
             xsw.writeEndElement();
             if(var instanceof DefUseField){
                 xsw.writeStartElement("objectName");
@@ -324,6 +371,12 @@ public class SymbolicExec {
                 type == Double.class || type == Float.class || type == Long.class ||
                 type == Integer.class || type == Short.class || type == Character.class ||
                 type == Byte.class || type == Boolean.class || type == String.class;
+    }
+
+    public static String xmlEscape(String input){
+        String output = input.replace("<", "&lt;");
+        output = output.replace(">", "&gt;");
+        return output;
     }
 
 }

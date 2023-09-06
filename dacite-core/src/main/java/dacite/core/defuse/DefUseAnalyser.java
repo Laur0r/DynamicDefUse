@@ -49,6 +49,10 @@ public class DefUseAnalyser {
 
     protected static Map<String, CompilationUnit> sourceCode;
 
+    protected static Map<String, List<MethodCallExpr>> sourceCodeMethodCalls;
+
+    protected static Map<String, List<MethodDeclaration>> sourceCodeMethodDeclaration;
+
     protected static long counter;
 
     static{
@@ -59,6 +63,8 @@ public class DefUseAnalyser {
         interMethods = new InterMethodAllocDequeue();
         aliases = new HashMap<Object, AliasAlloc>();
         sourceCode = new HashMap<String, CompilationUnit>();
+        sourceCodeMethodCalls = new HashMap<String, List<MethodCallExpr>>();
+        sourceCodeMethodDeclaration = new HashMap<String, List<MethodDeclaration>>();
         counter = 0;
     }
 
@@ -228,6 +234,7 @@ public class DefUseAnalyser {
         DefUseVariable def = null;
         // TODO value oder instance SubstitutedVar? Oder geht immer nur beides oder nichts?
         if(value instanceof Substituted){
+            instanceName = removeSymbolicALoad(instance, linenumber, method);
             def = symbolicDefs.containsSymbolicField(value, -1, name, linenumber, instruction, instance);
             if(def != null){
                 symbolicDefs.removeDef(def);
@@ -260,10 +267,11 @@ public class DefUseAnalyser {
          To access a field, first the class instance is loaded in bytecode. However, this is not a usage as this is only used
          for the field access. Thus, the identified chain using the class instance is removed.
          */
-        String instanceName = chains.removeAload(instance, linenumber, method);
-        DefUseField use = new DefUseField(linenumber, instruction, -1, value, method, name, instance, instanceName);
+        DefUseVariable use = null;
         DefUseVariable def = null;
         if(value instanceof Substituted){
+            String instanceName = removeSymbolicALoad(instance, linenumber, method);
+            use = new DefUseField(linenumber, instruction, -1, value, method, name, instance, instanceName);
             if(value instanceof ConcSnumber || (value instanceof PartnerClass && ((PartnerClass) value).__mulib__getId()
                     instanceof Sint.ConcSint)){
                 def = symbolicDefs.getLastSymbolicDefinitionFields(-1, name, value, instance);
@@ -284,6 +292,8 @@ public class DefUseAnalyser {
             }
         } else {
             // get most recent field definition for this usage
+            String instanceName = chains.removeAload(instance, linenumber, method);
+            use = new DefUseField(linenumber, instruction, -1, value, method, name, instance, instanceName);
             def = defs.getLastDefinitionFields(-1, name, value, instance);
             // if there exists a definition and this is an alias, check whether alias definition was more recent
             if(def != null && def.isAlias()){
@@ -599,16 +609,24 @@ public class DefUseAnalyser {
     }
 
     protected static String getInterParameter(String className, int linenumber, int parameter){
-        CompilationUnit unit = sourceCode.get(className);
-        if(unit == null){
-            return "";
+        List<MethodCallExpr> methods;
+        if(sourceCodeMethodCalls.containsKey(className)) {
+            methods = sourceCodeMethodCalls.get(className);
+        } else {
+            CompilationUnit unit = sourceCode.get(className);
+            if(unit == null){
+                return "";
+            }
+            methods = new ArrayList<>(unit.findAll(MethodCallExpr.class));
+            sourceCodeMethodCalls.put(className, methods);
         }
-        List<Node> methods = unit.findAll(MethodCallExpr.class).stream().filter(it -> {
+
+        List<MethodCallExpr> lineMethodCalls = methods.stream().filter(it -> {
             var range = it.getRange().orElse(null);
             return range != null && range.begin.line == linenumber;
         }).collect(Collectors.toList());
-        if(methods.size()==1){
-            MethodCallExpr method = (MethodCallExpr) methods.get(0);
+        if(lineMethodCalls.size()==1){
+            MethodCallExpr method = lineMethodCalls.get(0);
             Node argument = method.getArgument(parameter);
             if(argument instanceof BinaryExpr || argument instanceof IntegerLiteralExpr){
                 return "";
@@ -623,14 +641,22 @@ public class DefUseAnalyser {
         String className = methodString.substring(0, methodString.lastIndexOf("."));
         String method = methodString.substring(methodString.lastIndexOf(".")+1);
         int linenumber = 0;
-        CompilationUnit unit = sourceCode.get(className);
-        if(unit == null){
-            return linenumber;
+
+        List<MethodDeclaration> methods;
+        if(sourceCodeMethodDeclaration.containsKey(className)) {
+            methods = sourceCodeMethodDeclaration.get(className);
+        } else {
+            CompilationUnit unit = sourceCode.get(className);
+            if(unit == null){
+                return linenumber;
+            }
+            methods = new ArrayList<>(unit.findAll(MethodDeclaration.class));
+            sourceCodeMethodDeclaration.put(className, methods);
         }
-        List<Node> methods = unit.findAll(MethodDeclaration.class).stream().filter(it -> it.getNameAsString().equals(method)).collect(Collectors.toList());
-        for(Node n:methods){
-            MethodDeclaration decl = (MethodDeclaration) methods.get(0);
-            Range range = decl.getRange().orElse(null);
+
+        List<MethodDeclaration> nameMethodCalls = methods.stream().filter(it -> it.getNameAsString().equals(method)).collect(Collectors.toList());
+        for(Node n:nameMethodCalls){
+            Range range = n.getRange().orElse(null);
             if(range!= null && range.begin.line > linenumber && ln >= range.begin.line){
                 linenumber = range.begin.line;
             }
@@ -819,6 +845,21 @@ public class DefUseAnalyser {
         return type.isPrimitive() || type == Double.class || type == Float.class || type == Long.class
                 || type == Integer.class || type == Short.class || type == Character.class
                 || type == Byte.class || type == Boolean.class || type == String.class;
+    }
+
+    protected static String removeSymbolicALoad(Object object, int linenumber, String method) {
+        for (DefUseVariable use : symbolicUsages) {
+            if (use.getLinenumber() == linenumber && use.getMethod().equals(method)) {
+                if (use.getValue() == null && object == null) {
+                    symbolicUsages.remove(use);
+                    return use.getVariableName();
+                } else if(use.getValue() != null && use.getValue() == object && !DefUseAnalyser.isPrimitiveOrWrapper(object)) {
+                    symbolicUsages.remove(use);
+                    return use.getVariableName();
+                }
+            }
+        }
+        return "this";
     }
 
     /**
