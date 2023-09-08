@@ -33,6 +33,7 @@ public class DaciteSymbolicAnalysisAction extends AnAction {
   @Override
   public void actionPerformed(@NotNull AnActionEvent e) {
     System.out.println("action performed");
+    long start = System.currentTimeMillis();
     Project project = e.getProject();
     PsiFile file = e.getData(PlatformCoreDataKeys.PSI_FILE);
 
@@ -51,6 +52,8 @@ public class DaciteSymbolicAnalysisAction extends AnAction {
     if (toolWindow != null) {
       factory.createToolWindowWithView(project,toolWindow);
     }
+    long end = System.currentTimeMillis();
+    System.out.println("Execution time in ms: "+(end-start));
 
   }
 

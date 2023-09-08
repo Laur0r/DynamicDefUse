@@ -47,8 +47,12 @@ public class XMLSolution {
             return false;
         } else {
           XMLSolution s = (XMLSolution) obj;
-          if(s.exceptional == this.exceptional && ((s.returnValue != null && s.returnValue.equals(this.returnValue)) || (s.returnValue == null && this.returnValue == null))
-                  && ((s.labels != null && s.labels.equals(this.labels)) || s.labels == null && this.labels == null)){
+          if(s.exceptional == this.exceptional && s.returnValue == this.returnValue){
+              for(String key :this.labels.keySet()){
+                  if(this.labels.get(key) != s.labels.get(key)){
+                      return false;
+                  }
+              }
               return true;
           } else {
               return false;
@@ -56,5 +60,8 @@ public class XMLSolution {
         }
     }
 
-
+    @Override
+    public int hashCode() {
+        return super.hashCode();
+    }
 }

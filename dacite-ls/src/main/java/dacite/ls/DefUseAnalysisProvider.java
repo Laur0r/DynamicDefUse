@@ -188,14 +188,14 @@ public class DefUseAnalysisProvider {
 
   public static List<XMLSolution> getSolutions(){
     List<XMLSolution> solutions = new ArrayList<>();
-    for(DefUseChain chain :notCoveredChains){
+    notCoveredChains.parallelStream().forEach(chain -> {
       List<XMLSolution> solution = chain.getSolution();
-      for(XMLSolution s: solution){
+      solution.parallelStream().forEach(s -> {
         if(!solutions.contains(s)){
           solutions.add(s);
         }
-      }
-    }
+      });
+    });
     return solutions;
   }
 
@@ -206,7 +206,7 @@ public class DefUseAnalysisProvider {
         bitset.set((int) chain.getId());
       }
     }
-    logger.info(String.valueOf(bitset));
+    //logger.info(String.valueOf(bitset));
     return bitset;
   }
 
