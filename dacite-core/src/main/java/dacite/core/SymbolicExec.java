@@ -111,49 +111,57 @@ public class SymbolicExec {
         logger.info(instance.toString());
 
         // Set Mulib configs
-        int BUDGET_INCR_ACTUAL_CP = 8;
+        int BUDGET_INCR_ACTUAL_CP = 64;
         int BUDGET_FIXED_ACTUAL_CP = 64;
-        int BUDGET_GLOBAL_TIME_IN_SECONDS = 5;
-        if(config != null){
+        int BUDGET_GLOBAL_TIME_IN_SECONDS = 10;
+        boolean CONCOLIC = false;
+        String SEARCH_STRATEGY = "IDDFS";
+        if (config != null) {
             LinkedHashMap<String, Object> mulibConfig = config.get("mulib_config") == null? null : (LinkedHashMap<String, Object>) config.get("mulib_config");
-            if(mulibConfig != null){
-                if(mulibConfig.containsKey("BUDGET_INCR_ACTUAL_CP")){
+            if (mulibConfig != null){
+                if (mulibConfig.containsKey("BUDGET_INCR_ACTUAL_CP")) {
                     BUDGET_INCR_ACTUAL_CP = (Integer) mulibConfig.get("BUDGET_INCR_ACTUAL_CP");
                 }
-                if(mulibConfig.containsKey("BUDGET_FIXED_ACTUAL_CP")){
+                if (mulibConfig.containsKey("BUDGET_FIXED_ACTUAL_CP")) {
                     BUDGET_FIXED_ACTUAL_CP = (Integer) mulibConfig.get("BUDGET_FIXED_ACTUAL_CP");
                 }
-                if(mulibConfig.containsKey("BUDGET_GLOBAL_TIME_IN_SECONDS")){
+                if (mulibConfig.containsKey("BUDGET_GLOBAL_TIME_IN_SECONDS")) {
                     BUDGET_GLOBAL_TIME_IN_SECONDS = (Integer) mulibConfig.get("BUDGET_GLOBAL_TIME_IN_SECONDS");
+                }
+                if (mulibConfig.containsKey("SEARCH_CONCOLIC")) {
+                    CONCOLIC = (Boolean) mulibConfig.get("SEARCH_CONCOLIC");
+                }
+                if (mulibConfig.containsKey("SEARCH_STRATEGY")) {
+                    SEARCH_STRATEGY = (String) mulibConfig.get("SEARCH_STRATEGY");
                 }
             }
         }
+        SearchStrategy searchStrategy = SearchStrategy.valueOf(SEARCH_STRATEGY);
 
         // Symbolic Execution with Mulib
         MulibConfig.MulibConfigBuilder builder =
                 MulibConfig.builder()
-                        .setTRANSF_WRITE_TO_FILE(true)
+//                        .setTRANSF_WRITE_TO_FILE(true)
                         .setTRANSF_GENERATED_CLASSES_PATH(sourcePath)
-//                        .setTRANSF_LOAD_WITH_SYSTEM_CLASSLOADER(true)
-//                        .setTRANSF_OVERWRITE_FILE_FOR_SYSTEM_CLASSLOADER(true)
-                        .setTRANSF_VALIDATE_TRANSFORMATION(true)
-                        .setSEARCH_MAIN_STRATEGY(SearchStrategy.IDDSAS)
-                        .setSEARCH_CHOICE_OPTION_DEQUE_TYPE(ChoiceOptionDeques.DIRECT_ACCESS)
-                        .setSOLVER_GLOBAL_TYPE(Solvers.Z3_INCREMENTAL)
-                        .setBUDGET_INCR_ACTUAL_CP(BUDGET_INCR_ACTUAL_CP)
                         .setTRANSF_USE_DEFAULT_MODEL_CLASSES(true)
-                        .setSOLVER_HIGH_LEVEL_SYMBOLIC_OBJECT_APPROACH(true)
-                        .setBUDGET_GLOBAL_TIME_IN_SECONDS(BUDGET_GLOBAL_TIME_IN_SECONDS)
-                        .setBUDGET_FIXED_ACTUAL_CP(BUDGET_FIXED_ACTUAL_CP)
-                        //.setVALS_SYMSINT_DOMAIN(-10000000, 1000000)
-                        //.setBUDGET_MAX_EXCEEDED(150_000)
-                        .setCALLBACK_BACKTRACK((a0, a1, a2) -> DefUseAnalyser.resetSymbolicValues())
-                        .setCALLBACK_FAIL((a0, a1, a2) -> DefUseAnalyser.resetSymbolicValues())
-                        .setCALLBACK_EXCEEDED_BUDGET((a0, a1, a2) -> DefUseAnalyser.resetSymbolicValues())
-                        //.setBUDGET_FIXED_ACTUAL_CP(16)
                         .setTRANSF_TREAT_SPECIAL_METHOD_CALLS(true)
                         .setTRANSF_IGNORE_CLASSES(List.of(DefUseAnalyser.class, ParameterCollector.class))
                         .setTRANSF_TRY_USE_MORE_GENERAL_METHOD_FOR(List.of(DefUseAnalyser.class, ParameterCollector.class))
+//                        .setTRANSF_LOAD_WITH_SYSTEM_CLASSLOADER(true)
+//                        .setTRANSF_OVERWRITE_FILE_FOR_SYSTEM_CLASSLOADER(true)
+//                        .setTRANSF_VALIDATE_TRANSFORMATION(true)
+                        .setTRANSF_CFG_GENERATE_CHOICE_POINTS_WITH_ID(true, false, false)
+                        .setSEARCH_MAIN_STRATEGY(searchStrategy)
+                        .setSEARCH_CONCOLIC(CONCOLIC)
+                        .setBUDGET_INCR_ACTUAL_CP(BUDGET_INCR_ACTUAL_CP)
+                        .setBUDGET_GLOBAL_TIME_IN_SECONDS(BUDGET_GLOBAL_TIME_IN_SECONDS)
+                        .setBUDGET_FIXED_ACTUAL_CP(BUDGET_FIXED_ACTUAL_CP)
+                        .setSEARCH_CHOICE_OPTION_DEQUE_TYPE(ChoiceOptionDeques.DIRECT_ACCESS)
+                        .setSOLVER_GLOBAL_TYPE(Solvers.Z3_INCREMENTAL)
+                        .setSOLVER_HIGH_LEVEL_SYMBOLIC_OBJECT_APPROACH(true)
+                        .setCALLBACK_BACKTRACK((a0, a1, a2) -> DefUseAnalyser.resetSymbolicValues())
+                        .setCALLBACK_FAIL((a0, a1, a2) -> DefUseAnalyser.resetSymbolicValues())
+                        .setCALLBACK_EXCEEDED_BUDGET((a0, a1, a2) -> DefUseAnalyser.resetSymbolicValues())
                         .setCALLBACK_PATH_SOLUTION(DefUseAnalyser::resolveLabels)
                 ;
         for(Method method: cls.getDeclaredMethods()){
