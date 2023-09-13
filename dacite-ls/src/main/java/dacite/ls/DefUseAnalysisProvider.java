@@ -37,6 +37,8 @@ public class DefUseAnalysisProvider {
 
   private static List<DefUseClass> notCoveredClasses = new ArrayList<>();
 
+  private static XMLSolutions xmlSolutionsList;
+
   private static int maxNumberChains;
 
   private static final String[] indexcolors = new String[]{
@@ -109,6 +111,7 @@ public class DefUseAnalysisProvider {
       Set<Class<?>> classes = parseClassesFromSolution(pathDir, project);
       classes.add(DefUseChains.class);
       classes.add(XMLSolution.class);
+      classes.add(XMLSolutionMapping.class);
       classes.add(XMLSolutions.class);
       logger.info(classes.toString());
       JAXBContext jaxbContext = JAXBContext.newInstance(classes.toArray(new Class[]{}));
@@ -117,13 +120,16 @@ public class DefUseAnalysisProvider {
       DefUseChains chainCollection = (DefUseChains) jaxbUnmarshaller.unmarshal(new StringReader(chainFile));
       String solutionFile = Files.readString(Path.of(pathDir+"/SymbolicSolutions.xml"));
       XMLSolutions solutionList = (XMLSolutions) jaxbUnmarshaller.unmarshal(new StringReader(solutionFile));
+      xmlSolutionsList = solutionList;
       for(DefUseChain ch:chainCollection.getChains()){
         String solutionIds = ch.getSolutionIds();
         String[] array = solutionIds.split(",");
         List<XMLSolution> solutionsChain  = new ArrayList<>();
         for(String a:array){
-          int index = Integer.parseInt(a);
-          solutionsChain.add(solutionList.getXmlSolutions().get(index));
+          String[] input = a.split("_");
+          String method = input[0];
+          int index = Integer.parseInt(input[1]);
+          solutionsChain.add(solutionList.getSolution(method, index));
         }
         ch.setSolution(solutionsChain);
       }
@@ -567,5 +573,7 @@ public class DefUseAnalysisProvider {
     }
     return classes;
   }
+
+  public static XMLSolutions getXmlSolutionsList(){return xmlSolutionsList;}
 
 }

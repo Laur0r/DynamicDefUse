@@ -147,4 +147,12 @@ public class DefUseChains {
         }
         return "this";
     }
+
+    public void mergeChains(DefUseChains chains){
+        for(DefUseChain chain: chains.getDefUseChains()){
+            if(containsSimilar(chain) == null){
+                addChain(chain);
+            }
+        }
+    }
 }
