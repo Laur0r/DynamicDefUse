@@ -79,7 +79,6 @@ public class DaciteAnalysisToolWindow {
                 new DefaultMutableTreeNode(root);
         createTreeViewChildren(top);
         Tree tree2 = new Tree(top);
-        ((DefaultTreeModel)tree2.getModel()).setAsksAllowsChildren(true);
         tree2.setCellRenderer(new TreeViewCellRenderer());
         TreeViewCellEditor editor = new TreeViewCellEditor();
         editor.addChangeListener(new CellEditorListener() {
