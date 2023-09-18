@@ -3,6 +3,8 @@ package dacite.core;
 import dacite.core.defuse.*;
 import dacite.core.instrumentation.Transformer;
 import dacite.lsp.defUseData.transformation.XMLSolution;
+import dacite.lsp.defUseData.transformation.XMLSolutionMapping;
+import dacite.lsp.defUseData.transformation.XMLSolutions;
 import de.wwu.mulib.Mulib;
 import de.wwu.mulib.MulibConfig;
 import de.wwu.mulib.search.executors.SearchStrategy;
@@ -11,6 +13,7 @@ import de.wwu.mulib.solving.Solvers;
 import jakarta.xml.bind.JAXBContext;
 import jakarta.xml.bind.JAXBException;
 import jakarta.xml.bind.Marshaller;
+import jakarta.xml.bind.Unmarshaller;
 import org.yaml.snakeyaml.Yaml;
 
 import javax.tools.JavaCompiler;
@@ -25,6 +28,9 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.logging.Logger;
 
@@ -164,14 +170,20 @@ public class SymbolicExec {
                         .setCALLBACK_EXCEEDED_BUDGET((a0, a1, a2) -> DefUseAnalyser.resetSymbolicValues())
                         .setCALLBACK_PATH_SOLUTION(DefUseAnalyser::resolveLabels)
                 ;
+
+        XMLSolutions solutionMapping = new XMLSolutions();
+        DefUseChains chains = new DefUseChains();
         for(Method method: cls.getDeclaredMethods()){
             if(method.getName().contains("dacite_symbolic_driver")){
                 Mulib.getPathSolutions(cls, method.getName(), builder);
+                solutionMapping.addXMLSolution(method.getName().substring(method.getName().lastIndexOf("_")+1), getSolutions(DefUseAnalyser.chains));
+                chains.mergeChains(DefUseAnalyser.chains);
+                DefUseAnalyser.chains = new DefUseChains();
             }
         }
 
         logger.info("run through symbolic method");
-        DefUseAnalyser.check();
+        logger.info("Size: "+chains.getChainSize());
 
         // Write xml files for output
         XMLOutputFactory xof = XMLOutputFactory.newInstance();
@@ -181,13 +193,11 @@ public class SymbolicExec {
             xsw = xof.createXMLStreamWriter(new BufferedOutputStream(new FileOutputStream("SymbolicDUCs.xml")));
             xsw.writeStartDocument();
             xsw.writeStartElement("DefUseChains");
-            if(DefUseAnalyser.chains.getDefUseChains().size() >0) {
-                getClassesOfSolution(DefUseAnalyser.chains);
-            }
-            List<XMLSolution> solutions = getSolutions(DefUseAnalyser.chains);
-            parseSolution(xof, solutions);
 
-            for (DefUseChain chain : DefUseAnalyser.chains.getDefUseChains()) {
+            getClassesOfSolution(solutionMapping);
+            parseSolution(xof, solutionMapping);
+
+            for (DefUseChain chain : chains.getDefUseChains()) {
                 xsw.writeStartElement("DefUseChain");
                 xsw.writeStartElement("id");
                 xsw.writeCharacters(String.valueOf(chain.getId()));
@@ -199,7 +209,7 @@ public class SymbolicExec {
                 parseDefUseVariable(xsw, chain.getUse());
                 xsw.writeEndElement();
                 xsw.writeStartElement("solutionIds");
-                parseSolutionIds(xsw, chain.getSolutions(), solutions);
+                parseSolutionIds(xsw, chain.getSolutions(), solutionMapping);
                 xsw.writeEndElement();
                 xsw.writeEndElement();
             }
@@ -251,21 +261,30 @@ public class SymbolicExec {
         }
     }
 
-    private static void parseSolution(XMLOutputFactory xof, List<XMLSolution> solutions){
+    private static void parseSolution(XMLOutputFactory xof, XMLSolutions solutions){
         try {
-            if(solutions.size() != 0){
+            if(!solutions.getXmlSolutions().isEmpty()){
                 XMLStreamWriter xsw = xof.createXMLStreamWriter(new BufferedOutputStream(new FileOutputStream("SymbolicSolutions.xml")));
                 xsw.writeStartDocument();
                 xsw.writeStartElement("xmlsolutions");
                 Set<Class<?>> classes = parseClassesFromSolution();
                 classes.add(XMLSolution.class);
-                for(XMLSolution s: solutions){
-                    JAXBContext jaxbContextR = JAXBContext.newInstance(classes.toArray(Class[]::new));
-                    Marshaller jaxbMarshallerR = jaxbContextR.createMarshaller();
-                    jaxbMarshallerR.setProperty(Marshaller.JAXB_FRAGMENT, true);
-                    StringWriter swR = new StringWriter();
-                    jaxbMarshallerR.marshal(s, swR);
-                    xsw.writeCharacters(swR.toString());
+                for(XMLSolutionMapping mapping : solutions.getXmlSolutions()){
+                    xsw.writeStartElement("xmlsolutionmapping");
+                    List<XMLSolution> entrySolutions = mapping.getSolutions();
+                    String entryMethod = mapping.getMethod();
+                    xsw.writeStartElement("xmlsolutionmethod");
+                    xsw.writeCharacters(entryMethod);
+                    xsw.writeEndElement();
+                    for (XMLSolution s : entrySolutions) {
+                        JAXBContext jaxbContextR = JAXBContext.newInstance(classes.toArray(Class[]::new));
+                        Marshaller jaxbMarshallerR = jaxbContextR.createMarshaller();
+                        jaxbMarshallerR.setProperty(Marshaller.JAXB_FRAGMENT, true);
+                        StringWriter swR = new StringWriter();
+                        jaxbMarshallerR.marshal(s, swR);
+                        xsw.writeCharacters(swR.toString());
+                    }
+                    xsw.writeEndElement();
                 }
                 xsw.writeEndElement();
                 xsw.writeEndDocument();
@@ -279,7 +298,7 @@ public class SymbolicExec {
         }
     }
 
-    private static void parseSolutionIds(XMLStreamWriter xsw, List<XMLSolution> solutions, List<XMLSolution> allSolutions) {
+    private static void parseSolutionIds(XMLStreamWriter xsw, List<XMLSolution> solutions, XMLSolutions allSolutions) {
         try {
             StringBuilder solutionInd = new StringBuilder();
             for(int i =0; i<solutions.size(); i++){
@@ -287,7 +306,13 @@ public class SymbolicExec {
                 if(i != 0){
                     solutionInd.append(",");
                 }
-                solutionInd.append(allSolutions.indexOf(s));
+                for(XMLSolutionMapping mapping : allSolutions.getXmlSolutions()){
+                    List<XMLSolution> entrySolutions = mapping.getSolutions();
+                    String entryMethod = mapping.getMethod();
+                    if(entrySolutions.contains(s)){
+                        solutionInd.append(entryMethod).append("_").append(entrySolutions.indexOf(s));
+                    }
+                }
             }
             xsw.writeCharacters(solutionInd.toString());
         } catch (XMLStreamException e) {
@@ -298,21 +323,22 @@ public class SymbolicExec {
 
     public static List<XMLSolution> getSolutions(DefUseChains chains){
         List<XMLSolution> solutions = new ArrayList<>();
-        for(DefUseChain chain :chains.getDefUseChains()){
+        chains.getDefUseChains().parallelStream().forEach(chain -> {
             List<XMLSolution> solution = chain.getSolutions();
-            for(XMLSolution s: solution){
+            solution.parallelStream().forEach(s -> {
                 if(!solutions.contains(s)){
                     solutions.add(s);
                 }
-            }
-        }
+            });
+        });
         return solutions;
     }
 
-    private static void getClassesOfSolution(DefUseChains chains){
+
+    private static void getClassesOfSolution(XMLSolutions solutionsMapped){
         Set<String> classes = new HashSet<>();
-        for(DefUseChain chain: chains.getDefUseChains()){
-            List<XMLSolution> solutions = chain.getSolutions();
+        for(XMLSolutionMapping mapping : solutionsMapped.getXmlSolutions()){
+            List<XMLSolution> solutions = mapping.getSolutions();
             if(solutions.size() != 0) {
                 XMLSolution solution = solutions.get(0);
 

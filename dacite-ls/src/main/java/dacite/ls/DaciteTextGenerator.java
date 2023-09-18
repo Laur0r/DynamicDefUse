@@ -5,9 +5,7 @@ import de.wwu.mulib.tcg.TcgConfig;
 import de.wwu.mulib.tcg.TestCase;
 import de.wwu.mulib.tcg.TestCases;
 import de.wwu.mulib.tcg.TestCasesStringGenerator;
-import de.wwu.mulib.tcg.testsetreducer.SequentialCombinedTestSetReducer;
-import de.wwu.mulib.tcg.testsetreducer.SimpleBackwardsTestSetReducer;
-import de.wwu.mulib.tcg.testsetreducer.SimpleForwardsTestSetReducer;
+import de.wwu.mulib.tcg.testsetreducer.*;
 import org.eclipse.lsp4j.*;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.slf4j.Logger;
@@ -105,7 +103,7 @@ public class DaciteTextGenerator {
             }
 
             if(containsArray) {
-                String arrayComment = indent.repeat(2)+"// To restrict the array size use: Mulib.assume(array.lenght<...);"+ls;
+                String arrayComment = indent.repeat(2)+"// To restrict the array size use: Mulib.assume(array.length<...);"+ls;
                 line = createTextEditAndIncrementLine(edits, line, arrayComment);
             }
 
@@ -181,52 +179,65 @@ public class DaciteTextGenerator {
 
     public static List<Either<TextDocumentEdit, ResourceOperation>> generateTestCases(File project, String packageName, String classname, String uri){
         List<XMLSolution> solutions = DefUseAnalysisProvider.getSolutions();
-        List<TestCase> testCaseList = new ArrayList<>();
-        for(XMLSolution solution : solutions){
-            TcgConfig config = TcgConfig.builder().setTestClassPostfix("Dacite")
-                    .setTestSetReducer(new SequentialCombinedTestSetReducer(new SimpleForwardsTestSetReducer(), new SimpleBackwardsTestSetReducer())).
-                    build();
-            TestCase testCase = new TestCase(solution.exceptional,solution.labels,solution.returnValue, DefUseAnalysisProvider.getBitSet(solution),config);
-            testCaseList.add(testCase);
-        }
-        Map<String, List<String>> invokedMethods = CodeAnalyser.analyseJUnitTest(project,packageName +"."+classname);
-        Iterator<Map.Entry<String, List<String>>> iterator = invokedMethods.entrySet().iterator();
-        Map.Entry<String, List<String>> firstMethod = iterator.next(); // TODO Loop for multiple drivers
-
-        String testingClassName = firstMethod.getKey().substring(0,firstMethod.getKey().lastIndexOf("."));
-        String testingMethodName = firstMethod.getKey().substring(firstMethod.getKey().lastIndexOf(".")+1);
-
-        Class<?> myclass = null;
-        try {
-            URL url = project.toURI().toURL();
-            URLClassLoader classLoader = new URLClassLoader(new URL[]{url});
-            myclass = classLoader.loadClass(packageName+"."+testingClassName);
-        } catch (ClassNotFoundException | MalformedURLException e) {
-            throw new RuntimeException(e);
-        }
-        Method[] methods = myclass.getDeclaredMethods();
-        Method methodUnderTest = null;
-        for(Method method : methods){
-            if(method.getName().equals(testingMethodName)){
-                methodUnderTest = method;
-            }
-        }
-        TestCases testCases = new TestCases(testCaseList,methodUnderTest);
-        TcgConfig config = TcgConfig.builder().setTestClassPostfix("Dacite").
-                setTestSetReducer(new SequentialCombinedTestSetReducer(new SimpleForwardsTestSetReducer(),
-                        new SimpleBackwardsTestSetReducer())).build();
-        TestCasesStringGenerator tcg = new TestCasesStringGenerator(testCases, config);
-        String test = tcg.generateTestClassStringRepresentation();
+        String testingClassName = "";
         List<TextEdit> testEdits = new ArrayList<>();
-        createTextEditAndIncrementLine(testEdits, 0, test);
-
-        uri += "/Test"+testingClassName + "Dacite.java";
-        CreateFile createFile = new CreateFile(uri, new CreateFileOptions(true,false));
-
-        TextDocumentEdit documentEdit = new TextDocumentEdit(new VersionedTextDocumentIdentifier(uri,1), testEdits);
         List<Either<TextDocumentEdit, ResourceOperation>> changes = new ArrayList<>();
-        changes.add(Either.forRight(createFile));
-        changes.add(Either.forLeft(documentEdit));
+
+        Map<String, List<String>> invokedMethods = CodeAnalyser.analyseJUnitTest(project,packageName +"."+classname);
+        int counter = 0;
+        for (String methodString : invokedMethods.keySet()) {
+            testingClassName = methodString.substring(0, methodString.lastIndexOf("."));
+            String testingMethodName = methodString.substring(methodString.lastIndexOf(".") + 1);
+
+            List<TestCase> testCaseList = new ArrayList<>();
+            List<XMLSolution> list = DefUseAnalysisProvider.getXmlSolutionsList().getSolutionList(testingMethodName);
+            for(XMLSolution solution : solutions){
+                if(!list.contains(solution)){
+                    continue;
+                }
+                TcgConfig config = TcgConfig.builder().setTestClassPostfix("Dacite")
+                        .setTestSetReducer(new SequentialCombinedTestSetReducer(new SimpleForwardsTestSetReducer(), new SimpleBackwardsTestSetReducer())).
+                        build();
+                TestCase testCase = new TestCase(solution.exceptional,solution.labels,solution.returnValue, DefUseAnalysisProvider.getBitSet(solution),config);
+                testCaseList.add(testCase);
+            }
+
+            Class<?> myclass = null;
+            try {
+                URL url = project.toURI().toURL();
+                URLClassLoader classLoader = new URLClassLoader(new URL[]{url});
+                myclass = classLoader.loadClass(packageName + "." + testingClassName);
+            } catch (ClassNotFoundException | MalformedURLException e) {
+                throw new RuntimeException(e);
+            }
+            Method[] methods = myclass.getDeclaredMethods();
+            Method methodUnderTest = null;
+            for (Method method : methods) {
+                if (method.getName().equals(testingMethodName)) {
+                    methodUnderTest = method;
+                }
+            }
+            TestCases testCases = new TestCases(testCaseList, methodUnderTest);
+            TcgConfig config = TcgConfig.builder().setTestClassPostfix("Dacite").
+                    setTestSetReducer(
+                            new CompetingTestSetReducer(
+                                    new SequentialCombinedTestSetReducer(
+                                            new SimpleForwardsTestSetReducer(),
+                                            new SimpleBackwardsTestSetReducer()),
+                                    new SimpleGreedyTestSetReducer()
+                            )).build();
+            TestCasesStringGenerator tcg = new TestCasesStringGenerator(testCases, config);
+            String test = tcg.generateTestClassStringRepresentation();
+            createTextEditAndIncrementLine(testEdits, 0, test);
+
+            uri += "/Test"+testingClassName + "Dacite"+counter+".java";
+            CreateFile createFile = new CreateFile(uri, new CreateFileOptions(true,false));
+
+            TextDocumentEdit documentEdit = new TextDocumentEdit(new VersionedTextDocumentIdentifier(uri,1), testEdits);
+            changes.add(Either.forRight(createFile));
+            changes.add(Either.forLeft(documentEdit));
+            counter++;
+        }
         return changes;
     }
 }
