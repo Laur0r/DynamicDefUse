@@ -5,26 +5,26 @@ import java.util.ArrayList;
 public class DefUseVar {
     private String name;
     private int numberChains;
-    private ArrayList<DefUseData> data;
+    private ArrayList<DefUseDef> data;
 
     public DefUseVar(String name){
         this.name = name;
         data = new ArrayList<>();
     }
 
-    public void setData(ArrayList<DefUseData>  data){
+    public void setDefs(ArrayList<DefUseDef>  data){
         this.data = data;
     }
-    public ArrayList<DefUseData>  getData(){
+    public ArrayList<DefUseDef>  getDefs(){
         return this.data;
     }
-    public void addData(DefUseData defuse){
+    public void addDef(DefUseDef defuse){
         data.add(defuse);
     }
     public String getName(){return name;}
 
-    public void setNumberChains(int numberChains) {
-        this.numberChains = numberChains;
+    public void addNumberChains(int numberChains) {
+        this.numberChains += numberChains;
     }
 
     public int getNumberChains() {
@@ -46,13 +46,13 @@ public class DefUseVar {
 
     public String toString(){
         String output = "\n" +name + ": ";
-        for(DefUseData d: data){
+        for(DefUseDef d: data){
             output += d.toString();
         }
         return output;
     }
 
-    public void sort(){
+    /*public void sort(){
         data = quicksort(0, data.size()-1, false);
         int l = 0;
         int r = 0;
@@ -127,5 +127,5 @@ public class DefUseVar {
                 return j;
             }
         }
-    }
+    }*/
 }

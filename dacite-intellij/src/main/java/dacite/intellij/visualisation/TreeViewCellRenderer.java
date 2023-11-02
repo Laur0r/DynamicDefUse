@@ -57,6 +57,7 @@ public class TreeViewCellRenderer extends DefaultTreeCellRenderer {
                     name.setText(label.substring(0,label.indexOf(" ")));
                     String chains = label.substring(label.indexOf(" "));
                     number.setText(chains);
+
                 } else {
                     name.setText(label);
                     number.setText("");
@@ -71,19 +72,30 @@ public class TreeViewCellRenderer extends DefaultTreeCellRenderer {
             } else {
                 JPanel labelPanel = new JPanel();
                 labelPanel.setLayout(new BoxLayout(labelPanel, BoxLayout.X_AXIS));
-                String var = label.substring(0,label.indexOf(" "));
-                String deftext = label.substring(label.indexOf(" "),label.indexOf("-")-1);
-                String usetext = label.substring(label.lastIndexOf("-")+2);
-                name.setText(var);
-                def.setText(deftext);
-                labelPanel.add(name);
-                labelPanel.add(Box.createHorizontalStrut(10));
-                labelPanel.add(defLabel);
-                labelPanel.add(def);
-                labelPanel.add(Box.createHorizontalStrut(10));
-                labelPanel.add(useLabel);
-                use.setText(usetext);
-                labelPanel.add(use);
+
+                int firstindex = label.indexOf(" ");
+                int secondindex = label.indexOf(" ", firstindex+1);
+                String text = label.substring(firstindex,secondindex);
+                use.setText(text);
+
+                if(e.getIcon() != null && e.getIcon().equals("definition")){
+                    defLabel.setText(label.substring(0,firstindex));
+                    number.setText(label.substring(secondindex));
+                    labelPanel.add(defLabel);
+                    labelPanel.add(Box.createHorizontalStrut(10));
+                    labelPanel.add(use);
+                    labelPanel.add(Box.createHorizontalStrut(10));
+                    labelPanel.add(number);
+                } else {
+                    useLabel.setText(label.substring(0,firstindex));
+                    name.setText(label.substring(secondindex));
+                    labelPanel.add(useLabel);
+                    labelPanel.add(Box.createHorizontalStrut(10));
+                    labelPanel.add(use);
+                    labelPanel.add(Box.createHorizontalStrut(10));
+                    labelPanel.add(name);
+
+                }
                 labelPanel.add(Box.createHorizontalStrut(10));
                 box.setSelected(e.isEditorHighlight());
                 labelPanel.add(box);

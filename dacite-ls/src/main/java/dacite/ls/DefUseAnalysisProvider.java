@@ -2,6 +2,7 @@ package dacite.ls;
 
 import com.google.gson.JsonObject;
 
+import dacite.lsp.defUseData.*;
 import dacite.lsp.defUseData.transformation.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,10 +17,6 @@ import java.nio.file.Paths;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import dacite.lsp.defUseData.DefUseClass;
-import dacite.lsp.defUseData.DefUseData;
-import dacite.lsp.defUseData.DefUseMethod;
-import dacite.lsp.defUseData.DefUseVar;
 import jakarta.xml.bind.JAXBContext;
 import jakarta.xml.bind.JAXBException;
 import jakarta.xml.bind.Unmarshaller;
@@ -478,13 +475,14 @@ public class DefUseAnalysisProvider {
         }
       }
       String varName = def.getVariableName();
-      DefUseVar var = new DefUseVar(def.getVariableName());
+      DefUseDef definition = new DefUseDef(varName, defLocation, def.getInstruction());
+      DefUseVar var = new DefUseVar(varName);
       if (!use.getVariableName().equals(varName)) {
         if (use.getVariableName().contains("[")) {
           varName = use.getVariableName() + use.getVariableIndex() + "]";
           var = new DefUseVar(varName);
         } else {
-          varName = varName + "/" + use.getVariableName();
+          varName = use.getVariableName();
         }
       } else if (varName.contains("[")) {
         varName = varName + use.getVariableIndex() + "]";
@@ -501,18 +499,27 @@ public class DefUseAnalysisProvider {
           DefUseMethod mInstance = instance.getMethods().get(instance.getMethods().indexOf(m));
           if (mInstance.getVariables().contains(var)) {
             DefUseVar vInstance = mInstance.getVariables().get(mInstance.getVariables().indexOf(var));
-            vInstance.addData(data);
+            if(vInstance.getDefs().contains(definition)){
+              DefUseDef dInstance = vInstance.getDefs().get(vInstance.getDefs().indexOf(definition));
+              dInstance.addData(data);
+            } else{
+              definition.addData(data);
+              vInstance.addDef(definition);
+            }
           } else {
-            var.addData(data);
+            definition.addData(data);
+            var.addDef(definition);
             mInstance.addVariable(var);
           }
         } else {
-          var.addData(data);
+          definition.addData(data);
+          var.addDef(definition);
           m.addVariable(var);
           instance.addMethod(m);
         }
       } else { // if output does not contain class, create new class instance with data
-        var.addData(data);
+        definition.addData(data);
+        var.addDef(definition);
         m.addVariable(var);
         defUseClass.addMethod(m);
         output.add(defUseClass);
@@ -521,9 +528,12 @@ public class DefUseAnalysisProvider {
     for (DefUseClass cl : output) {
       for (DefUseMethod m : cl.getMethods()) {
         for (DefUseVar var : m.getVariables()) {
-          var.setNumberChains(var.getData().size());
+          for(DefUseDef def : var.getDefs()){
+            def.setNumberChains(def.getData().size());
+            var.addNumberChains(def.getNumberChains());
+            //var.sort();
+          }
           m.addNumberChains(var.getNumberChains());
-          var.sort();
         }
         cl.addNumberChains(m.getNumberChains());
       }

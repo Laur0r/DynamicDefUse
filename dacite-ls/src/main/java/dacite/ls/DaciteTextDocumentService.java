@@ -7,10 +7,7 @@ import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.google.gson.JsonObject;
 
 import dacite.lsp.InlayHintDecorationParams;
-import dacite.lsp.defUseData.DefUseClass;
-import dacite.lsp.defUseData.DefUseData;
-import dacite.lsp.defUseData.DefUseMethod;
-import dacite.lsp.defUseData.DefUseVar;
+import dacite.lsp.defUseData.*;
 import dacite.lsp.defUseData.transformation.DefUseVariable;
 import dacite.lsp.defUseData.transformation.DefUseVariableRole;
 import dacite.lsp.tvp.*;
@@ -200,10 +197,15 @@ public class DaciteTextDocumentService
             if (nodeUri.equals(cl.getName() + "." + m.getName() + " " + var.getName())) {
               return CompletableFuture.completedFuture(new TreeViewParentResult(cl.getName() + "." + m.getName()));
             }
-            for (DefUseData data : var.getData()) {
-              if (nodeUri.equals(cl.getName() + "." + m.getName() + " " + var.getName() + " " + data.getDefLocation() + " - "
-                      + data.getUseLocation())) {
+            for(DefUseDef def: var.getDefs()){
+              if(nodeUri.equals(cl.getName() + "." + m.getName() + " " + var.getName() + " " + def.getDefLocation())){
                 return CompletableFuture.completedFuture(new TreeViewParentResult(cl.getName() + "." + m.getName() + " " + var.getName()));
+              }
+              for (DefUseData data : def.getData()) {
+                if (nodeUri.equals(cl.getName() + "." + m.getName() + " " + var.getName() + " " + data.getDefLocation() + " - "
+                        + data.getUseLocation())) {
+                  return CompletableFuture.completedFuture(new TreeViewParentResult(cl.getName() + "." + m.getName() + " " + var.getName()+" " + def.getDefLocation()));
+                }
               }
             }
           }
@@ -288,29 +290,52 @@ public class DaciteTextDocumentService
             } else {
               for (DefUseVar var : m.getVariables()) {
                 if (nodeUri.equals(cl.getName() + "." + m.getName() + " " + var.getName())) {
-                  for (DefUseData data : var.getData()) {
+                  for (DefUseDef def : var.getDefs()) {
                     TreeViewNode node = new TreeViewNode(id,
-                            cl.getName() + "." + m.getName() + " " + var.getName() + " " + data.getDefLocation() + " - "
-                                    + data.getUseLocation() + " " + data.getIndex() + " " + data.getUseInstruction(),
-                            data.getName() + " " + data.getDefLocation() + " - " + data.getUseLocation());
+                            cl.getName() + "." + m.getName() + " " + var.getName() + " " + def.getDefLocation(),
+                            "Def: " + def.getDefLocation() +" "+ def.getNumberChains() + " chains");
 
                     var commandArg = new JsonObject();
                     commandArg.addProperty("packageClass", cl.getName());
                     commandArg.addProperty("method", m.getName());
                     commandArg.addProperty("variable", var.getName());
-                    commandArg.addProperty("defLocation", data.getDefLocation());
-                    commandArg.addProperty("defInstruction", data.getDefInstruction());
-                    commandArg.addProperty("useLocation", data.getUseLocation());
-                    commandArg.addProperty("index", data.getIndex());
-                    commandArg.addProperty("useInstruction", data.getUseInstruction());
+                    commandArg.addProperty("defLocation", def.getDefLocation());
+                    commandArg.addProperty("defInstruction", def.getDefInstruction());
                     if (id.equals("notCoveredDUC")) {
                       commandArg.addProperty("notCovered", true);
                     }
                     node.setCommand(new TreeViewCommand("Highlight", "dacite.highlight", List.of(commandArg)));
+                    node.setIcon("definition");
 
                     nodes.add(node);
                   }
                   break;
+                } else {
+                  for(DefUseDef def: var.getDefs()){
+                    if(nodeUri.equals(cl.getName() + "." + m.getName() + " " + var.getName() + " " + def.getDefLocation()))
+                      for (DefUseData data : def.getData()) {
+                        TreeViewNode node = new TreeViewNode(id,
+                                cl.getName() + "." + m.getName() + " " + var.getName() + " " + data.getDefLocation() + " - "
+                                        + data.getUseLocation() + " " + data.getIndex() + " " + data.getUseInstruction(),
+                                "Use: "  + data.getUseLocation() + " " + data.getName());
+
+                        var commandArg = new JsonObject();
+                        commandArg.addProperty("packageClass", cl.getName());
+                        commandArg.addProperty("method", m.getName());
+                        commandArg.addProperty("variable", var.getName());
+                        commandArg.addProperty("defLocation", data.getDefLocation());
+                        commandArg.addProperty("defInstruction", data.getDefInstruction());
+                        commandArg.addProperty("useLocation", data.getUseLocation());
+                        commandArg.addProperty("index", data.getIndex());
+                        commandArg.addProperty("useInstruction", data.getUseInstruction());
+                        if (id.equals("notCoveredDUC")) {
+                          commandArg.addProperty("notCovered", true);
+                        }
+                        node.setCommand(new TreeViewCommand("Highlight", "dacite.highlight", List.of(commandArg)));
+
+                        nodes.add(node);
+                      }
+                  }
                 }
               }
             }
