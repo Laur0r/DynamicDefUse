@@ -1,7 +1,7 @@
 package dacite.core;
 
 import dacite.core.defuse.*;
-import dacite.core.instrumentation.Transformer;
+import dacite.core.instrumentation.DaciteTransformer;
 import dacite.lsp.defUseData.transformation.XMLSolution;
 import dacite.lsp.defUseData.transformation.XMLSolutionMapping;
 import dacite.lsp.defUseData.transformation.XMLSolutions;
@@ -13,7 +13,6 @@ import de.wwu.mulib.solving.Solvers;
 import jakarta.xml.bind.JAXBContext;
 import jakarta.xml.bind.JAXBException;
 import jakarta.xml.bind.Marshaller;
-import jakarta.xml.bind.Unmarshaller;
 import org.yaml.snakeyaml.Yaml;
 
 import javax.tools.JavaCompiler;
@@ -28,9 +27,6 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.*;
 import java.util.logging.Logger;
 
@@ -74,7 +70,7 @@ public class SymbolicExec {
 
         // Get sourcepath
         URL url = null;
-        Transformer transformer = new Transformer();
+        DaciteTransformer transformer = new DaciteTransformer();
         transformer.setDir(projectpath+";"+packagename.substring(0,packagename.length()-2));
         if(packagedir.listFiles() == null){
             throw new RuntimeException("there are not files in "+projectpath+packagename);
@@ -151,8 +147,8 @@ public class SymbolicExec {
                         .setTRANSF_GENERATED_CLASSES_PATH(sourcePath)
                         .setTRANSF_USE_DEFAULT_MODEL_CLASSES(true)
                         .setTRANSF_TREAT_SPECIAL_METHOD_CALLS(true)
-                        .setTRANSF_IGNORE_CLASSES(List.of(DefUseAnalyser.class, ParameterCollector.class))
-                        .setTRANSF_TRY_USE_MORE_GENERAL_METHOD_FOR(List.of(DefUseAnalyser.class, ParameterCollector.class))
+                        .setTRANSF_IGNORE_CLASSES(List.of(DaciteAnalyzer.class, ParameterCollector.class))
+                        .setTRANSF_TRY_USE_MORE_GENERAL_METHOD_FOR(List.of(DaciteAnalyzer.class, ParameterCollector.class))
 //                        .setTRANSF_LOAD_WITH_SYSTEM_CLASSLOADER(true)
 //                        .setTRANSF_OVERWRITE_FILE_FOR_SYSTEM_CLASSLOADER(true)
 //                        .setTRANSF_VALIDATE_TRANSFORMATION(true)
@@ -165,10 +161,10 @@ public class SymbolicExec {
                         .setSEARCH_CHOICE_OPTION_DEQUE_TYPE(ChoiceOptionDeques.DIRECT_ACCESS)
                         .setSOLVER_GLOBAL_TYPE(Solvers.Z3_INCREMENTAL)
                         .setSOLVER_HIGH_LEVEL_SYMBOLIC_OBJECT_APPROACH(true)
-                        .setCALLBACK_BACKTRACK((a0, a1, a2) -> DefUseAnalyser.resetSymbolicValues())
-                        .setCALLBACK_FAIL((a0, a1, a2) -> DefUseAnalyser.resetSymbolicValues())
-                        .setCALLBACK_EXCEEDED_BUDGET((a0, a1, a2) -> DefUseAnalyser.resetSymbolicValues())
-                        .setCALLBACK_PATH_SOLUTION(DefUseAnalyser::resolveLabels)
+                        .setCALLBACK_BACKTRACK((a0, a1, a2) -> SymbolicAnalyzer.resetSymbolicValues())
+                        .setCALLBACK_FAIL((a0, a1, a2) -> SymbolicAnalyzer.resetSymbolicValues())
+                        .setCALLBACK_EXCEEDED_BUDGET((a0, a1, a2) -> SymbolicAnalyzer.resetSymbolicValues())
+                        .setCALLBACK_PATH_SOLUTION(SymbolicAnalyzer::resolveLabels)
                 ;
 
         XMLSolutions solutionMapping = new XMLSolutions();
@@ -176,9 +172,9 @@ public class SymbolicExec {
         for(Method method: cls.getDeclaredMethods()){
             if(method.getName().contains("dacite_symbolic_driver")){
                 Mulib.getPathSolutions(cls, method.getName(), builder);
-                solutionMapping.addXMLSolution(method.getName().substring(method.getName().lastIndexOf("_")+1), getSolutions(DefUseAnalyser.chains));
-                chains.mergeChains(DefUseAnalyser.chains);
-                DefUseAnalyser.chains = new DefUseChains();
+                solutionMapping.addXMLSolution(method.getName().substring(method.getName().lastIndexOf("_")+1), getSolutions(DaciteAnalyzer.chains));
+                chains.mergeChains(DaciteAnalyzer.chains);
+                DaciteAnalyzer.chains = new DefUseChains();
             }
         }
 

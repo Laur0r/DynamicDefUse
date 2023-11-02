@@ -12,7 +12,7 @@ public class Agent {
 		if(!executed){
 			logger.info("Starting the agent for directory "+ agentArgs);
 			executed = true;
-			Transformer transformer = new Transformer();
+			DaciteTransformer transformer = new DaciteTransformer();
 			transformer.setDir(agentArgs);
 			inst.addTransformer(transformer);
 

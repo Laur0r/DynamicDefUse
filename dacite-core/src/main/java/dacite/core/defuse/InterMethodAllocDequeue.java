@@ -15,7 +15,7 @@ public class InterMethodAllocDequeue {
     public InterMethodAlloc contains(InterMethodAlloc alloc){
         for(InterMethodAlloc a: interMethodAllocs){
             if(a.newMethod.equals(alloc.newMethod) && a.currentMethod.equals(alloc.currentMethod) && a.linenumber == alloc.linenumber
-            && (a.value == alloc.value || a.value != null && DefUseAnalyser.isPrimitiveOrWrapper(a.value) && a.value.equals(alloc.value))){
+            && (a.value == alloc.value || a.value != null && DaciteAnalyzer.isPrimitiveOrWrapper(a.value) && a.value.equals(alloc.value))){
                 return a;
             }
         }

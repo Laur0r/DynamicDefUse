@@ -1,15 +1,11 @@
 package dacite.core;
 
-import org.glassfish.jaxb.runtime.v2.runtime.output.XmlOutput;
 import org.junit.runner.JUnitCore;
-import org.w3c.dom.Attr;
 import org.w3c.dom.Document;
-import org.w3c.dom.Element;
 import org.xml.sax.InputSource;
 
 import java.io.*;
 import java.net.URL;
-import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -21,19 +17,16 @@ import javax.tools.StandardJavaFileManager;
 import javax.tools.ToolProvider;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.stream.XMLEventWriter;
 import javax.xml.stream.XMLOutputFactory;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
-import javax.xml.transform.OutputKeys;
-import javax.xml.transform.Result;
 import javax.xml.transform.Source;
 import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
-import dacite.core.defuse.DefUseAnalyser;
+import dacite.core.defuse.DaciteAnalyzer;
 import dacite.core.defuse.DefUseChain;
 import dacite.core.defuse.DefUseField;
 import dacite.core.defuse.DefUseVariable;
@@ -46,7 +39,7 @@ public class DefUseMain {
 		if(args.length > 3){
 			throw new IllegalArgumentException("More than one argument for main method detected");
 		} else if(args.length == 0){
-			throw new IllegalArgumentException("Required to specify analysisJunittest to analyse data-flow");
+			throw new IllegalArgumentException("Required to specify name of package to analyse data-flow");
 		}
 		long startTime = System.nanoTime();
 		JUnitCore junitCore = new JUnitCore();
@@ -81,7 +74,7 @@ public class DefUseMain {
 		long totalTime = (endTime - startTime) /1000000;
 		logger.info(String.valueOf(totalTime));
 		logger.info("run through main method");
-		DefUseAnalyser.check();
+		DaciteAnalyzer.check();
 		// write xml file
 		XMLOutputFactory xof = XMLOutputFactory.newInstance();
 		XMLStreamWriter xsw = null;
@@ -90,7 +83,7 @@ public class DefUseMain {
 			xsw.writeStartDocument();
 			xsw.writeStartElement("DefUseChains");
 
-			for (DefUseChain chain : DefUseAnalyser.chains.getDefUseChains()) {
+			for (DefUseChain chain : DaciteAnalyzer.chains.getDefUseChains()) {
 				xsw.writeStartElement("DefUseChain");
 				xsw.writeStartElement("def");
 				parseDefUseVariable(xsw, chain.getDef());

@@ -5,21 +5,17 @@ import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
-import org.objectweb.asm.commons.*;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.instrument.ClassFileTransformer;
-import java.lang.instrument.IllegalClassFormatException;
 import java.security.ProtectionDomain;
-import java.util.Arrays;
 import java.util.Iterator;
-import java.util.Map;
 import java.util.logging.Logger;
 
-public class Transformer implements ClassFileTransformer {
+public class DaciteTransformer implements ClassFileTransformer {
 
 	static Logger logger = Logger.getLogger(Logger.GLOBAL_LOGGER_NAME);
 
@@ -38,7 +34,7 @@ public class Transformer implements ClassFileTransformer {
 			ClassNode node = new ClassNode();
 			reader.accept(node, 0);
 
-			node = transformBasis(node);
+			node = transformBytecode(node);
 
 			byte[] output = null;
 			ClassWriter writer = new ClassWriter(reader, ClassWriter.COMPUTE_FRAMES);
@@ -63,7 +59,7 @@ public class Transformer implements ClassFileTransformer {
 		reader.accept(node, 0);
 
 		if(!input.contains("DaciteSymbolicDriver")) {
-			node = transformBasis(node);
+			node = transformBytecode(node);
 		}
 
 		ClassWriter writer = new ClassWriter(reader, ClassWriter.COMPUTE_FRAMES);
@@ -80,7 +76,8 @@ public class Transformer implements ClassFileTransformer {
 		}
 	}
 
-	protected ClassNode transformBasis(ClassNode node){
+	protected ClassNode transformBytecode(ClassNode node){
+		boolean sourceCode = false;
 		for(MethodNode mnode : node.methods){
 			int linenumber = 0;
 			InsnList insns = mnode.instructions;
@@ -160,7 +157,7 @@ public class Transformer implements ClassFileTransformer {
 					il.add(new LdcInsnNode(index));
 					il.add(new LdcInsnNode(classname+"."+mnode.name));
 					il.add(new LdcInsnNode(varname));
-					il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/defuse/DefUseAnalyser", "visitUse", "(Ljava/lang/Object;IIILjava/lang/String;Ljava/lang/String;)V", false));
+					il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/defuse/DaciteAnalyzer", "visitUse", "(Ljava/lang/Object;IIILjava/lang/String;Ljava/lang/String;)V", false));
 					insns.insertBefore(in, il);
 					boxing(Type.INT_TYPE, incIns.var, il, true);
 					il.add(new LdcInsnNode(incIns.var));
@@ -168,7 +165,7 @@ public class Transformer implements ClassFileTransformer {
 					il.add(new LdcInsnNode(index));
 					il.add(new LdcInsnNode(classname+"."+mnode.name));
 					il.add(new LdcInsnNode(varname));
-					il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/defuse/DefUseAnalyser", "visitDef", "(Ljava/lang/Object;IIILjava/lang/String;Ljava/lang/String;)V", false));
+					il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/defuse/DaciteAnalyzer", "visitDef", "(Ljava/lang/Object;IIILjava/lang/String;Ljava/lang/String;)V", false));
 					insns.insert(in, il);
 					index++;
 				} else if(in instanceof LineNumberNode){
@@ -188,9 +185,12 @@ public class Transformer implements ClassFileTransformer {
 			}
 			// Register method Parameter for DefUse by aligning first local variables with parameter types
 			InsnList methodStart = new InsnList();
-			methodStart.add(new LdcInsnNode(classname));
-			methodStart.add(new LdcInsnNode(path));
-			methodStart.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/defuse/DefUseAnalyser", "visitSourceCode", "(Ljava/lang/String;Ljava/lang/String;)V", false));
+			if(!sourceCode){
+				methodStart.add(new LdcInsnNode(classname));
+				methodStart.add(new LdcInsnNode(path));
+				methodStart.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/defuse/DaciteAnalyzer", "visitSourceCode", "(Ljava/lang/String;Ljava/lang/String;)V", false));
+				sourceCode = true;
+			}
 			InsnList methodintermediate = new InsnList();
 			Type[] types = Type.getArgumentTypes(mnode.desc);
 			int typeindex = 0;
@@ -213,7 +213,7 @@ public class Transformer implements ClassFileTransformer {
 					methodintermediate.add(new LdcInsnNode(classname+"."+mnode.name));
 					methodintermediate.add(new LdcInsnNode(localVariable.name));
 					methodintermediate.add(new IntInsnNode(Opcodes.BIPUSH, typeindex));
-					methodintermediate.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/defuse/DefUseAnalyser", "visitParameter", "(Ljava/lang/Object;IILjava/lang/String;Ljava/lang/String;I)V", false));
+					methodintermediate.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/defuse/DaciteAnalyzer", "visitParameter", "(Ljava/lang/Object;IILjava/lang/String;Ljava/lang/String;I)V", false));
 					if(types[typeindex] == Type.DOUBLE_TYPE || types[typeindex] == Type.LONG_TYPE){
 						i++;
 					}
@@ -233,7 +233,7 @@ public class Transformer implements ClassFileTransformer {
 	}
 
 	/**
-	 * Convert primitive types to Class types. Necessary to avoid individual methods for all types for the DefUseAnalyser.
+	 * Convert primitive types to Class types. Necessary to avoid individual methods for all types for the DaciteAnalyzer.
 	 * Has the option to include loading of the variable to the stack before converting it. Otherwise it is assumed that
 	 * the variable is already on top of the stack.
 	 * @param type original type of the variable
@@ -313,7 +313,7 @@ public class Transformer implements ClassFileTransformer {
 
 	/**
 	 * Instrument Variable Instructions (Load and Store of variables). Includes pushing relevant parameter on the operating
-	 * stack and calling the DefUseAnalyser
+	 * stack and calling the DaciteAnalyzer
 	 * @param varins the variable instruction
 	 * @param mnode name of the current method
 	 * @param op operating instruction as int
@@ -370,9 +370,9 @@ public class Transformer implements ClassFileTransformer {
 			il.add(new LdcInsnNode(variableName));
 			if (op == Opcodes.ILOAD || op == Opcodes.LLOAD || op == Opcodes.FLOAD ||
 					op == Opcodes.DLOAD || op == Opcodes.ALOAD) {
-				il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/defuse/DefUseAnalyser", "visitUse", "(Ljava/lang/Object;IIILjava/lang/String;Ljava/lang/String;)V", false));
+				il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/defuse/DaciteAnalyzer", "visitUse", "(Ljava/lang/Object;IIILjava/lang/String;Ljava/lang/String;)V", false));
 			} else {
-				il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/defuse/DefUseAnalyser", "visitDef", "(Ljava/lang/Object;IIILjava/lang/String;Ljava/lang/String;)V", false));
+				il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/defuse/DaciteAnalyzer", "visitDef", "(Ljava/lang/Object;IIILjava/lang/String;Ljava/lang/String;)V", false));
 			}
 			return il;
 		}
@@ -381,7 +381,7 @@ public class Transformer implements ClassFileTransformer {
 
 	/**
 	 * Instrument Simple Instructions (Load and Store of array elements and return statements). Includes pushing relevant
-	 * parameter on the operating stack and calling the DefUseAnalyser.
+	 * parameter on the operating stack and calling the DaciteAnalyzer.
 	 * @param mnode the node of the current method
 	 * @param op operating instruction as int
 	 * @param linenumber current linenumber of source code
@@ -407,7 +407,7 @@ public class Transformer implements ClassFileTransformer {
 			il.add(new LdcInsnNode(linenumber));
 			il.add(new LdcInsnNode(instruction));
 			il.add(new LdcInsnNode(classname +"."+mnode.name));
-			il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/defuse/DefUseAnalyser", "visitArrayUse", "(Ljava/lang/Object;ILjava/lang/Object;IILjava/lang/String;)V", false));
+			il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/defuse/DaciteAnalyzer", "visitArrayUse", "(Ljava/lang/Object;ILjava/lang/Object;IILjava/lang/String;)V", false));
 			output[1] = il;
 		} else if(op == Opcodes.IASTORE || op == Opcodes.LASTORE || op == Opcodes.FASTORE ||
 				op == Opcodes.DASTORE || op == Opcodes.AASTORE){
@@ -427,7 +427,7 @@ public class Transformer implements ClassFileTransformer {
 			il.add(new VarInsnNode(Opcodes.ISTORE, index));
 			index++;
 			il.add(new VarInsnNode(Opcodes.ASTORE, index));
-			// retrieving parameters for DefUseAnalyser invocation
+			// retrieving parameters for DaciteAnalyzer invocation
 			int indexEnd = index;
 			il.add(new VarInsnNode(Opcodes.ALOAD, index));
 			index--;
@@ -437,7 +437,7 @@ public class Transformer implements ClassFileTransformer {
 			il.add(new LdcInsnNode(linenumber));
 			il.add(new LdcInsnNode(instruction));
 			il.add(new LdcInsnNode(classname+"."+mnode.name));
-			il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/defuse/DefUseAnalyser", "visitArrayDef", "(Ljava/lang/Object;ILjava/lang/Object;IILjava/lang/String;)V", false));
+			il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/defuse/DaciteAnalyzer", "visitArrayDef", "(Ljava/lang/Object;ILjava/lang/Object;IILjava/lang/String;)V", false));
 			// retrieving parameters for original store instruction
 			il.add(new VarInsnNode(Opcodes.ALOAD, indexEnd));
 			indexEnd--;
@@ -451,7 +451,7 @@ public class Transformer implements ClassFileTransformer {
 
 	/**
 	 * Instrument Field Variable Instructions (Load and Store of class variables). Includes pushing relevant parameter
-	 * on the operating stack and calling the DefUseAnalyser
+	 * on the operating stack and calling the DaciteAnalyzer
 	 * @param fieldins the field variable instruction
 	 * @param methodName name of the current method
 	 * @param op operating instruction as int
@@ -479,7 +479,7 @@ public class Transformer implements ClassFileTransformer {
 			il.add(new LdcInsnNode(linenumber));
 			il.add(new LdcInsnNode(index));
 			il.add(new LdcInsnNode(methodName));
-			il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/defuse/DefUseAnalyser", "visitFieldUse", "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/String;IILjava/lang/String;)V", false));
+			il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/defuse/DaciteAnalyzer", "visitFieldUse", "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/String;IILjava/lang/String;)V", false));
 			output[1] = il;
 		} else if (op == Opcodes.GETSTATIC || op == Opcodes.PUTSTATIC){
 			// static field variables behave similar to variable uses and definitions -> no ALOAD necessary
@@ -497,11 +497,11 @@ public class Transformer implements ClassFileTransformer {
 			il.add(new LdcInsnNode(methodName));
 			il.add(new LdcInsnNode(fieldins.owner));
 			if(op == Opcodes.GETSTATIC){
-				il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/defuse/DefUseAnalyser", "visitStaticFieldUse", "(Ljava/lang/Object;Ljava/lang/String;IILjava/lang/String;Ljava/lang/String;)V", false));
+				il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/defuse/DaciteAnalyzer", "visitStaticFieldUse", "(Ljava/lang/Object;Ljava/lang/String;IILjava/lang/String;Ljava/lang/String;)V", false));
 				output[1] = il;
 			} else {
 				// Putfield needs instrumentation before instruction otherwise value is no longer on stack
-				il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/defuse/DefUseAnalyser", "visitStaticFieldDef", "(Ljava/lang/Object;Ljava/lang/String;IILjava/lang/String;Ljava/lang/String;)V", false));
+				il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/defuse/DaciteAnalyzer", "visitStaticFieldDef", "(Ljava/lang/Object;Ljava/lang/String;IILjava/lang/String;Ljava/lang/String;)V", false));
 				output[0] = il;
 			}
 		} else if(op == Opcodes.PUTFIELD){
@@ -519,7 +519,7 @@ public class Transformer implements ClassFileTransformer {
 			il.add(new LdcInsnNode(linenumber));
 			il.add(new LdcInsnNode(index));
 			il.add(new LdcInsnNode(methodName));
-			il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/defuse/DefUseAnalyser", "visitFieldDef", "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/String;IILjava/lang/String;)V", false));
+			il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/defuse/DaciteAnalyzer", "visitFieldDef", "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/String;IILjava/lang/String;)V", false));
 			output[0] = il;
 		}
 		return output;
@@ -527,7 +527,7 @@ public class Transformer implements ClassFileTransformer {
 
 	/**
 	 * Instrument method invocation instructions. Includes duplicating parameter of invoked method
-	 * on the operating stack and calling the DefUseAnalyser
+	 * on the operating stack and calling the DaciteAnalyzer
 	 * @param methodins the method invocation instruction
 	 * @param mnode node of the current method
 	 * @param linenumber current linenumber of source code
@@ -548,7 +548,7 @@ public class Transformer implements ClassFileTransformer {
 			il.add(new LdcInsnNode(classname+"."+mnode.name));
 			il.add(new LdcInsnNode(methodins.owner+"."+methodins.name));
 			il.add(new IntInsnNode(Opcodes.BIPUSH, 0));
-			il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/defuse/DefUseAnalyser", "registerInterMethod", "(Ljava/lang/Object;ILjava/lang/String;Ljava/lang/String;I)V", false));
+			il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/defuse/DaciteAnalyzer", "registerInterMethod", "(Ljava/lang/Object;ILjava/lang/String;Ljava/lang/String;I)V", false));
 			return il;
 		} else if(parameterTypes.length != 0){
 			// if there are more parameters, duplicating has to be done by storing values in local variables and retrieving values
@@ -572,7 +572,7 @@ public class Transformer implements ClassFileTransformer {
 			il.add(new LdcInsnNode(linenumber));
 			il.add(new LdcInsnNode(classname+"."+mnode.name));
 			il.add(new LdcInsnNode(methodins.owner+"."+methodins.name));
-			il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/defuse/DefUseAnalyser", "registerInterMethod", "([Ljava/lang/Object;ILjava/lang/String;Ljava/lang/String;)V", false));
+			il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/defuse/DaciteAnalyzer", "registerInterMethod", "([Ljava/lang/Object;ILjava/lang/String;Ljava/lang/String;)V", false));
 			// retrieving values for original method invocation instruction
 			for(Type type: parameterTypes){
 				if(type == Type.DOUBLE_TYPE || type == Type.LONG_TYPE) {

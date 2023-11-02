@@ -28,7 +28,7 @@ public class DefSet {
             if(def.getVariableIndex() == index && def.getMethod().equals(method)
                     && !(def instanceof DefUseField)){
                 // to be able to compare integer and Integer due to transformer boxing
-                if(def.getValue() == value || value != null && DefUseAnalyser.isPrimitiveOrWrapper(value) && value.equals(def.getValue())
+                if(def.getValue() == value || value != null && DaciteAnalyzer.isPrimitiveOrWrapper(value) && value.equals(def.getValue())
                         && def.getVariableName().equals(name)) {
                     output = def;
                     break;
@@ -52,7 +52,7 @@ public class DefSet {
             if(def.getVariableIndex() == index && def.getMethod().equals(method)
                     && !(def instanceof DefUseField) && time>def.timeRef){
                 // to be able to compare integer and Integer due to transformer boxing
-                if(def.getValue() == value || value != null && DefUseAnalyser.isPrimitiveOrWrapper(value) && value.equals(def.getValue())
+                if(def.getValue() == value || value != null && DaciteAnalyzer.isPrimitiveOrWrapper(value) && value.equals(def.getValue())
                         && def.getVariableName().equals(name)) {
                     output = def;
                     break;
@@ -105,7 +105,7 @@ public class DefSet {
                 if(field.getVariableIndex() == index && (varname.equals(field.getVariableName()) || varname.equals(""))
                         && (fieldInstance == null || field.getInstance()== fieldInstance)){
                     // to be able to compare integer and Integer due to transformer boxing
-                    if(def.getValue() == value || value != null && DefUseAnalyser.isPrimitiveOrWrapper(value) && value.equals(field.getValue())){
+                    if(def.getValue() == value || value != null && DaciteAnalyzer.isPrimitiveOrWrapper(value) && value.equals(field.getValue())){
                         output = def;
                         break;
                     }
@@ -123,7 +123,7 @@ public class DefSet {
                 if(field.getVariableIndex() == index && (varname.contains(field.getVariableName()))
                         && (fieldInstance == null || field.getInstance()== fieldInstance)&& time>def.timeRef){
                     // to be able to compare integer and Integer due to transformer boxing
-                    if(def.getValue() == value || value != null && DefUseAnalyser.isPrimitiveOrWrapper(value) && value.equals(field.getValue())){
+                    if(def.getValue() == value || value != null && DaciteAnalyzer.isPrimitiveOrWrapper(value) && value.equals(field.getValue())){
                         if(!varname.equals("") && field.getVariableName().equals("")){
                             def.setVariableName(varname);
                         }
@@ -191,7 +191,7 @@ public class DefSet {
         for(DefUseVariable def : defs){
             if(def.getVariableIndex() == index && def.getVariableName().equals(varname)){
                 // to be able to compare integer and Integer due to transformer boxing
-                if(def.getValue() == value || value != null && DefUseAnalyser.isPrimitiveOrWrapper(value) && value.equals(def.getValue())) {
+                if(def.getValue() == value || value != null && DaciteAnalyzer.isPrimitiveOrWrapper(value) && value.equals(def.getValue())) {
                     output = def;
                     break;
                 }
@@ -237,7 +237,7 @@ public class DefSet {
                 continue;
             }
             if(def.getValue() == newDef.getValue() && !(def.getVariableIndex() == newDef.getVariableIndex())
-                    && !DefUseAnalyser.isPrimitiveOrWrapper(def.getValue())){
+                    && !DaciteAnalyzer.isPrimitiveOrWrapper(def.getValue())){
                 if(output == null || def.getLinenumber() > output.getLinenumber()){
                     output = def;
                 }
@@ -283,7 +283,7 @@ public class DefSet {
         for(DefUseVariable d: defs){
             if(d.getMethod().equals(method) && d.getVariableIndex() == index
                             && d.getLinenumber() == ln && d.getInstruction() == ins){
-                    if(d.getValue() == value || value != null && DefUseAnalyser.isPrimitiveOrWrapper(value) && value.equals(d.getValue())) {
+                    if(d.getValue() == value || value != null && DaciteAnalyzer.isPrimitiveOrWrapper(value) && value.equals(d.getValue())) {
                         return d;
                     }
             }
@@ -332,7 +332,7 @@ public class DefSet {
                 DefUseField field = (DefUseField) d;
                 if(d.getVariableIndex() == index && d.getVariableName().equals(varname) && d.getLinenumber() == ln &&
                         d.getInstruction() == ins && (instance == null || field.getInstance() == instance)) {
-                    if(field.getValue() == value || value != null && DefUseAnalyser.isPrimitiveOrWrapper(value) && value.equals(field.getValue())){
+                    if(field.getValue() == value || value != null && DaciteAnalyzer.isPrimitiveOrWrapper(value) && value.equals(field.getValue())){
                         return d;
                     }
                 }
