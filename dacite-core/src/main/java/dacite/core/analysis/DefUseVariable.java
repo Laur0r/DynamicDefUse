@@ -1,4 +1,4 @@
-package dacite.core.defuse;
+package dacite.core.analysis;
 
 import jakarta.xml.bind.annotation.XmlElement;
 import jakarta.xml.bind.annotation.XmlTransient;

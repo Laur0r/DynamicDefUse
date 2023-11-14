@@ -1,4 +1,4 @@
-package dacite.core.defuse;
+package dacite.core.analysis;
 
 import dacite.lsp.defUseData.transformation.XMLSolution;
 import jakarta.xml.bind.annotation.XmlElement;

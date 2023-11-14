@@ -1,4 +1,4 @@
-package dacite.core.defuse;
+package dacite.core.analysis;
 
 
 import java.util.ArrayList;

@@ -1,4 +1,4 @@
-package dacite.core.defuse;
+package dacite.core.analysis;
 
 import dacite.lsp.defUseData.transformation.XMLSolution;
 import de.wwu.mulib.search.executors.MulibExecutor;

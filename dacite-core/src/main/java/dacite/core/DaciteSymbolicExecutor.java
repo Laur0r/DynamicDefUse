@@ -1,6 +1,6 @@
 package dacite.core;
 
-import dacite.core.defuse.*;
+import dacite.core.analysis.*;
 import dacite.core.instrumentation.DaciteTransformer;
 import dacite.lsp.defUseData.transformation.XMLSolution;
 import dacite.lsp.defUseData.transformation.XMLSolutionMapping;
@@ -16,8 +16,6 @@ import jakarta.xml.bind.Marshaller;
 import org.yaml.snakeyaml.Yaml;
 
 import javax.tools.JavaCompiler;
-import javax.tools.JavaFileObject;
-import javax.tools.StandardJavaFileManager;
 import javax.tools.ToolProvider;
 import javax.xml.stream.XMLOutputFactory;
 import javax.xml.stream.XMLStreamException;
@@ -30,18 +28,11 @@ import java.net.URLClassLoader;
 import java.util.*;
 import java.util.logging.Logger;
 
-public class SymbolicExec {
+public class DaciteSymbolicExecutor extends DaciteDynamicExecutor {
 
     static Logger logger = Logger.getLogger(Logger.GLOBAL_LOGGER_NAME);
 
-    public static void exec(String[] args) throws Exception {
-        if(args.length != 3){
-            throw new IllegalArgumentException("Not the expected amount of arguments given for SymbolicExec.exec()");
-        }
-        String projectpath = args[0];
-        String packagename = args[1];
-        String classname = args[2];
-
+    public static void exec(String projectpath, String packagename, String classname) throws Exception {
         Yaml yaml = new Yaml();
         File packagedir = new File(projectpath+packagename);
         URL urlPackage = packagedir.toURI().toURL();
@@ -93,11 +84,7 @@ public class SymbolicExec {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         List<File> sourceFileList = new ArrayList<File>();
         sourceFileList.add(file);
-        StandardJavaFileManager fileManager = compiler.getStandardFileManager( null, null, null );
-        Iterable<? extends JavaFileObject> javaSource = fileManager.getJavaFileObjectsFromFiles( sourceFileList );
-        Iterable<String> options = Arrays.asList("-d", sourcePath, "--release", "11", "-g");
-        JavaCompiler.CompilationTask task = compiler.getTask(null, fileManager, null, options, null, javaSource);
-        task.call();
+        compileFiles(sourceFileList, sourcePath);
 
         // Transform all files for Analysis
         for(File f: Objects.requireNonNull(packagedir.listFiles())){
@@ -156,7 +143,7 @@ public class SymbolicExec {
                         .setSEARCH_MAIN_STRATEGY(searchStrategy)
                         .setSEARCH_CONCOLIC(CONCOLIC)
                         .setBUDGET_INCR_ACTUAL_CP(BUDGET_INCR_ACTUAL_CP)
-                        .setBUDGET_GLOBAL_TIME_IN_SECONDS(BUDGET_GLOBAL_TIME_IN_SECONDS)
+                        //.setBUDGET_GLOBAL_TIME_IN_SECONDS(BUDGET_GLOBAL_TIME_IN_SECONDS)
                         .setBUDGET_FIXED_ACTUAL_CP(BUDGET_FIXED_ACTUAL_CP)
                         .setSEARCH_CHOICE_OPTION_DEQUE_TYPE(ChoiceOptionDeques.DIRECT_ACCESS)
                         .setSOLVER_GLOBAL_TYPE(Solvers.Z3_INCREMENTAL)
@@ -224,37 +211,7 @@ public class SymbolicExec {
                 sourceFileList.add(f);
             }
         }
-        javaSource = fileManager.getJavaFileObjectsFromFiles( sourceFileList );
-        JavaCompiler.CompilationTask taskRecompile = compiler.getTask(null, fileManager, null, options, null, javaSource);
-        taskRecompile.call();
-
-    }
-
-    private static void parseDefUseVariable(XMLStreamWriter xsw, DefUseVariable var){
-        try {
-            xsw.writeStartElement("linenumber");
-            xsw.writeCharacters(String.valueOf(var.getLinenumber()));
-            xsw.writeEndElement();
-            xsw.writeStartElement("method");
-            xsw.writeCharacters(xmlEscape(var.getMethod()));
-            xsw.writeEndElement();
-            xsw.writeStartElement("variableIndex");
-            xsw.writeCharacters(String.valueOf(var.getVariableIndex()));
-            xsw.writeEndElement();
-            xsw.writeStartElement("instruction");
-            xsw.writeCharacters(String.valueOf(var.getInstruction()));
-            xsw.writeEndElement();
-            xsw.writeStartElement("variableName");
-            xsw.writeCharacters(xmlEscape(var.getVariableName()));
-            xsw.writeEndElement();
-            if(var instanceof DefUseField){
-                xsw.writeStartElement("objectName");
-                xsw.writeCharacters(String.valueOf(((DefUseField)var).getInstanceName()));
-                xsw.writeEndElement();
-            }
-        } catch (XMLStreamException e) {
-            e.printStackTrace();
-        }
+        compileFiles(sourceFileList, sourcePath);
     }
 
     private static void parseSolution(XMLOutputFactory xof, XMLSolutions solutions){
@@ -382,7 +339,7 @@ public class SymbolicExec {
                 if(strLine.contains("[") || strLine.equals("int")){
                     classes.add(Class.forName(strLine));
                 } else {
-                    classes.add(SymbolicExec.class.getClassLoader().loadClass(strLine));
+                    classes.add(DaciteSymbolicExecutor.class.getClassLoader().loadClass(strLine));
                 }
             }
             reader.close();
@@ -399,12 +356,6 @@ public class SymbolicExec {
                 type == Double.class || type == Float.class || type == Long.class ||
                 type == Integer.class || type == Short.class || type == Character.class ||
                 type == Byte.class || type == Boolean.class || type == String.class;
-    }
-
-    public static String xmlEscape(String input){
-        String output = input.replace("<", "&lt;");
-        output = output.replace(">", "&gt;");
-        return output;
     }
 
 }

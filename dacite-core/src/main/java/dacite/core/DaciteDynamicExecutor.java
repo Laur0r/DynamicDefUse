@@ -1,8 +1,6 @@
 package dacite.core;
 
 import org.junit.runner.JUnitCore;
-import org.w3c.dom.Document;
-import org.xml.sax.InputSource;
 
 import java.io.*;
 import java.net.URL;
@@ -15,39 +13,26 @@ import javax.tools.JavaCompiler;
 import javax.tools.JavaFileObject;
 import javax.tools.StandardJavaFileManager;
 import javax.tools.ToolProvider;
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.stream.XMLOutputFactory;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
-import javax.xml.transform.Source;
-import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerFactory;
-import javax.xml.transform.dom.DOMSource;
-import javax.xml.transform.stream.StreamResult;
 
-import dacite.core.defuse.DaciteAnalyzer;
-import dacite.core.defuse.DefUseChain;
-import dacite.core.defuse.DefUseField;
-import dacite.core.defuse.DefUseVariable;
+import dacite.core.analysis.DaciteAnalyzer;
+import dacite.core.analysis.DefUseChain;
+import dacite.core.analysis.DefUseField;
+import dacite.core.analysis.DefUseVariable;
 
-public class DefUseMain {
+public class DaciteDynamicExecutor {
 
 	static Logger logger = Logger.getLogger(Logger.GLOBAL_LOGGER_NAME);
 
-	public static void exec(String[] args) throws Exception {
-		if(args.length > 3){
-			throw new IllegalArgumentException("More than one argument for main method detected");
-		} else if(args.length == 0){
-			throw new IllegalArgumentException("Required to specify name of package to analyse data-flow");
-		}
+	public static void exec(String projectdir, String packagename, String classname) throws Exception {
 		long startTime = System.nanoTime();
 		JUnitCore junitCore = new JUnitCore();
-		String projectdir = args[0];
-		String packagename = args[1].replace(".","/");
-		String classname = args[2];
+		packagename = packagename.replace(".","/");
 		File file = new File(projectdir+packagename+classname+".java");
 
+		// compile files in path to have all local changes for the execution
 		URL url = ClassLoader.getSystemResource(packagename+classname+".class");
 		String sourcePath = url.getPath().substring(0,url.getPath().indexOf(packagename));
 		List<File> sourceFileList = new ArrayList<File>();
@@ -58,13 +43,9 @@ public class DefUseMain {
 				sourceFileList.add(f);
 			}
 		}
-		JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
-		StandardJavaFileManager fileManager = compiler.getStandardFileManager( null, null, null );
-		Iterable<? extends JavaFileObject> javaSource = fileManager.getJavaFileObjectsFromFiles( sourceFileList );
-		Iterable<String> options = Arrays.asList("-d", sourcePath, "--release", "11", "-g");
-		JavaCompiler.CompilationTask task = compiler.getTask(null, fileManager, null, options, null, javaSource);
-		task.call();
+		compileFiles(sourceFileList,sourcePath);
 
+		// run test cases
 		try {
 			junitCore.run(Class.forName(packagename.replace("/",".")+classname));
 		} catch (ClassNotFoundException e) {
@@ -75,7 +56,8 @@ public class DefUseMain {
 		logger.info(String.valueOf(totalTime));
 		logger.info("run through main method");
 		DaciteAnalyzer.check();
-		// write xml file
+
+		// write xml file of identified DUC
 		XMLOutputFactory xof = XMLOutputFactory.newInstance();
 		XMLStreamWriter xsw = null;
 		try {
@@ -97,7 +79,6 @@ public class DefUseMain {
 			xsw.writeEndDocument();
 			xsw.flush();
 			xsw.close();
-			//format("file.xml");
 		}
 		catch (Exception e) {
 			logger.info("Unable to write the file: " + e.getMessage());
@@ -105,7 +86,12 @@ public class DefUseMain {
 
 	}
 
-	private static void parseDefUseVariable(XMLStreamWriter xsw, DefUseVariable var){
+	/**
+	 * Parse a DUC as xml
+	 * @param xsw XMLStreamWriter
+	 * @param var DefUseVariable to parse
+	 */
+	protected static void parseDefUseVariable(XMLStreamWriter xsw, DefUseVariable var){
 		try {
 			xsw.writeStartElement("linenumber");
 			xsw.writeCharacters(String.valueOf(var.getLinenumber()));
@@ -132,30 +118,17 @@ public class DefUseMain {
 		}
 	}
 
-	private static void format(String file) {
-		logger.info("hat String gebaut");
-		DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-		DocumentBuilder builder = null;
-		try {
-			builder = factory.newDocumentBuilder();
-			Document document = builder.parse(new InputSource(new InputStreamReader(new FileInputStream(file))));
-
-	// Gets a new transformer instance
-			Transformer xformer = TransformerFactory.newInstance().newTransformer();
-	// Sets XML formatting
-			//xformer.setOutputProperty(OutputKeys.METHOD, "xml");
-	// Sets indent
-			//xformer.setOutputProperty(OutputKeys.INDENT, "yes");
-			Source source = new DOMSource(document);
-			StringWriter writer = new StringWriter();
-			xformer.transform(source, new StreamResult(writer));
-			logger.info("sollte Ergebnis geprintet haben");
-			System.out.println(writer.getBuffer().toString());
-		} catch (Exception e) {
-			logger.info(e.getMessage());
-			e.printStackTrace();
-		}
+	/**
+	 * Compile the given list of java files to the given path
+	 * @param files list of java files to-be-compiled
+	 * @param sourcePath path where the compiled files are saved
+	 */
+	protected static void compileFiles(List<File> files, String sourcePath){
+		JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
+		StandardJavaFileManager fileManager = compiler.getStandardFileManager( null, null, null );
+		Iterable<? extends JavaFileObject> javaSource = fileManager.getJavaFileObjectsFromFiles( files );
+		Iterable<String> options = Arrays.asList("-d", sourcePath, "--release", "11", "-g");
+		JavaCompiler.CompilationTask task = compiler.getTask(null, fileManager, null, options, null, javaSource);
+		task.call();
 	}
-
-
 }

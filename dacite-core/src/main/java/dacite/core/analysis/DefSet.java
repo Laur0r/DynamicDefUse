@@ -1,5 +1,6 @@
-package dacite.core.defuse;
+package dacite.core.analysis;
 
+import de.wwu.mulib.model.classes.java.lang.IntegerReplacement;
 import de.wwu.mulib.substitutions.PartnerClass;
 import de.wwu.mulib.substitutions.primitives.ConcSnumber;
 import de.wwu.mulib.substitutions.primitives.Sint;

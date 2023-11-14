@@ -1,4 +1,4 @@
-package dacite.core.defuse;
+package dacite.core.analysis;
 
 /**
  * Class representing the allocation between variable definitions and usages over the boundary of methods

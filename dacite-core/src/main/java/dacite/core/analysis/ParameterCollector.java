@@ -1,4 +1,4 @@
-package dacite.core.defuse;
+package dacite.core.analysis;
 
 /**
  * Class necessary to collect a list of parameters for a method invocation.

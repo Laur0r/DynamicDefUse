@@ -157,7 +157,7 @@ public class DaciteTransformer implements ClassFileTransformer {
 					il.add(new LdcInsnNode(index));
 					il.add(new LdcInsnNode(classname+"."+mnode.name));
 					il.add(new LdcInsnNode(varname));
-					il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/defuse/DaciteAnalyzer", "visitUse", "(Ljava/lang/Object;IIILjava/lang/String;Ljava/lang/String;)V", false));
+					il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/analysis/DaciteAnalyzer", "visitUse", "(Ljava/lang/Object;IIILjava/lang/String;Ljava/lang/String;)V", false));
 					insns.insertBefore(in, il);
 					boxing(Type.INT_TYPE, incIns.var, il, true);
 					il.add(new LdcInsnNode(incIns.var));
@@ -165,7 +165,7 @@ public class DaciteTransformer implements ClassFileTransformer {
 					il.add(new LdcInsnNode(index));
 					il.add(new LdcInsnNode(classname+"."+mnode.name));
 					il.add(new LdcInsnNode(varname));
-					il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/defuse/DaciteAnalyzer", "visitDef", "(Ljava/lang/Object;IIILjava/lang/String;Ljava/lang/String;)V", false));
+					il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/analysis/DaciteAnalyzer", "visitDef", "(Ljava/lang/Object;IIILjava/lang/String;Ljava/lang/String;)V", false));
 					insns.insert(in, il);
 					index++;
 				} else if(in instanceof LineNumberNode){
@@ -188,7 +188,7 @@ public class DaciteTransformer implements ClassFileTransformer {
 			if(!sourceCode){
 				methodStart.add(new LdcInsnNode(classname));
 				methodStart.add(new LdcInsnNode(path));
-				methodStart.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/defuse/DaciteAnalyzer", "visitSourceCode", "(Ljava/lang/String;Ljava/lang/String;)V", false));
+				methodStart.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/analysis/DaciteAnalyzer", "visitSourceCode", "(Ljava/lang/String;Ljava/lang/String;)V", false));
 				sourceCode = true;
 			}
 			InsnList methodintermediate = new InsnList();
@@ -213,7 +213,7 @@ public class DaciteTransformer implements ClassFileTransformer {
 					methodintermediate.add(new LdcInsnNode(classname+"."+mnode.name));
 					methodintermediate.add(new LdcInsnNode(localVariable.name));
 					methodintermediate.add(new IntInsnNode(Opcodes.BIPUSH, typeindex));
-					methodintermediate.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/defuse/DaciteAnalyzer", "visitParameter", "(Ljava/lang/Object;IILjava/lang/String;Ljava/lang/String;I)V", false));
+					methodintermediate.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/analysis/DaciteAnalyzer", "visitParameter", "(Ljava/lang/Object;IILjava/lang/String;Ljava/lang/String;I)V", false));
 					if(types[typeindex] == Type.DOUBLE_TYPE || types[typeindex] == Type.LONG_TYPE){
 						i++;
 					}
@@ -370,9 +370,9 @@ public class DaciteTransformer implements ClassFileTransformer {
 			il.add(new LdcInsnNode(variableName));
 			if (op == Opcodes.ILOAD || op == Opcodes.LLOAD || op == Opcodes.FLOAD ||
 					op == Opcodes.DLOAD || op == Opcodes.ALOAD) {
-				il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/defuse/DaciteAnalyzer", "visitUse", "(Ljava/lang/Object;IIILjava/lang/String;Ljava/lang/String;)V", false));
+				il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/analysis/DaciteAnalyzer", "visitUse", "(Ljava/lang/Object;IIILjava/lang/String;Ljava/lang/String;)V", false));
 			} else {
-				il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/defuse/DaciteAnalyzer", "visitDef", "(Ljava/lang/Object;IIILjava/lang/String;Ljava/lang/String;)V", false));
+				il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/analysis/DaciteAnalyzer", "visitDef", "(Ljava/lang/Object;IIILjava/lang/String;Ljava/lang/String;)V", false));
 			}
 			return il;
 		}
@@ -407,7 +407,7 @@ public class DaciteTransformer implements ClassFileTransformer {
 			il.add(new LdcInsnNode(linenumber));
 			il.add(new LdcInsnNode(instruction));
 			il.add(new LdcInsnNode(classname +"."+mnode.name));
-			il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/defuse/DaciteAnalyzer", "visitArrayUse", "(Ljava/lang/Object;ILjava/lang/Object;IILjava/lang/String;)V", false));
+			il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/analysis/DaciteAnalyzer", "visitArrayUse", "(Ljava/lang/Object;ILjava/lang/Object;IILjava/lang/String;)V", false));
 			output[1] = il;
 		} else if(op == Opcodes.IASTORE || op == Opcodes.LASTORE || op == Opcodes.FASTORE ||
 				op == Opcodes.DASTORE || op == Opcodes.AASTORE){
@@ -437,7 +437,7 @@ public class DaciteTransformer implements ClassFileTransformer {
 			il.add(new LdcInsnNode(linenumber));
 			il.add(new LdcInsnNode(instruction));
 			il.add(new LdcInsnNode(classname+"."+mnode.name));
-			il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/defuse/DaciteAnalyzer", "visitArrayDef", "(Ljava/lang/Object;ILjava/lang/Object;IILjava/lang/String;)V", false));
+			il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/analysis/DaciteAnalyzer", "visitArrayDef", "(Ljava/lang/Object;ILjava/lang/Object;IILjava/lang/String;)V", false));
 			// retrieving parameters for original store instruction
 			il.add(new VarInsnNode(Opcodes.ALOAD, indexEnd));
 			indexEnd--;
@@ -479,7 +479,7 @@ public class DaciteTransformer implements ClassFileTransformer {
 			il.add(new LdcInsnNode(linenumber));
 			il.add(new LdcInsnNode(index));
 			il.add(new LdcInsnNode(methodName));
-			il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/defuse/DaciteAnalyzer", "visitFieldUse", "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/String;IILjava/lang/String;)V", false));
+			il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/analysis/DaciteAnalyzer", "visitFieldUse", "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/String;IILjava/lang/String;)V", false));
 			output[1] = il;
 		} else if (op == Opcodes.GETSTATIC || op == Opcodes.PUTSTATIC){
 			// static field variables behave similar to variable uses and definitions -> no ALOAD necessary
@@ -497,11 +497,11 @@ public class DaciteTransformer implements ClassFileTransformer {
 			il.add(new LdcInsnNode(methodName));
 			il.add(new LdcInsnNode(fieldins.owner));
 			if(op == Opcodes.GETSTATIC){
-				il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/defuse/DaciteAnalyzer", "visitStaticFieldUse", "(Ljava/lang/Object;Ljava/lang/String;IILjava/lang/String;Ljava/lang/String;)V", false));
+				il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/analysis/DaciteAnalyzer", "visitStaticFieldUse", "(Ljava/lang/Object;Ljava/lang/String;IILjava/lang/String;Ljava/lang/String;)V", false));
 				output[1] = il;
 			} else {
 				// Putfield needs instrumentation before instruction otherwise value is no longer on stack
-				il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/defuse/DaciteAnalyzer", "visitStaticFieldDef", "(Ljava/lang/Object;Ljava/lang/String;IILjava/lang/String;Ljava/lang/String;)V", false));
+				il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/analysis/DaciteAnalyzer", "visitStaticFieldDef", "(Ljava/lang/Object;Ljava/lang/String;IILjava/lang/String;Ljava/lang/String;)V", false));
 				output[0] = il;
 			}
 		} else if(op == Opcodes.PUTFIELD){
@@ -519,7 +519,7 @@ public class DaciteTransformer implements ClassFileTransformer {
 			il.add(new LdcInsnNode(linenumber));
 			il.add(new LdcInsnNode(index));
 			il.add(new LdcInsnNode(methodName));
-			il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/defuse/DaciteAnalyzer", "visitFieldDef", "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/String;IILjava/lang/String;)V", false));
+			il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/analysis/DaciteAnalyzer", "visitFieldDef", "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/String;IILjava/lang/String;)V", false));
 			output[0] = il;
 		}
 		return output;
@@ -548,31 +548,31 @@ public class DaciteTransformer implements ClassFileTransformer {
 			il.add(new LdcInsnNode(classname+"."+mnode.name));
 			il.add(new LdcInsnNode(methodins.owner+"."+methodins.name));
 			il.add(new IntInsnNode(Opcodes.BIPUSH, 0));
-			il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/defuse/DaciteAnalyzer", "registerInterMethod", "(Ljava/lang/Object;ILjava/lang/String;Ljava/lang/String;I)V", false));
+			il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/analysis/DaciteAnalyzer", "registerInterMethod", "(Ljava/lang/Object;ILjava/lang/String;Ljava/lang/String;I)V", false));
 			return il;
 		} else if(parameterTypes.length != 0){
 			// if there are more parameters, duplicating has to be done by storing values in local variables and retrieving values
 			InsnList il = new InsnList();
 			int index  = mnode.maxLocals + 1;
 			il.add(new IntInsnNode(Opcodes.SIPUSH, parameterTypes.length));
-			il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/defuse/ParameterCollector", "setParameter", "(I)V", false));
+			il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/analysis/ParameterCollector", "setParameter", "(I)V", false));
 			for(int i = parameterTypes.length-1; i >= 0; i--){
 				Type type = parameterTypes[i];
 				il.add(new VarInsnNode(type.getOpcode(Opcodes.ISTORE), index));
 				boxing(type, index, il, true);
 				// to avoid having different methods for each number of parameters, method parameters are collected in array
-				il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/defuse/ParameterCollector", "push", "(Ljava/lang/Object;)V", false));
+				il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/analysis/ParameterCollector", "push", "(Ljava/lang/Object;)V", false));
 				if(type == Type.DOUBLE_TYPE || type == Type.LONG_TYPE) {
 					index = index + 2;
 				} else {
 					index++;
 				}
 			}
-			il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/defuse/ParameterCollector", "getParameters", "()[Ljava/lang/Object;", false));
+			il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/analysis/ParameterCollector", "getParameters", "()[Ljava/lang/Object;", false));
 			il.add(new LdcInsnNode(linenumber));
 			il.add(new LdcInsnNode(classname+"."+mnode.name));
 			il.add(new LdcInsnNode(methodins.owner+"."+methodins.name));
-			il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/defuse/DaciteAnalyzer", "registerInterMethod", "([Ljava/lang/Object;ILjava/lang/String;Ljava/lang/String;)V", false));
+			il.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/analysis/DaciteAnalyzer", "registerInterMethod", "([Ljava/lang/Object;ILjava/lang/String;Ljava/lang/String;)V", false));
 			// retrieving values for original method invocation instruction
 			for(Type type: parameterTypes){
 				if(type == Type.DOUBLE_TYPE || type == Type.LONG_TYPE) {

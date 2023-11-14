@@ -1,4 +1,4 @@
-package dacite.core.defuse;
+package dacite.core.analysis;
 
 import com.github.javaparser.Range;
 import com.github.javaparser.StaticJavaParser;
@@ -515,6 +515,13 @@ public class DaciteAnalyzer {
         registerDef(def);
     }
 
+    /**
+     * Method with statically searches for the variable name at given line in class for the interprocedural data flow.
+     * @param className classname of to-be-searched class
+     * @param linenumber line number where argument is called
+     * @param parameter number of parameter
+     * @return name of variable or ""
+     */
     protected static String getInterParameter(String className, int linenumber, int parameter){
         List<MethodCallExpr> methods;
         if(sourceCodeMethodCalls.containsKey(className)) {
@@ -544,6 +551,13 @@ public class DaciteAnalyzer {
         return "";
     }
 
+    /**
+     * Method which statically determines the linenumber of method declaration. Bytecode line numbers for method declarations
+     * often are not identical to the source code line number.
+     * @param methodString name of declared method
+     * @param ln bytecode linenumber
+     * @return source code linenumber
+     */
     protected static int getLinenumberParameter(String methodString, int ln){
         String className = methodString.substring(0, methodString.lastIndexOf("."));
         String method = methodString.substring(methodString.lastIndexOf(".")+1);
