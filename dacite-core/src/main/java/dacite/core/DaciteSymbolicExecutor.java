@@ -62,7 +62,8 @@ public class DaciteSymbolicExecutor extends DaciteDynamicExecutor {
         // Get sourcepath
         URL url = null;
         DaciteTransformer transformer = new DaciteTransformer();
-        transformer.setDir(projectpath+";"+packagename.substring(0,packagename.length()-2));
+        transformer.setPath(projectpath);
+        transformer.setDir(packagename.substring(0,packagename.length()-2));
         if(packagedir.listFiles() == null){
             throw new RuntimeException("there are not files in "+projectpath+packagename);
         }
@@ -81,7 +82,6 @@ public class DaciteSymbolicExecutor extends DaciteDynamicExecutor {
         String sourcePath = url.getPath().substring(0,url.getPath().indexOf(packagename));
 
         // Compile source file.
-        JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         List<File> sourceFileList = new ArrayList<File>();
         sourceFileList.add(file);
         compileFiles(sourceFileList, sourcePath);

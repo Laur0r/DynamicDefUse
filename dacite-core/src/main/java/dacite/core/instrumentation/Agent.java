@@ -7,15 +7,18 @@ public class Agent {
 
 	static Logger logger = Logger.getLogger(Logger.GLOBAL_LOGGER_NAME);
 
+	static DaciteTransformer transformer;
 	static boolean executed = false;
 	public static void premain(String agentArgs, Instrumentation inst) {
 		if(!executed){
 			logger.info("Starting the agent for directory "+ agentArgs);
 			executed = true;
-			DaciteTransformer transformer = new DaciteTransformer();
-			transformer.setDir(agentArgs);
+			transformer = new DaciteTransformer();
 			inst.addTransformer(transformer);
-
 		}
+	}
+
+	public static DaciteTransformer getTransformer(){
+		return transformer;
 	}
 }

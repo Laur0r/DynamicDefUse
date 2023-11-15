@@ -81,7 +81,7 @@ public class CommandRegistry {
                   // Java binary
                   System.getProperty("java.home") + File.separator + "bin" + File.separator + "java",
                   // Java agent
-                  "-javaagent:" + javaAgentJar + "=" +projectDir + "src/;"+ packageName.replace(".", "/"),
+                  "-javaagent:" + javaAgentJar,
                   // Classpath
                   "-classpath", fullClassPath,
                   // Main class in dacite-core

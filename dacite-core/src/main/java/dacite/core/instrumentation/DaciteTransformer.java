@@ -587,9 +587,11 @@ public class DaciteTransformer implements ClassFileTransformer {
 		return null;
 	}
 
-	public void setDir(String paths){
-		String[] path = paths.split(";");
-		this.path = path[0];
-		this.dir = path[1];
+	public void setDir(String dir){
+		this.dir = dir;
+	}
+
+	public void setPath(String path){
+		this.path = path;
 	}
 }
