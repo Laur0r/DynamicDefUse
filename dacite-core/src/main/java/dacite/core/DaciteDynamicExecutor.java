@@ -1,6 +1,6 @@
 package dacite.core;
 
-import dacite.core.instrumentation.Agent;
+import dacite.core.instrumentation.DaciteAgent;
 import org.junit.runner.JUnitCore;
 
 import java.io.*;
@@ -36,8 +36,8 @@ public class DaciteDynamicExecutor {
 		// compile files in path to have all local changes for the execution
 		URL url = ClassLoader.getSystemResource(packagename+classname+".class");
 		String sourcePath = url.getPath().substring(0,url.getPath().indexOf(packagename));
-		Agent.getTransformer().setPath(sourcePath);
-		Agent.getTransformer().setDir(packagename);
+		DaciteAgent.getTransformer().setPath(sourcePath);
+		DaciteAgent.getTransformer().setDir(packagename);
 		List<File> sourceFileList = new ArrayList<File>();
 		sourceFileList.add(file);
 		File packagedir = new File(projectdir+packagename);

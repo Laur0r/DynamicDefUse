@@ -21,7 +21,7 @@ dependencies {
 
 jar {
     manifest {
-        attributes 'Premain-Class': 'dacite.core.instrumentation.Agent'
+        attributes 'Premain-Class': 'dacite.core.instrumentation.DaciteAgent'
         attributes 'Main-Class': 'dacite.core.DaciteLauncher'
         attributes 'Class-Path': configurations.runtimeClasspath.collect { it.name }.join(' ')
     }

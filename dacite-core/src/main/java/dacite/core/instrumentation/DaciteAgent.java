@@ -3,7 +3,7 @@ package dacite.core.instrumentation;
 import java.lang.instrument.Instrumentation;
 import java.util.logging.Logger;
 
-public class Agent {
+public class DaciteAgent {
 
 	static Logger logger = Logger.getLogger(Logger.GLOBAL_LOGGER_NAME);
 
