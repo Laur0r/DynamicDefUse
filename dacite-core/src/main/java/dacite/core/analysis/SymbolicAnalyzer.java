@@ -24,7 +24,7 @@ public class SymbolicAnalyzer {
     protected static DefSet symbolicDefs;
 
     // all identified DUC that were passed so far
-    public static ArrayDeque<DefUseVariable> symbolicUsages;
+    public static ArrayDeque<DefUseSymbolic> symbolicUsages;
 
     protected static long counter;
 
@@ -32,46 +32,6 @@ public class SymbolicAnalyzer {
         symbolicDefs = new DefSet();
         symbolicUsages = new ArrayDeque<>();
         counter = 0;
-    }
-
-
-
-    /**
-     * Method which is called from the instrumented source code whenever an array element is used with a potentially symbolic
-     * index.
-     * @param array array instance of the referenced element
-     * @param index index of the array element which is used, potentially symbolic
-     * @param value value of the used array element
-     * @param linenumber line number where the array element is used in the source code
-     * @param instruction integer helping to differentiating instructions within a line
-     * @param method name of the source code method where the array element is used
-     */
-    public static void visitArrayUse(Object array, Sint index, Object value, int linenumber, int instruction, String method){
-        if (index instanceof Sint.ConcSint) {
-            DaciteAnalyzer.visitArrayUse(array, ((Sint.ConcSint) index).intVal(), value, linenumber, instruction, method);
-            return;
-        }
-        //// TODO
-        throw new NotYetImplementedException();
-    }
-
-    /**
-     * Method which is called from the instrumented source code whenever an array element is defined with a potentially symbolic
-     * index.
-     * @param array array instance of the referenced element
-     * @param index index of the array element which is defined, potentially symbolic
-     * @param value value of the defined array element
-     * @param linenumber line number where the array element is defined in the source code
-     * @param instruction integer helping to differentiating instructions within a line
-     * @param method name of the source code method where the array element is defined
-     */
-    public static void visitArrayDef(Object array, Sint index, Object value, int linenumber, int instruction, String method){
-        if (index instanceof Sint.ConcSint) {
-            DaciteAnalyzer.visitArrayDef(array, ((Sint.ConcSint) index).intVal(), value, linenumber, instruction, method);
-            return;
-        }
-        //// TODO
-        throw new NotYetImplementedException();
     }
 
     /**
@@ -158,7 +118,7 @@ public class SymbolicAnalyzer {
         if(def != null){
             symbolicDefs.removeDef(def);
         } else {
-            def = new DefUseVariable(ln, parameter, index, value, method, varname);
+            def = new DefUseSymbolic(ln, parameter, index, value, method, varname);
         }
         DaciteAnalyzer.registerDef(def);
     }
@@ -177,13 +137,13 @@ public class SymbolicAnalyzer {
         }
         return "this";
     }
-    protected static void addSymbolicUse(DefUseVariable use){
+    protected static void addSymbolicUse(DefUseSymbolic use){
         use.setTimeRef(counter);
         counter++;
         symbolicUsages.addFirst(use);
     }
 
-    protected static void addSymbolicDef(DefUseVariable def){
+    protected static void addSymbolicDef(DefUseSymbolic def){
         def.setTimeRef(counter);
         counter++;
         symbolicDefs.addDef(def);
@@ -192,18 +152,15 @@ public class SymbolicAnalyzer {
     public static void resolveLabels(MulibExecutor mulibExecutor, PathSolution pathSolution, SolverManager s) {
 
         for(DefUseVariable def : symbolicDefs.defs){
-            if((def.getValue() instanceof Substituted)){ //&& !(def.getValue() instanceof ConcSnumber) && !(def.getValue() instanceof PartnerClass && ((PartnerClass) def.getValue()).__mulib__getId()
-                    //instanceof Sint.ConcSint)){
-                // TODO ist das jetzt zB int oder ConcSint?
+            if((def.getValue() instanceof Substituted)){
                 def.setValue(s.getLabel(def.getValue()));
             }
         }
-        for(DefUseVariable var: symbolicUsages){
+        for(DefUseSymbolic var: symbolicUsages){
             var.setValue(s.getLabel(var.getValue()));
-            // TODO oder symbolische Vergleiche notwendig?
             DefUseVariable def = null;
-            if(var instanceof DefUseField){
-                def = symbolicDefs.getLastDefinitionFields(var.variableIndex, var.variableName,var.value, ((DefUseField) var).getInstance(), var.timeRef);
+            if(var instanceof DefUseFieldSymbolic){
+                def = symbolicDefs.getLastDefinitionFields(var.variableIndex, var.variableName,var.value, ((DefUseFieldSymbolic) var).getInstance(), var.timeRef);
             } else {
                 def = symbolicDefs.getLastDefinition(var.variableIndex, var.method, var.value, var.variableName, var.timeRef);
             }
@@ -226,6 +183,15 @@ public class SymbolicAnalyzer {
         symbolicUsages = new ArrayDeque<>();
     }
 
+    /**
+     * Find variable usage with given characteristics. Necessary in the context of variable allocations over the
+     * boundaries of methods.
+     * @param method name of method where the usage occurred
+     * @param linenumber where the usage occurred
+     * @param value of variable which was used
+     * @param removed boolean indicating whether this usage was already removed from chains
+     * @return variable usage
+     */
     protected static DefUseVariable findSymbolicUse(String method, int linenumber, Object value, boolean removed){
         for(DefUseVariable use : symbolicUsages){
             if(use.getLinenumber() == linenumber && use.getMethod().equals(method) &&

@@ -12,6 +12,7 @@ import de.wwu.mulib.substitutions.PartnerClass;
 import de.wwu.mulib.substitutions.Substituted;
 import de.wwu.mulib.substitutions.primitives.ConcSnumber;
 import de.wwu.mulib.substitutions.primitives.Sint;
+import de.wwu.mulib.throwables.NotYetImplementedException;
 
 import java.io.File;
 import java.nio.file.Files;
@@ -67,7 +68,7 @@ public class DaciteAnalyzer {
             if(symbolicDef != null){
                 defs.removeDef(symbolicDef);
             } else {
-                symbolicDef = new DefUseVariable(linenumber, instruction, index, value, method, varname);
+                symbolicDef = new DefUseSymbolic(linenumber, instruction, index, value, method, varname);
             }
             registerDef(symbolicDef);
         } else {
@@ -97,9 +98,9 @@ public class DaciteAnalyzer {
      * @param varname name of the used variable
      */
     public static void visitUse(Object value, int index, int linenumber, int instruction, String method, String varname){
-        DefUseVariable use = new DefUseVariable(linenumber, instruction, index, value, method, varname);
         // get most recent variable definition for this usage
         if(value instanceof Substituted){
+            DefUseSymbolic use = new DefUseSymbolic(linenumber, instruction, index, value, method, varname);
             // can be compared similar to concrete values
             if(value instanceof ConcSnumber || (value instanceof PartnerClass && ((PartnerClass) value).__mulib__getId()
                     instanceof Sint.ConcSint)){
@@ -121,6 +122,7 @@ public class DaciteAnalyzer {
             }
 
         } else {
+            DefUseVariable use = new DefUseVariable(linenumber, instruction, index, value, method, varname);
             DefUseVariable def = defs.getLastDefinition(index, method, value, varname);
             // if there exists a definition and this is an alias, check whether alias definition was more recent
             if(def != null && def.isAlias()){
@@ -146,19 +148,22 @@ public class DaciteAnalyzer {
      * @param classname name of the static class
      */
     public static void visitStaticFieldUse(Object value, String name, int linenumber, int instruction, String method, String classname){
-        DefUseField use = new DefUseField(linenumber, instruction, -1, value, method, name, null, classname);
         DefUseVariable def = null;
+        DefUseVariable use = null;
         // get most recent field definition for this usage
         if(value instanceof Substituted){
             // can be compared similar to concrete values
             if(value instanceof ConcSnumber || (value instanceof PartnerClass && ((PartnerClass) value).__mulib__getId()
                     instanceof Sint.ConcSint)){
+                use = new DefUseField(linenumber, instruction, -1, value, method, name, null, classname);
                 def = SymbolicAnalyzer.symbolicDefs.getLastSymbolicDefinitionFields(-1, name, value, null);
             } else {
-                SymbolicAnalyzer.addSymbolicUse(use);
+                DefUseSymbolic useSymbolic = new DefUseFieldSymbolic(linenumber, instruction, -1, value, method, name, null, classname);
+                SymbolicAnalyzer.addSymbolicUse(useSymbolic);
                 return;
             }
         } else {
+            use = new DefUseField(linenumber, instruction, -1, value, method, name, null, classname);
             def = defs.getLastDefinitionFields(-1, name, value, null);
         }
         registerUse(def, use, -1, name, method);
@@ -182,7 +187,7 @@ public class DaciteAnalyzer {
             if(def != null){
                 SymbolicAnalyzer.symbolicDefs.removeDef(def);
             } else {
-                def = new DefUseField(linenumber, instruction, -1, value, method, name, null, classname);
+                def = new DefUseFieldSymbolic(linenumber, instruction, -1, value, method, name, null, classname);
             }
         } else {
             def = defs.containsField(value, -1, name, linenumber, instruction,null);
@@ -219,7 +224,7 @@ public class DaciteAnalyzer {
             if(def != null){
                 SymbolicAnalyzer.symbolicDefs.removeDef(def);
             } else {
-                def = new DefUseField(linenumber, instruction, -1, value, method, name, instance, instanceName);
+                def = new DefUseFieldSymbolic(linenumber, instruction, -1, value, method, name, instance, instanceName);
             }
         } else {
             def = defs.containsField(value, -1, name, linenumber, instruction, instance);
@@ -251,9 +256,12 @@ public class DaciteAnalyzer {
         DefUseVariable def = null;
         if(value instanceof Substituted){
             String instanceName = SymbolicAnalyzer.removeSymbolicALoad(instance, linenumber, method);
-            use = new DefUseField(linenumber, instruction, -1, value, method, name, instance, instanceName);
+            if(instanceName.equals("this")){
+                instanceName = chains.removeAload(instance, linenumber,method);
+            }
             if(value instanceof ConcSnumber || (value instanceof PartnerClass && ((PartnerClass) value).__mulib__getId()
                     instanceof Sint.ConcSint)){
+                use = new DefUseField(linenumber, instruction, -1, value, method, name, instance, instanceName);
                 def = SymbolicAnalyzer.symbolicDefs.getLastSymbolicDefinitionFields(-1, name, value, instance);
                 if(def != null && def.isAlias()){
                     AliasAlloc alloc = aliases.get(def.getValue());
@@ -265,7 +273,8 @@ public class DaciteAnalyzer {
                     }
                 }
             } else {
-                SymbolicAnalyzer.addSymbolicUse(use);
+                use = new DefUseFieldSymbolic(linenumber, instruction, -1, value, method, name, instance, instanceName);
+                SymbolicAnalyzer.addSymbolicUse((DefUseSymbolic) use);
                 return;
             }
         } else {
@@ -302,18 +311,21 @@ public class DaciteAnalyzer {
          is only used for the array element access. Thus, the identified chain using the array instance is removed.
          */
         String arrayName = chains.removeAload(array, linenumber, method);
-        DefUseField use = new DefUseField(linenumber, instruction, index, value, method, arrayName+"[", array, arrayName);
+        DefUseVariable use = null;
         DefUseVariable def = null;
         // get most recent field definition for this usage
         if(value instanceof Substituted){
             if(value instanceof ConcSnumber || (value instanceof PartnerClass && ((PartnerClass) value).__mulib__getId()
                     instanceof Sint.ConcSint)){
+                use = new DefUseField(linenumber, instruction, index, value, method, arrayName+"[", array, arrayName);
                 def = SymbolicAnalyzer.symbolicDefs.getLastSymbolicDefinitionFields(index, "", value, array);
             } else {
-                SymbolicAnalyzer.addSymbolicUse(use);
+                DefUseSymbolic useSymbolic = new DefUseFieldSymbolic(linenumber, instruction, index, value, method, arrayName+"[", array, arrayName);
+                SymbolicAnalyzer.addSymbolicUse(useSymbolic);
                 return;
             }
         } else {
+            use = new DefUseField(linenumber, instruction, index, value, method, arrayName+"[", array, arrayName);
             def = defs.getLastDefinitionFields(index, "", value, array);
             if(def == null){
                 DefUseVariable defArray = defs.getLastDefinitionArray(array, arrayName);
@@ -355,7 +367,7 @@ public class DaciteAnalyzer {
             if(def != null){
                 SymbolicAnalyzer.symbolicDefs.removeDef(def);
             } else {
-                def = new DefUseField(linenumber, instruction, index, value, method, "", array, arrayName);
+                def = new DefUseFieldSymbolic(linenumber, instruction, index, value, method, "", array, arrayName);
             }
         } else {
             // get most recent field definition for this usage
@@ -405,6 +417,46 @@ public class DaciteAnalyzer {
         }
     }
 
+
+
+    /**
+     * Method which is called from the instrumented source code whenever an array element is used with a potentially symbolic
+     * index.
+     * @param array array instance of the referenced element
+     * @param index index of the array element which is used, potentially symbolic
+     * @param value value of the used array element
+     * @param linenumber line number where the array element is used in the source code
+     * @param instruction integer helping to differentiating instructions within a line
+     * @param method name of the source code method where the array element is used
+     */
+    public static void visitArrayUse(Object array, Sint index, Object value, int linenumber, int instruction, String method){
+        if (index instanceof Sint.ConcSint) {
+            DaciteAnalyzer.visitArrayUse(array, ((Sint.ConcSint) index).intVal(), value, linenumber, instruction, method);
+            return;
+        }
+        //// TODO
+        throw new NotYetImplementedException();
+    }
+
+    /**
+     * Method which is called from the instrumented source code whenever an array element is defined with a potentially symbolic
+     * index.
+     * @param array array instance of the referenced element
+     * @param index index of the array element which is defined, potentially symbolic
+     * @param value value of the defined array element
+     * @param linenumber line number where the array element is defined in the source code
+     * @param instruction integer helping to differentiating instructions within a line
+     * @param method name of the source code method where the array element is defined
+     */
+    public static void visitArrayDef(Object array, Sint index, Object value, int linenumber, int instruction, String method){
+        if (index instanceof Sint.ConcSint) {
+            DaciteAnalyzer.visitArrayDef(array, ((Sint.ConcSint) index).intVal(), value, linenumber, instruction, method);
+            return;
+        }
+        //// TODO
+        throw new NotYetImplementedException();
+    }
+
     /**
      * Given a usage and its most recent definition, these form a DUC and are added to chains.
      * @param def most recent definition
@@ -440,7 +492,7 @@ public class DaciteAnalyzer {
         AliasAlloc alloc = aliases.get(def.getValue());
         if(alloc == null) {
             DefUseVariable alias = null;
-            if(def.getValue() instanceof Substituted){
+            if(def instanceof DefUseSymbolic){
                 alias = SymbolicAnalyzer.symbolicDefs.hasSymbolicAlias(def);
             } else {
                 // check if there exists an alias
@@ -455,8 +507,8 @@ public class DaciteAnalyzer {
         } else {
             alloc.addAlias(def.getVariableName(), def.getVariableIndex());
         }
-        if(def.getValue() instanceof Substituted){
-            SymbolicAnalyzer.addSymbolicDef(def);
+        if(def instanceof DefUseSymbolic){
+            SymbolicAnalyzer.addSymbolicDef((DefUseSymbolic) def);
         } else {
             defs.addDef(def);
         }

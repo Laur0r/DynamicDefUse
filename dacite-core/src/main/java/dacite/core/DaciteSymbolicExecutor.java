@@ -142,8 +142,9 @@ public class DaciteSymbolicExecutor extends DaciteDynamicExecutor {
                         .setTRANSF_CFG_GENERATE_CHOICE_POINTS_WITH_ID(true, false, false)
                         .setSEARCH_MAIN_STRATEGY(searchStrategy)
                         .setSEARCH_CONCOLIC(CONCOLIC)
+                        .setVALS_SYMSINT_DOMAIN(-7,7)
                         .setBUDGET_INCR_ACTUAL_CP(BUDGET_INCR_ACTUAL_CP)
-                        //.setBUDGET_GLOBAL_TIME_IN_SECONDS(BUDGET_GLOBAL_TIME_IN_SECONDS)
+                        .setBUDGET_GLOBAL_TIME_IN_SECONDS(BUDGET_GLOBAL_TIME_IN_SECONDS)
                         .setBUDGET_FIXED_ACTUAL_CP(BUDGET_FIXED_ACTUAL_CP)
                         .setSEARCH_CHOICE_OPTION_DEQUE_TYPE(ChoiceOptionDeques.DIRECT_ACCESS)
                         .setSOLVER_GLOBAL_TYPE(Solvers.Z3_INCREMENTAL)
@@ -357,6 +358,5 @@ public class DaciteSymbolicExecutor extends DaciteDynamicExecutor {
                 type == Integer.class || type == Short.class || type == Character.class ||
                 type == Byte.class || type == Boolean.class || type == String.class;
     }
-
 }
 

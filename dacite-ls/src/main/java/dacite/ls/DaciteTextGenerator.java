@@ -1,6 +1,7 @@
 package dacite.ls;
 
 import dacite.lsp.defUseData.transformation.XMLSolution;
+import dacite.lsp.defUseData.transformation.XMLSolutionMapping;
 import de.wwu.mulib.tcg.TcgConfig;
 import de.wwu.mulib.tcg.TestCase;
 import de.wwu.mulib.tcg.TestCases;
@@ -199,7 +200,7 @@ public class DaciteTextGenerator {
             List<TestCase> testCaseList = new ArrayList<>();
             List<XMLSolution> list = DefUseAnalysisProvider.getXmlSolutionsList().getSolutionList(testingMethodName);
             for(XMLSolution solution : solutions){
-                if(!list.contains(solution)){
+                if(list == null || !list.contains(solution)){
                     continue;
                 }
                 TcgConfig config = TcgConfig.builder().setTestClassPostfix("Dacite")
@@ -207,6 +208,9 @@ public class DaciteTextGenerator {
                         build();
                 TestCase testCase = new TestCase(solution.exceptional,solution.labels,solution.returnValue, DefUseAnalysisProvider.getBitSet(solution),config);
                 testCaseList.add(testCase);
+            }
+            if(testCaseList.size()==0){
+                continue;
             }
 
             Class<?> myclass = null;

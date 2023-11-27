@@ -1,5 +1,6 @@
 package dacite.core;
 
+import dacite.core.analysis.*;
 import dacite.core.instrumentation.DaciteAgent;
 import org.junit.runner.JUnitCore;
 
@@ -18,11 +19,6 @@ import javax.xml.stream.XMLOutputFactory;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
 
-import dacite.core.analysis.DaciteAnalyzer;
-import dacite.core.analysis.DefUseChain;
-import dacite.core.analysis.DefUseField;
-import dacite.core.analysis.DefUseVariable;
-
 public class DaciteDynamicExecutor {
 
 	static Logger logger = Logger.getLogger(Logger.GLOBAL_LOGGER_NAME);
@@ -36,7 +32,7 @@ public class DaciteDynamicExecutor {
 		// compile files in path to have all local changes for the execution
 		URL url = ClassLoader.getSystemResource(packagename+classname+".class");
 		String sourcePath = url.getPath().substring(0,url.getPath().indexOf(packagename));
-		DaciteAgent.getTransformer().setPath(sourcePath);
+		DaciteAgent.getTransformer().setPath(projectdir);
 		DaciteAgent.getTransformer().setDir(packagename);
 		List<File> sourceFileList = new ArrayList<File>();
 		sourceFileList.add(file);
@@ -63,6 +59,7 @@ public class DaciteDynamicExecutor {
 		// write xml file of identified DUC
 		XMLOutputFactory xof = XMLOutputFactory.newInstance();
 		XMLStreamWriter xsw = null;
+		xof.setProperty("escapeCharacters", false);
 		try {
 			xsw = xof.createXMLStreamWriter(new BufferedOutputStream(new FileOutputStream("coveredDUCs.xml")));
 			xsw.writeStartDocument();
@@ -100,7 +97,7 @@ public class DaciteDynamicExecutor {
 			xsw.writeCharacters(String.valueOf(var.getLinenumber()));
 			xsw.writeEndElement();
 			xsw.writeStartElement("method");
-			xsw.writeCharacters(String.valueOf(var.getMethod()));
+			xsw.writeCharacters(xmlEscape(String.valueOf(var.getMethod())));
 			xsw.writeEndElement();
 			xsw.writeStartElement("variableIndex");
 			xsw.writeCharacters(String.valueOf(var.getVariableIndex()));
@@ -114,6 +111,10 @@ public class DaciteDynamicExecutor {
 			if(var instanceof DefUseField){
 				xsw.writeStartElement("objectName");
 				xsw.writeCharacters(String.valueOf(((DefUseField)var).getInstanceName()));
+				xsw.writeEndElement();
+			} else if(var instanceof DefUseFieldSymbolic){
+				xsw.writeStartElement("objectName");
+				xsw.writeCharacters(String.valueOf(((DefUseFieldSymbolic)var).getInstanceName()));
 				xsw.writeEndElement();
 			}
 		} catch (XMLStreamException e) {
@@ -133,5 +134,11 @@ public class DaciteDynamicExecutor {
 		Iterable<String> options = Arrays.asList("-d", sourcePath, "--release", "11", "-g");
 		JavaCompiler.CompilationTask task = compiler.getTask(null, fileManager, null, options, null, javaSource);
 		task.call();
+	}
+
+	public static String xmlEscape(String input){
+		String output = input.replace("<", "&lt;");
+		output = output.replace(">", "&gt;");
+		return output;
 	}
 }

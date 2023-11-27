@@ -96,7 +96,7 @@ public class XMLSolutions {
         for(XMLSolutionMapping mapping : xmlSolutions) {
             List<XMLSolution> solutions = mapping.getSolutions();
             String m = mapping.getMethod();
-            if(m.contains(method)){
+            if(m.equals(method)){
                 return solutions;
             }
         }

@@ -77,7 +77,6 @@ public class DaciteTransformer implements ClassFileTransformer {
 	}
 
 	protected ClassNode transformBytecode(ClassNode node){
-		boolean sourceCode = false;
 		for(MethodNode mnode : node.methods){
 			int linenumber = 0;
 			InsnList insns = mnode.instructions;
@@ -185,12 +184,10 @@ public class DaciteTransformer implements ClassFileTransformer {
 			}
 			// Register method Parameter for DefUse by aligning first local variables with parameter types
 			InsnList methodStart = new InsnList();
-			if(!sourceCode){
-				methodStart.add(new LdcInsnNode(classname));
-				methodStart.add(new LdcInsnNode(path));
-				methodStart.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/analysis/DaciteAnalyzer", "visitSourceCode", "(Ljava/lang/String;Ljava/lang/String;)V", false));
-				sourceCode = true;
-			}
+			methodStart.add(new LdcInsnNode(classname));
+			methodStart.add(new LdcInsnNode(path));
+			methodStart.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "dacite/core/analysis/DaciteAnalyzer", "visitSourceCode", "(Ljava/lang/String;Ljava/lang/String;)V", false));
+
 			InsnList methodintermediate = new InsnList();
 			Type[] types = Type.getArgumentTypes(mnode.desc);
 			int typeindex = 0;

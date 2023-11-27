@@ -6,7 +6,7 @@ plugins {
 version '0.1.0'
 
 dependencies {
-    implementation project(':mulib')
+    api project(':mulib')
     implementation 'org.ow2.asm:asm:7.0'
     implementation 'org.ow2.asm:asm-util:7.0'
     implementation 'org.ow2.asm:asm-commons:7.0'

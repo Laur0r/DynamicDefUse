@@ -23,8 +23,6 @@ public class DefUseVariable {
     // stores whether this variable has an alias
     protected boolean alias;
 
-    protected long timeRef;
-
     public DefUseVariable(int linenumber, int instruction, int variableIndex, Object value, String method, String variableName){
         this.linenumber = linenumber;
         this.variableIndex = variableIndex;
@@ -73,11 +71,6 @@ public class DefUseVariable {
     public boolean isAlias(){return alias;}
     public void setAlias(Boolean alias){this.alias=alias;}
 
-    public void setTimeRef(long tf){
-        this.timeRef = tf;
-    }
-    public long getTimeRef(){return timeRef;}
-
     public boolean equals(DefUseVariable var){
         if(var.getLinenumber() == this.linenumber && var.getInstruction() == this.instruction &&
                 var.getVariableIndex() == this.variableIndex && var.getVariableName().equals(this.variableName) && var.getMethod().equals(this.method)){
@@ -87,6 +80,6 @@ public class DefUseVariable {
 
     @Override
     public String toString(){
-        return "name: " + variableName + ", ln: "+linenumber + ", method: "+ method+", time: "+timeRef;
+        return "name: " + variableName + ", ln: "+linenumber + ", method: "+ method;//+", time: "+timeRef;
     }
 }
