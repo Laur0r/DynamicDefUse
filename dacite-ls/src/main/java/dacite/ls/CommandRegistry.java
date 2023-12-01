@@ -24,6 +24,8 @@ public class CommandRegistry {
 
   private static final Logger logger = LoggerFactory.getLogger(CommandRegistry.class);
 
+  private static final String PATH_SEPARATOR = System.getProperty("path.separator");
+
   public static final String COMMAND_PREFIX = "dacite.";
 
   enum Command {
@@ -50,8 +52,12 @@ public class CommandRegistry {
             String textDocumentUri = args.size() > 0 ? ((JsonPrimitive) args.get(0)).getAsString() : null;
             if (textDocumentUri != null && textDocumentUri.startsWith("file://")) {
               // Extract project's root directory
-              Path textDocumentPath = Paths.get(textDocumentUri.replace("file://", ""));
-              String projectDir = textDocumentPath.getParent().toString().split("src/")[0];
+              String path = textDocumentUri.replace("file://", "");
+              if(path.contains(":")){
+                path = path.substring(path.indexOf(":")+1);
+              }
+              Path textDocumentPath = Paths.get(path);
+              String projectDir = textDocumentPath.getParent().toString().split("src")[0];
 
               // Extract package and class name
               var analyser = new CodeAnalyser(TextDocumentItemProvider.get(textDocumentUri).getText());
@@ -67,13 +73,13 @@ public class CommandRegistry {
               String fullClassPath = System.getProperty("java.class.path");
               fullClassPath += Files.find(Paths.get(projectDir), 50,
                       (p, bfa) -> bfa.isRegularFile() && p.getFileName().toString().endsWith(".jar"))
-                  .map(it -> ":" + it.toString()).reduce(String::concat).orElse("");
-              fullClassPath += findClassPathFolders(projectDir + "out/production"); // IntelliJ
-              fullClassPath += findClassPathFolders(projectDir + "build/classes/java/main"); // gradle
-              fullClassPath += findClassPathFolders(projectDir + "target/classes"); // maven
+                  .map(it -> PATH_SEPARATOR + it.toString()).reduce(String::concat).orElse("");
+              fullClassPath += findClassPathFolders(projectDir + "out"+File.separator+"production"); // IntelliJ
+              fullClassPath += findClassPathFolders(projectDir + "build"+File.separator+"classes"+File.separator+"java"+File.separator+"main"); // gradle
+              fullClassPath += findClassPathFolders(projectDir + "target"+File.separator+"classes"); // maven
 
               // As dacite-core must be within the constructed class path we can extract the corresponding jar
-              String javaAgentJar = Arrays.stream(fullClassPath.split(":")).filter(it -> it.contains("dacite-core"))
+              String javaAgentJar = Arrays.stream(fullClassPath.split(PATH_SEPARATOR)).filter(it -> it.contains("dacite-core"))
                   .findFirst().get();
 
               // Construct command arguments
@@ -118,8 +124,12 @@ public class CommandRegistry {
           logger.info("in analyze Symbolic");
           if (textDocumentUri != null && textDocumentUri.startsWith("file://")) {
             // Extract project's root directory
-            Path textDocumentPath = Paths.get(textDocumentUri.replace("file://", ""));
-            String projectDir = textDocumentPath.getParent().toString().split("src/")[0];
+            String path = textDocumentUri.replace("file://", "");
+            if(path.contains(":")){
+              path = path.substring(path.indexOf(":")+1);
+            }
+            Path textDocumentPath = Paths.get(path);
+            String projectDir = textDocumentPath.getParent().toString().split("src")[0];
 
             // Extract package and class name
             var analyser = new CodeAnalyser(TextDocumentItemProvider.get(textDocumentUri).getText());
@@ -135,13 +145,13 @@ public class CommandRegistry {
             String fullClassPath = System.getProperty("java.class.path");
             fullClassPath += Files.find(Paths.get(projectDir), 50,
                             (p, bfa) -> bfa.isRegularFile() && p.getFileName().toString().endsWith(".jar"))
-                    .map(it -> ":" + it.toString()).reduce(String::concat).orElse("");
-            fullClassPath += findClassPathFolders(projectDir + "out/production"); // IntelliJ
-            fullClassPath += findClassPathFolders(projectDir + "build/classes/java/main"); // gradle
-            fullClassPath += findClassPathFolders(projectDir + "target/classes"); // maven
+                    .map(it -> PATH_SEPARATOR + it.toString()).reduce(String::concat).orElse("");
+            fullClassPath += findClassPathFolders(projectDir + "out"+File.separator+"production"); // IntelliJ
+            fullClassPath += findClassPathFolders(projectDir + "build"+File.separator+"classes"+File.separator+"java"+File.separator+"main"); // gradle
+            fullClassPath += findClassPathFolders(projectDir + "target"+File.separator+"classes"); // maven
 
             // As dacite-core must be within the constructed class path we can extract the corresponding jar
-            String javaAgentJar = Arrays.stream(fullClassPath.split(":")).filter(it -> it.contains("dacite-core"))
+            String javaAgentJar = Arrays.stream(fullClassPath.split(PATH_SEPARATOR)).filter(it -> it.contains("dacite-core"))
                     .findFirst().get();
 
             // Construct command arguments
@@ -245,7 +255,7 @@ public class CommandRegistry {
   private static String findClassPathFolders(String basePath) {
     var files = new File(basePath).listFiles(File::isDirectory);
     if (files != null) {
-      return Arrays.stream(files).map(File::toString).collect(Collectors.toList()).stream().map(it -> ":" + it)
+      return Arrays.stream(files).map(File::toString).collect(Collectors.toList()).stream().map(it -> PATH_SEPARATOR + it)
           .reduce(String::concat).orElse("");
     }
 
@@ -257,14 +267,15 @@ public class CommandRegistry {
     String projectDirStart = textDocumentPath.getParent().toString();
     projectDirStart = projectDirStart.substring(0, projectDirStart.lastIndexOf("/src/"));
     String projectName = projectDirStart.substring(projectDirStart.lastIndexOf("/")+1);
-    String projectDir = projectDirStart+"/out/production/"+projectName;
+    String projectDir = projectDirStart+File.separator+"out"+File.separator+"production"+File.separator+projectName;
     File projectFile = new File(projectDir);
     if(!projectFile.exists()){
-      projectDir = projectDirStart+"/build/classes/java/main/"+projectName;
+      projectDir = projectDirStart+File.separator+"build"+File.separator+"classes"+File.separator+"java"+File.separator
+              +"main"+File.separator+projectName;
       projectFile = new File(projectDir);
     }
     if(!projectFile.exists()){
-      projectDir = projectDirStart+"/target/classes/"+projectName;
+      projectDir = projectDirStart+File.separator+"target"+File.separator+"classes"+File.separator+projectName;
       projectFile = new File(projectDir);
     }
     if(!projectFile.exists()){

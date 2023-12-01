@@ -37,7 +37,7 @@ public class DaciteSymbolicTriggerAction extends AnAction {
     if (wrapper.size() == 1) {
       requestManager = wrapper.iterator().next().getRequestManager();
     }
-    CompletableFuture<Object> result = requestManager.executeCommand(new ExecuteCommandParams("dacite.symbolicTrigger", List.of(file.getVirtualFile().getUrl())));
+    CompletableFuture<Object> result = requestManager.executeCommand(new ExecuteCommandParams("dacite.symbolicTrigger", List.of(FileUtils.VFSToURI(file.getVirtualFile()))));
   }
 
 }

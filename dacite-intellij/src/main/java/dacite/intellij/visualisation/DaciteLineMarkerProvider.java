@@ -48,7 +48,7 @@ public class DaciteLineMarkerProvider implements LineMarkerProvider {
             if (wrapper.size() == 1) {
                 requestManager = wrapper.iterator().next().getRequestManager();
             }
-            CodeLensParams param = new CodeLensParams(new TextDocumentIdentifier(element.getContainingFile().getVirtualFile().getUrl()));
+            CodeLensParams param = new CodeLensParams(new TextDocumentIdentifier(FileUtils.VFSToURI(element.getContainingFile().getVirtualFile())));
             CompletableFuture<List<? extends CodeLens>> request = requestManager.codeLens(param);
             if (request != null) {
                 try {

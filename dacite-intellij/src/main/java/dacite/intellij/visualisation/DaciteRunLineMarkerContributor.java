@@ -53,7 +53,7 @@ public class DaciteRunLineMarkerContributor extends RunLineMarkerContributor {
             requestManager = wrapper.iterator().next().getRequestManager();
         }
         if (textDocument == null || !textDocument.equals(element.getContainingFile().getVirtualFile().getUrl())) {
-            CodeLensParams param = new CodeLensParams(new TextDocumentIdentifier(element.getContainingFile().getVirtualFile().getUrl()));
+            CodeLensParams param = new CodeLensParams(new TextDocumentIdentifier(FileUtils.VFSToURI(element.getContainingFile().getVirtualFile())));
             CompletableFuture<List<? extends CodeLens>> request = requestManager.codeLens(param);
             if (request != null) {
                 try {

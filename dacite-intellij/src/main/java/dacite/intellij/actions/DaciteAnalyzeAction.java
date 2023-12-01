@@ -18,6 +18,7 @@ import org.wso2.lsp4intellij.client.languageserver.requestmanager.RequestManager
 import org.wso2.lsp4intellij.client.languageserver.wrapper.LanguageServerWrapper;
 import org.wso2.lsp4intellij.utils.FileUtils;
 
+import java.io.File;
 import java.util.List;
 import java.util.Set;
 
@@ -41,7 +42,7 @@ public class DaciteAnalyzeAction extends AnAction {
     if (wrapper.size() == 1) {
       requestManager = wrapper.iterator().next().getRequestManager();
     }
-    requestManager.executeCommand(new ExecuteCommandParams("dacite.analyze", List.of(file.getVirtualFile().getUrl())));
+    requestManager.executeCommand(new ExecuteCommandParams("dacite.analyze", List.of(FileUtils.VFSToURI(file.getVirtualFile()))));
 
     ToolWindowManager toolWindowManager = ToolWindowManager.getInstance(project);
     ToolWindow toolWindow = toolWindowManager.getToolWindow("DaciteAnalysisToolWindow");

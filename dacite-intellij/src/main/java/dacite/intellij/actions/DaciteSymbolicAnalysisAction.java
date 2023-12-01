@@ -42,7 +42,7 @@ public class DaciteSymbolicAnalysisAction extends AnAction {
     if (wrapper.size() == 1) {
       requestManager = wrapper.iterator().next().getRequestManager();
     }
-    CompletableFuture<Object> result = requestManager.executeCommand(new ExecuteCommandParams("dacite.analyzeSymbolic", List.of(file.getVirtualFile().getUrl())));
+    CompletableFuture<Object> result = requestManager.executeCommand(new ExecuteCommandParams("dacite.analyzeSymbolic", List.of(FileUtils.VFSToURI(file.getVirtualFile()))));
 
     ToolWindowManager toolWindowManager = ToolWindowManager.getInstance(project);
     ToolWindow toolWindow = toolWindowManager.getToolWindow("DaciteAnalysisToolWindow");
