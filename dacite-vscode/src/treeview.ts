@@ -255,10 +255,10 @@ class DaciteTreeDataProvider implements TreeDataProvider<string> {
             this.docUri = n.contextValue;
             console.log("docUri "+this.docUri);
             const params: ExecuteCommandParams = {
-              command: 'dacite.symbolicTrigger',
+              command: 'dacite.symbolicDriver',
               arguments: [this.docUri]
             }
-            vscode.commands.registerCommand("dacite.symbolicTrigger2", () => this.client.sendRequest(ExecuteCommandRequest.type,params));
+            vscode.commands.registerCommand("dacite.symbolicDriver", () => this.client.sendRequest(ExecuteCommandRequest.type,params));
           }
         });
         console.log(result.nodes);

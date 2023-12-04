@@ -7,12 +7,9 @@ import jakarta.xml.bind.annotation.XmlRootElement;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 @XmlRootElement(name="xmlsolutions")
 public class XMLSolutions {
-
-
     private List<XMLSolutionMapping> xmlSolutions = new ArrayList<>();
 
     @XmlElement(name="xmlsolutionmapping")

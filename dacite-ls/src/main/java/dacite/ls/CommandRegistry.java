@@ -31,7 +31,7 @@ public class CommandRegistry {
   enum Command {
     analyze,
     analyzeSymbolic,
-    symbolicTrigger,
+    symbolicDriver,
     generateTestCases,
     highlight
   }
@@ -190,7 +190,7 @@ public class CommandRegistry {
         }
         return CompletableFuture.completedFuture(null);
 
-        case symbolicTrigger:
+        case symbolicDriver:
           String textDocumentUri = args.size() > 0 ? ((JsonPrimitive) args.get(0)).getAsString() : null;
           if (textDocumentUri != null && textDocumentUri.startsWith("file://")) {
             CodeAnalyser analyser = new CodeAnalyser(TextDocumentItemProvider.get(textDocumentUri).getText());

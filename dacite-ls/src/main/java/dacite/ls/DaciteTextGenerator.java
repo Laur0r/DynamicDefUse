@@ -1,7 +1,6 @@
 package dacite.ls;
 
 import dacite.lsp.defUseData.transformation.XMLSolution;
-import dacite.lsp.defUseData.transformation.XMLSolutionMapping;
 import de.wwu.mulib.tcg.TcgConfig;
 import de.wwu.mulib.tcg.TestCase;
 import de.wwu.mulib.tcg.TestCases;

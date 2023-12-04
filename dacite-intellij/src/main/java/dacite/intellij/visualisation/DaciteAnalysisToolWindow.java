@@ -105,7 +105,7 @@ public class DaciteAnalysisToolWindow {
                 if (wrapper.size() == 1) {
                     requestManager = wrapper.iterator().next().getRequestManager();
                 }
-                CompletableFuture<Object> result = requestManager.executeCommand(new ExecuteCommandParams("dacite.symbolicTrigger",List.of(uri)));
+                CompletableFuture<Object> result = requestManager.executeCommand(new ExecuteCommandParams("dacite.symbolicDriver",List.of(uri)));
             }
         };
 

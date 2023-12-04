@@ -4,10 +4,7 @@ import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.actionSystem.PlatformCoreDataKeys;
 import com.intellij.openapi.project.Project;
-import com.intellij.openapi.wm.ToolWindow;
-import com.intellij.openapi.wm.ToolWindowManager;
 import com.intellij.psi.PsiFile;
-import dacite.intellij.visualisation.DaciteToolWindowFactory;
 import org.eclipse.lsp4j.ExecuteCommandParams;
 import org.jetbrains.annotations.NotNull;
 import org.wso2.lsp4intellij.IntellijLanguageClient;
@@ -19,7 +16,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
-public class DaciteSymbolicTriggerAction extends AnAction {
+public class DaciteSymbolicDriverAction extends AnAction {
 
   @Override
   public void update(AnActionEvent e) {
@@ -37,7 +34,7 @@ public class DaciteSymbolicTriggerAction extends AnAction {
     if (wrapper.size() == 1) {
       requestManager = wrapper.iterator().next().getRequestManager();
     }
-    CompletableFuture<Object> result = requestManager.executeCommand(new ExecuteCommandParams("dacite.symbolicTrigger", List.of(FileUtils.VFSToURI(file.getVirtualFile()))));
+    CompletableFuture<Object> result = requestManager.executeCommand(new ExecuteCommandParams("dacite.symbolicDriver", List.of(FileUtils.VFSToURI(file.getVirtualFile()))));
   }
 
 }

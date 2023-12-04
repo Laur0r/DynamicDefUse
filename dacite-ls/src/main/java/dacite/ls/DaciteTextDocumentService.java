@@ -86,9 +86,6 @@ public class DaciteTextDocumentService
             codeLenses.add(new CodeLens(new Range(new Position(range.begin.line - 1, range.begin.column - 1),
                 new Position(range.end.line - 1, range.end.column)),
                 new Command("Run Analysis", "dacite.analyze", List.of(params.getTextDocument().getUri())), null));
-            /*codeLenses.add(new CodeLens(new Range(new Position(range.begin.line - 1, range.begin.column - 1),
-                    new Position(range.end.line - 1, range.end.column)),
-                    new Command("Run Symbolic Analysis", "dacite.symbolicTrigger", List.of(params.getTextDocument().getUri())), null));*/
           }));
 
       compilationUnit.findAll(ClassOrInterfaceDeclaration.class).stream().filter(coid ->String.valueOf(coid.getName()).contains("DaciteSymbolicDriver"))
