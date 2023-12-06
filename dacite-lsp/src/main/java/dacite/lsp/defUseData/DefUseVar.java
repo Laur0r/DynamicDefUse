@@ -2,34 +2,25 @@ package dacite.lsp.defUseData;
 
 import java.util.ArrayList;
 
-public class DefUseVar {
-    private String name;
-    private int numberChains;
-    private ArrayList<DefUseDef> data;
+public class DefUseVar extends DefUse {
+    private ArrayList<Def> defs;
 
     public DefUseVar(String name){
         this.name = name;
-        data = new ArrayList<>();
+        defs = new ArrayList<>();
     }
 
-    public void setDefs(ArrayList<DefUseDef>  data){
-        this.data = data;
+    public void setDefs(ArrayList<Def>  data){
+        this.defs = data;
     }
-    public ArrayList<DefUseDef>  getDefs(){
-        return this.data;
+    public ArrayList<Def>  getDefs(){
+        return this.defs;
     }
-    public void addDef(DefUseDef defuse){
-        data.add(defuse);
+    public void addDef(Def defuse){
+        defs.add(defuse);
     }
-    public String getName(){return name;}
-
-    public void addNumberChains(int numberChains) {
-        this.numberChains += numberChains;
-    }
-
-    public int getNumberChains() {
-        return numberChains;
-    }
+    public int getLinenumber(){return 0;}
+    public int getInstruction(){return 0;}
 
     @Override
     public boolean equals(Object obj){
@@ -46,7 +37,7 @@ public class DefUseVar {
 
     public String toString(){
         String output = "\n" +name + ": ";
-        for(DefUseDef d: data){
+        for(Def d: defs){
             output += d.toString();
         }
         return output;

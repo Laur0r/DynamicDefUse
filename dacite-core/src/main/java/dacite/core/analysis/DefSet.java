@@ -51,7 +51,7 @@ public class DefSet {
         DefUseVariable output = null;
         for(DefUseVariable def : defs){
             if(def.getVariableIndex() == index && def.getMethod().equals(method)
-                    && !(def instanceof DefUseField) && time>def.timeRef){
+                    && (def instanceof DefUseSymbolic && time>((DefUseSymbolic)def).timeRef) && !(def instanceof DefUseFieldSymbolic)){
                 // to be able to compare integer and Integer due to transformer boxing
                 if(def.getValue() == value || value != null && DaciteAnalyzer.isPrimitiveOrWrapper(value) && value.equals(def.getValue())
                         && def.getVariableName().equals(name)) {
@@ -75,7 +75,7 @@ public class DefSet {
         DefUseVariable output = null;
         for(DefUseVariable def : defs){
             if(def.getVariableIndex() == index && def.getMethod().equals(method)
-                    && !(def instanceof DefUseField)){
+                    && !(def instanceof DefUseFieldSymbolic)){
                 // to be able to compare integer and Integer due to transformer boxing
                 if((value instanceof ConcSnumber && value.equals(def.getValue())) || (value instanceof PartnerClass &&
                         ((PartnerClass) value).__mulib__getId() instanceof Sint.ConcSint && def.getValue() instanceof PartnerClass &&
@@ -119,10 +119,10 @@ public class DefSet {
     public DefUseVariable getLastDefinitionFields(int index, String varname, Object value, Object fieldInstance, long time){
         DefUseVariable output = null;
         for(DefUseVariable def : defs){
-            if(def instanceof DefUseField) {
-                DefUseField field = (DefUseField) def;
+            if(def instanceof DefUseFieldSymbolic) {
+                DefUseFieldSymbolic field = (DefUseFieldSymbolic) def;
                 if(field.getVariableIndex() == index && (varname.contains(field.getVariableName()))
-                        && (fieldInstance == null || field.getInstance()== fieldInstance)&& time>def.timeRef){
+                        && (fieldInstance == null || field.getInstance()== fieldInstance)&& time>field.timeRef){
                     // to be able to compare integer and Integer due to transformer boxing
                     if(def.getValue() == value || value != null && DaciteAnalyzer.isPrimitiveOrWrapper(value) && value.equals(field.getValue())){
                         if(!varname.equals("") && field.getVariableName().equals("")){
@@ -148,8 +148,8 @@ public class DefSet {
     public DefUseVariable getLastSymbolicDefinitionFields(int index, String varname, Object value, Object fieldInstance){
         DefUseVariable output = null;
         for(DefUseVariable def : defs){
-            if(def instanceof DefUseField) {
-                DefUseField field = (DefUseField) def;
+            if(def instanceof DefUseFieldSymbolic) {
+                DefUseFieldSymbolic field = (DefUseFieldSymbolic) def;
                 if(field.getVariableIndex() == index && (varname.equals(field.getVariableName()) || varname.equals(""))
                         && (fieldInstance == null || field.getInstance()== fieldInstance || (fieldInstance instanceof PartnerClass &&
                         ((PartnerClass) fieldInstance).__mulib__getId() instanceof Sint.ConcSint && field.getInstance() instanceof PartnerClass &&
@@ -354,8 +354,8 @@ public class DefSet {
      */
     public DefUseVariable containsSymbolicField(Object value, int index, String varname, int ln, int ins, Object instance){
         for(DefUseVariable d: defs){
-            if(d instanceof DefUseField){
-                DefUseField field = (DefUseField) d;
+            if(d instanceof DefUseFieldSymbolic){
+                DefUseFieldSymbolic field = (DefUseFieldSymbolic) d;
                 if(d.getVariableIndex() == index && d.getVariableName().equals(varname) && d.getLinenumber() == ln &&
                         d.getInstruction() == ins && (instance == null || field.getInstance() == instance) ||
                         (instance instanceof PartnerClass && ((PartnerClass) instance).__mulib__getId()

@@ -36,8 +36,6 @@ public class DefUseAnalysisProvider {
 
   private static XMLSolutions xmlSolutionsList;
 
-  private static int maxNumberChains;
-
   private static final String[] indexcolors = new String[]{
           "#434343", "#F6BE00", "#18c1d6", "#FF34FF", "#FF4A46", "#008941", "#006FA6", "#A30059",
           "#C2A7AF", "#7A4900", "#0000A6", "#63FFAC", "#B79762", "#004D43", "#8FB0FF", "#997D87",
@@ -85,21 +83,24 @@ public class DefUseAnalysisProvider {
     });
 
     int i = 0;
-    for (HashMap<DefUseVariable, List<DefUseVariable>> defuse : getVariableMapping(true).values()) {
-      String color;
-      if(i<indexcolors.length){
-        color = indexcolors[i];//Color.decode(indexcolors[i]);
-      } else {
-        Random random = new Random();
-        color = "rgb("+random.nextInt(256)+","+ random.nextInt(256)+","+ random.nextInt(256)+")";
+    for (DefUseClass cl: defUseClasses) {
+      for(DefUseMethod m: cl.getMethods()){
+        for(DefUseVar var: m.getVariables()){
+          for(Def def: var.getDefs()){
+            String color;
+            if(i<indexcolors.length){
+              color = indexcolors[i];//Color.decode(indexcolors[i]);
+            } else {
+              Random random = new Random();
+              color = "rgb("+random.nextInt(256)+","+ random.nextInt(256)+","+ random.nextInt(256)+")";
+            }
+            def.setColor(color);
+          }
+          i++;
+        }
       }
-
-      defuse.forEach((def, uses) -> {
-        def.setColor(color);
-        uses.forEach(it -> {it.setColor(color); it.getChain().getDef().setColor(color);});
-      });
-      i++;
     }
+    logger.info(defUseClasses.toString());
   }
 
   public static void processXmlFileSymbolic(String path, File project) {
@@ -156,7 +157,6 @@ public class DefUseAnalysisProvider {
       def.setEditorHighlight(false);
       use.setEditorHighlight(false);
     });
-    maxNumberChains = notCoveredChains.size();
 
     List<DefUseChain> chains = new ArrayList<>();
     for(DefUseChain chain: notCoveredChains){
@@ -168,17 +168,16 @@ public class DefUseAnalysisProvider {
     logger.info(notCoveredChains.toString());
     notCoveredClasses = transformDefUse(notCoveredChains);
 
-    for (HashMap<DefUseVariable, List<DefUseVariable>> defuse : getVariableMapping(false).values()) {
-      String color = "rgb("+Color.red.getRed()+","+Color.red.getGreen()+","+Color.red.getBlue()+")";
-      defuse.forEach((def, uses) -> {
-        def.setColor(color);
-        uses.forEach(it -> {it.setColor(color); it.getChain().getDef().setColor(color);});
-      });
+    for (DefUseClass cl: notCoveredClasses) {
+      for (DefUseMethod m : cl.getMethods()) {
+        for (DefUseVar var : m.getVariables()) {
+          for(Def def: var.getDefs()){
+            String color = "rgb(" + Color.red.getRed() + "," + Color.red.getGreen() + "," + Color.red.getBlue() + ")";
+            def.setColor(color);
+          }
+        }
+      }
     }
-  }
-
-  public static List<DefUseChain> getDefUseChains() {
-    return defUseChains;
   }
 
   public static List<DefUseClass> getDefUseClasses() {
@@ -229,92 +228,79 @@ public class DefUseAnalysisProvider {
     return defUseVariables;
   }
 
-  public static List<DefUseVariable> getUniqueDefUseVariables(boolean covered) {
-    List<DefUseVariable> uniqueDefUseVariables = new ArrayList<>();
-    var defUseMapping = getDefUseMapping(covered);
-    uniqueDefUseVariables.addAll(defUseMapping.keySet());
-    uniqueDefUseVariables.addAll(defUseMapping.values().stream().flatMap(List::stream).collect(Collectors.toList()));
-    return uniqueDefUseVariables;
-  }
-
-  public static List<DefUseVariable> getUniqueDefUseVariables(String packageName, String className, boolean covered) {
-    return getUniqueDefUseVariables(covered).stream()
-        .filter(it -> it.getPackageName().equals(packageName) && it.getClassName().equals(className))
-        .collect(Collectors.toList());
-  }
-
   public static void changeDefUseEditorHighlighting(JsonObject nodeProperties, Boolean newIsEditorHighlight) {
     if (nodeProperties.has("notCovered")) {
-      changeDefUseEditorHighlighting(notCoveredChains, nodeProperties, newIsEditorHighlight);
+      logger.info("not Covered");
+      changeDefUseEditorHighlightingClasses(notCoveredClasses, nodeProperties, newIsEditorHighlight);
     } else {
-      changeDefUseEditorHighlighting(defUseChains, nodeProperties, newIsEditorHighlight);
+      changeDefUseEditorHighlightingClasses(defUseClasses, nodeProperties, newIsEditorHighlight);
     }
 
   }
 
-  private static void changeDefUseEditorHighlighting(List<DefUseChain> list, JsonObject nodeProperties, Boolean newIsEditorHighlight) {
-    list.forEach(chain -> {
-      DefUseVariable def = chain.getDef();
-      DefUseVariable use = chain.getUse();
-      var affected = false;
-
-      // class level filter
+  private static void changeDefUseEditorHighlightingClasses(List<DefUseClass> list, JsonObject nodeProperties, Boolean newIsEditorHighlight) {
+    for(DefUseClass cl: list){
+      boolean affected = false;
       if (nodeProperties.has("packageClass")) {
         var packageClass = nodeProperties.get("packageClass").getAsString();
-        affected = def.matchesPackageClass(packageClass);
+        affected = cl.getName().equals(packageClass);
       }
-      // method level filter
-      if (nodeProperties.has("method")) {
-        var method = nodeProperties.get("method").getAsString();
-        affected = affected && def.getMethodName().equals(method);
-      }
-      // variable level filter
-      if (nodeProperties.has("variable")) {
-        var variable = nodeProperties.get("variable").getAsString();
-        if(variable.contains("[")){
-          //logger.info(variable+" defuse: "+defUseVariable.getVariableName()+defUseVariable.getVariableIndex()+"]");
-          affected = affected && variable.equals(def.getVariableName()+def.getVariableIndex()+"]");
-        } else {
-          affected = affected && variable.equals(def.getVariableName());
+      boolean affectedCl = affected;
+      for(DefUseMethod m: cl.getMethods()){
+        if (nodeProperties.has("method")) {
+          var method = nodeProperties.get("method").getAsString();
+          affected = affectedCl && m.getName().equals(method);
         }
-
-      }
-      // def use level filter
-      if (nodeProperties.has("defLocation") && nodeProperties.has("defInstruction")) {
-        var defLocation = Integer.parseInt(nodeProperties.get("defLocation").getAsString().substring(1));
-        int instruction = nodeProperties.get("defInstruction").getAsInt();
-        affected = affected && def.getLinenumber() == defLocation && def.getInstruction() == instruction;
-      }
-
-      if (nodeProperties.has("useLocation") && nodeProperties.has("index")) {
-        int index = nodeProperties.get("index").getAsInt();
-        int instruction = nodeProperties.get("useInstruction").getAsInt();
-        if(nodeProperties.get("useLocation").getAsString().contains(" ")){
-          String useLocation = nodeProperties.get("useLocation").getAsString();
-          String method = useLocation.substring(0,useLocation.indexOf(" "));
-          int ln = Integer.parseInt(useLocation.substring(useLocation.indexOf(" ")+2));
-          affected = affected && use.getMethodName().equals(method) && use.getLinenumber() == ln
-                  && use.getVariableIndex() == index && use.getInstruction() == instruction;
-        } else {
-          int useLocation = Integer.parseInt(nodeProperties.get("useLocation").getAsString().substring(1));
-          affected =
-                  affected && use.getLinenumber() == useLocation && use.getVariableIndex() == index
-                          && use.getInstruction() == instruction;
+        boolean affectedM = affected;
+        for(DefUseVar var: m.getVariables()){
+          if (nodeProperties.has("variable")) {
+            var variable = nodeProperties.get("variable").getAsString();
+            affected = affectedM && variable.equals(var.getName());
+          }
+          boolean affectedVar = affected;
+          for(Def def: var.getDefs()){
+            if (nodeProperties.has("defLocation") && nodeProperties.has("defInstruction")) {
+              var defLocation = Integer.parseInt(nodeProperties.get("defLocation").getAsString().substring(1));
+              int instruction = nodeProperties.get("defInstruction").getAsInt();
+              affected = affectedVar && def.getLinenumber() == defLocation && def.getInstruction() == instruction;
+            }
+            boolean affectedDef = affected;
+            for(Use use: def.getData()){
+              if (nodeProperties.has("useLocation") && nodeProperties.has("index")) {
+                int instruction = nodeProperties.get("useInstruction").getAsInt();
+                String useLocation = nodeProperties.get("useLocation").getAsString();
+                affected = affectedDef && use.getUseLocation().equals(useLocation) && use.getInstruction() == instruction;
+                if (affected) {
+                  logger.info("set highlighting uses");
+                  def.setEditorHighlight(
+                          // Standard implementations of the Tree View Protocol do not provide the additional parameter
+                          // for newIsEditorHighlight. If it is null, we just toggle the boolean value of affected nodes
+                          newIsEditorHighlight == null ? !def.isEditorHighlight() : newIsEditorHighlight);
+                  use.setEditorHighlight(
+                          // Standard implementations of the Tree View Protocol do not provide the additional parameter
+                          // for newIsEditorHighlight. If it is null, we just toggle the boolean value of affected nodes
+                          newIsEditorHighlight == null ? !use.isEditorHighlight() : newIsEditorHighlight);
+                  logger.info(use.toString());
+                }
+              } else {
+                if (affected) {
+                  logger.info("set highlighting");
+                  def.setEditorHighlight(
+                          // Standard implementations of the Tree View Protocol do not provide the additional parameter
+                          // for newIsEditorHighlight. If it is null, we just toggle the boolean value of affected nodes
+                          newIsEditorHighlight == null ? !def.isEditorHighlight() : newIsEditorHighlight);
+                  use.setEditorHighlight(
+                          // Standard implementations of the Tree View Protocol do not provide the additional parameter
+                          // for newIsEditorHighlight. If it is null, we just toggle the boolean value of affected nodes
+                          newIsEditorHighlight == null ? !use.isEditorHighlight() : newIsEditorHighlight);
+                  logger.info(use.toString());
+                }
+              }
+            }
+          }
         }
-
       }
-
-      if (affected) {
-        def.setEditorHighlight(
-                // Standard implementations of the Tree View Protocol do not provide the additional parameter
-                // for newIsEditorHighlight. If it is null, we just toggle the boolean value of affected nodes
-                newIsEditorHighlight == null ? !def.isEditorHighlight() : newIsEditorHighlight);
-        use.setEditorHighlight(
-                // Standard implementations of the Tree View Protocol do not provide the additional parameter
-                // for newIsEditorHighlight. If it is null, we just toggle the boolean value of affected nodes
-                newIsEditorHighlight == null ? !use.isEditorHighlight() : newIsEditorHighlight);
-      }
-    });
+    }
   }
 
   public static HashMap<DefUseVariable, List<DefUseVariable>> getDefUseMapping(boolean covered) {
@@ -347,62 +333,44 @@ public class DefUseAnalysisProvider {
     return defUseMapping;
   }
 
-  public static HashMap<String, HashMap<DefUseVariable,List<DefUseVariable>>> getVariableMapping(boolean covered) {
-    HashMap<String, HashMap<DefUseVariable,List<DefUseVariable>>> variableMapping = new HashMap<>();
-
-    var defUseVars = getDefUseVariables(covered);
-    List<DefUseVariable> defs = new ArrayList<>();
-    List<DefUseVariable> uses = new ArrayList<>();
-    for(DefUseVariable var:defUseVars){
-      if(var.getRole() == DefUseVariableRole.DEFINITION) {
-        defs.add(var);
-      } else {
-        uses.add(var);
-      }
-    }
-
-    for(DefUseVariable def: defs){
-      List<DefUseVariable> sameVar = new ArrayList<>();
-      sameVar.add(def);
-      for(DefUseVariable def2: defs){
-        if(def.getVariableName().equals(def2.getVariableName()) && (def.getVariableIndex() == def2.getVariableIndex())){
-          sameVar.add(def2);
+  public static HashMap<Integer, List<DefUse>> getDefUseByLine(String packageName,
+                                                               String className, boolean covered){
+    HashMap<Integer, List<DefUse>> uniqueDefUseVariablesByLine = new HashMap<>();
+    DefUseClass cl = getClass(packageName,className,covered);
+    if(cl != null){
+      for(DefUseMethod m:cl.getMethods()){
+        for(DefUseVar var:m.getVariables()){
+          for(Def def: var.getDefs()){
+            addDefUseVariable(uniqueDefUseVariablesByLine, def);
+            for(Use use: def.getData()){
+              addDefUseVariable(uniqueDefUseVariablesByLine, use);
+            }
+          }
         }
       }
-      HashMap<DefUseVariable,List<DefUseVariable>> mapVar = new HashMap<>();
-      for(DefUseVariable var :sameVar){
-        mapVar.put(var, uses.stream().filter(use -> use.getChain().getDef().equals(var)).collect(Collectors.toList()));
-      }
-      if(variableMapping.containsKey(sameVar.get(0).getMethod()+"."+sameVar.get(0).getVariableName())){
-        String name = sameVar.get(0).getMethod()+"."+sameVar.get(0).getVariableName();
-        HashMap<DefUseVariable, List<DefUseVariable>> defuses = variableMapping.get(name);
-        mapVar.forEach((def2, uses2) -> {
-          if(!defuses.containsKey(def2)){
-            defuses.put(def2,uses2);
-          }
-        });
-        defuses.putAll(mapVar);
-        variableMapping.put(name, defuses);
-      } else {
-        variableMapping.put(sameVar.get(0).getMethod()+"."+sameVar.get(0).getVariableName(),mapVar);
-      }
     }
-
-    return variableMapping;
-  }
-
-  public static HashMap<Integer, List<DefUseVariable>> getUniqueDefUseVariablesByLine(String packageName,
-      String className, boolean covered) {
-    HashMap<Integer, List<DefUseVariable>> uniqueDefUseVariablesByLine = new HashMap<>();
-
-    getUniqueDefUseVariables(packageName, className, covered).forEach(
-        defUseVariable -> addDefUseVariable(uniqueDefUseVariablesByLine, defUseVariable));
-
     return uniqueDefUseVariablesByLine;
   }
 
-  private static void addDefUseVariable(HashMap<Integer, List<DefUseVariable>> defUseVariableMap,
-      DefUseVariable defUseVariable) {
+  private static DefUseClass getClass(String packageName, String className, boolean covered){
+    if(covered){
+      for (DefUseClass cl: defUseClasses) {
+        if (cl.getName().equals(packageName + "/" + className)){
+          return cl;
+        }
+      }
+    } else {
+      for (DefUseClass cl: notCoveredClasses) {
+        if (cl.getName().equals(packageName + "/" + className)){
+          return cl;
+        }
+      }
+    }
+    return null;
+  }
+
+  private static void addDefUseVariable(HashMap<Integer, List<DefUse>> defUseVariableMap,
+                                        DefUse defUseVariable) {
     if (defUseVariableMap.containsKey(defUseVariable.getLinenumber())) {
       // Check for uniqueness
       var existingDefUseVariables = defUseVariableMap.get(defUseVariable.getLinenumber());
@@ -410,34 +378,27 @@ public class DefUseAnalysisProvider {
         existingDefUseVariables.add(defUseVariable);
       }
     } else {
-      List<DefUseVariable> defUseVariables = new ArrayList<>();
+      List<DefUse> defUseVariables = new ArrayList<>();
       defUseVariables.add(defUseVariable);
       defUseVariableMap.put(defUseVariable.getLinenumber(), defUseVariables);
     }
   }
 
-  public static HashMap<String, List<DefUseVariable>> groupByVariableNamesAndSort(
-      List<DefUseVariable> defUseVariables) {
-    HashMap<String, List<DefUseVariable>> defUseVariableMap = new HashMap<>();
+  public static HashMap<String, List<DefUse>> groupByVariableNamesAndSortDefUse(
+          List<DefUse> defUseVariables) {
+    HashMap<String, List<DefUse>> defUseVariableMap = new HashMap<>();
 
     defUseVariables.forEach(defUseVariable -> {
-      String name = defUseVariable.getVariableName();
-      if(defUseVariable.getObjectName() != null ){
-        if(!name.contains("[")) {
-          name = defUseVariable.getObjectName() + "." + name.substring(name.indexOf(".") + 1);
-        } else {
-          name = name + defUseVariable.getVariableIndex()+"]";
-        }
-      }
+      String name = defUseVariable.getName();
 
       if (defUseVariableMap.containsKey(name)) {
         var groupedDefUseVariables = defUseVariableMap.get(name);
         groupedDefUseVariables.add(defUseVariable);
 
-        Comparator<DefUseVariable> byVariableIndex = Comparator.comparingInt(DefUseVariable::getInstruction);
+        Comparator<DefUse> byVariableIndex = Comparator.comparingInt(DefUse::getInstruction);
         groupedDefUseVariables.sort(byVariableIndex);
       } else {
-        List<DefUseVariable> groupedDefUseVariables = new ArrayList<>();
+        List<DefUse> groupedDefUseVariables = new ArrayList<>();
         groupedDefUseVariables.add(defUseVariable);
         defUseVariableMap.put(name, groupedDefUseVariables);
       }
@@ -475,23 +436,21 @@ public class DefUseAnalysisProvider {
         }
       }
       String varName = def.getVariableName();
-      DefUseDef definition = new DefUseDef(varName, defLocation, def.getInstruction());
+      if(def.getObjectName() != null ){
+        if(!varName.contains("[")) {
+          varName = def.getObjectName() + "." + varName.substring(varName.indexOf(".") + 1);
+        } else {
+          varName = varName + def.getVariableIndex()+"]";
+        }
+      }
+      Def definition = new Def(varName, defLocation, def.getInstruction(), def.getLinenumber());
       DefUseVar var = new DefUseVar(varName);
       if (!use.getVariableName().equals(varName)) {
-        if (use.getVariableName().contains("[")) {
-          varName = use.getVariableName() + use.getVariableIndex() + "]";
-          var = new DefUseVar(varName);
-        } else {
-          varName = use.getVariableName();
-        }
-      } else if (varName.contains("[")) {
-        varName = varName + use.getVariableIndex() + "]";
-        var = new DefUseVar(varName);
+        varName = use.getVariableName();
       }
-      DefUseData data = new DefUseData(varName, defLocation, useLocation);
+      Use data = new Use(varName, useLocation, use.getLinenumber());
       data.setIndex(use.getVariableIndex());
       data.setUseInstruction(use.getInstruction());
-      data.setDefInstruction(def.getInstruction());
       // if output already contains class, add data to existing class instance
       if (output.contains(defUseClass)) {
         DefUseClass instance = output.get(output.indexOf(defUseClass));
@@ -500,7 +459,7 @@ public class DefUseAnalysisProvider {
           if (mInstance.getVariables().contains(var)) {
             DefUseVar vInstance = mInstance.getVariables().get(mInstance.getVariables().indexOf(var));
             if(vInstance.getDefs().contains(definition)){
-              DefUseDef dInstance = vInstance.getDefs().get(vInstance.getDefs().indexOf(definition));
+              Def dInstance = vInstance.getDefs().get(vInstance.getDefs().indexOf(definition));
               dInstance.addData(data);
             } else{
               definition.addData(data);
@@ -528,7 +487,7 @@ public class DefUseAnalysisProvider {
     for (DefUseClass cl : output) {
       for (DefUseMethod m : cl.getMethods()) {
         for (DefUseVar var : m.getVariables()) {
-          for(DefUseDef def : var.getDefs()){
+          for(Def def : var.getDefs()){
             def.setNumberChains(def.getData().size());
             var.addNumberChains(def.getNumberChains());
             //var.sort();

@@ -2,40 +2,29 @@ package dacite.lsp.defUseData;
 
 import java.util.ArrayList;
 
-public class DefUseDef {
-
-    private String name;
-    private int numberChains;
-
+public class Def extends DefUse{
     private String defLocation;
-
     private int defInstruction;
-    private ArrayList<DefUseData> data;
+    private int linenumber;
+    private boolean editorHighlight;
+    private ArrayList<Use> data;
 
-    public DefUseDef(String name, String defLocation, int instruction){
+    public Def(String name, String defLocation, int instruction, int linenumber){
         this.name = name;
         this.defLocation = defLocation;
         this.defInstruction = instruction;
+        this.linenumber = linenumber;
         data = new ArrayList<>();
     }
 
-    public void setData(ArrayList<DefUseData>  data){
+    public void setData(ArrayList<Use>  data){
         this.data = data;
     }
-    public ArrayList<DefUseData>  getData(){
+    public ArrayList<Use>  getData(){
         return this.data;
     }
-    public void addData(DefUseData defuse){
+    public void addData(Use defuse){
         data.add(defuse);
-    }
-    public String getName(){return name;}
-
-    public void setNumberChains(int numberChains) {
-        this.numberChains = numberChains;
-    }
-
-    public int getNumberChains() {
-        return numberChains;
     }
 
     public int getDefInstruction() {
@@ -46,6 +35,23 @@ public class DefUseDef {
         return defLocation;
     }
 
+    public int getLinenumber(){return linenumber;}
+    public int getInstruction(){return defInstruction;}
+    public boolean isEditorHighlight() {
+        return editorHighlight;
+    }
+
+    public void setEditorHighlight(boolean editorHighlight) {
+        this.editorHighlight = editorHighlight;
+    }
+    @Override
+    public void setColor(String color) {
+        this.color = color;
+        for(Use use: data){
+            use.setColor(color);
+        }
+    }
+
     @Override
     public boolean equals(Object obj){
         if(obj == null){
@@ -54,14 +60,14 @@ public class DefUseDef {
         if (obj.getClass() != this.getClass()) {
             return false;
         } else {
-            DefUseDef def = (DefUseDef) obj;
+            Def def = (Def) obj;
             return def.name.equals(this.name) && def.defLocation.equals(this.defLocation) && def.defInstruction == this.defInstruction;
         }
     }
 
     public String toString(){
-        String output = "\n" +name + ": ";
-        for(DefUseData d: data){
+        String output = "\n" +name + " "+defLocation+": ";
+        for(Use d: data){
             output += d.toString();
         }
         return output;

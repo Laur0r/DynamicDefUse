@@ -1,9 +1,6 @@
 package dacite.ls;
 
 import com.github.javaparser.ParseProblemException;
-import com.github.javaparser.StaticJavaParser;
-import com.github.javaparser.ast.CompilationUnit;
-import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.google.gson.JsonObject;
 
 import dacite.lsp.InlayHintDecorationParams;
@@ -14,7 +11,6 @@ import dacite.lsp.tvp.*;
 
 import org.eclipse.lsp4j.CodeLens;
 import org.eclipse.lsp4j.CodeLensParams;
-import org.eclipse.lsp4j.Command;
 import org.eclipse.lsp4j.DidChangeTextDocumentParams;
 import org.eclipse.lsp4j.DidCloseTextDocumentParams;
 import org.eclipse.lsp4j.DidOpenTextDocumentParams;
@@ -22,7 +18,6 @@ import org.eclipse.lsp4j.DidSaveTextDocumentParams;
 import org.eclipse.lsp4j.InlayHint;
 import org.eclipse.lsp4j.InlayHintParams;
 import org.eclipse.lsp4j.Position;
-import org.eclipse.lsp4j.Range;
 import org.eclipse.lsp4j.TextDocumentContentChangeEvent;
 import org.eclipse.lsp4j.TextDocumentIdentifier;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
@@ -43,7 +38,7 @@ public class DaciteTextDocumentService
 
   private static final Logger logger = LoggerFactory.getLogger(DaciteTextDocumentService.class);
 
-  private HashMap<TextDocumentIdentifier, HashMap<Position, DefUseVariable>> highlightedDefUseVariables = new HashMap<>();
+  private HashMap<TextDocumentIdentifier, HashMap<Position, DefUse>> highlightedDefUseVariables = new HashMap<>();
 
   @Override
   public void didOpen(DidOpenTextDocumentParams params) {
@@ -78,22 +73,9 @@ public class DaciteTextDocumentService
 
     try {
       String javaCode = TextDocumentItemProvider.get(params.getTextDocument()).getText();
-      CompilationUnit compilationUnit = StaticJavaParser.parse(javaCode);
+      CodeAnalyser codeAnalyser = new CodeAnalyser(javaCode);
+      codeLenses = codeAnalyser.extractCodeLens(params.getTextDocument().getUri());
 
-      compilationUnit.findAll(ClassOrInterfaceDeclaration.class).stream()
-          .filter(coid -> coid.getMethods().stream().anyMatch(md -> md.getAnnotationByName("Test").isPresent()))
-          .forEach(coid -> coid.getName().getRange().ifPresent(range -> {
-            codeLenses.add(new CodeLens(new Range(new Position(range.begin.line - 1, range.begin.column - 1),
-                new Position(range.end.line - 1, range.end.column)),
-                new Command("Run Analysis", "dacite.analyze", List.of(params.getTextDocument().getUri())), null));
-          }));
-
-      compilationUnit.findAll(ClassOrInterfaceDeclaration.class).stream().filter(coid ->String.valueOf(coid.getName()).contains("DaciteSymbolicDriver"))
-              .forEach(coid ->coid.getName().getRange().ifPresent(range -> {
-                codeLenses.add(new CodeLens(new Range(new Position(range.begin.line - 1, range.begin.column - 1),
-                        new Position(range.end.line - 1, range.end.column)),
-                        new Command("Run Dacite Symbolic Analysis", "dacite.analyzeSymbolic", List.of(params.getTextDocument().getUri())), null));
-              }));
     } catch (ParseProblemException e) {
       logger.error("Document {} could not be parsed successfully: {}", params.getTextDocument().getUri(), e);
     }
@@ -116,14 +98,13 @@ public class DaciteTextDocumentService
     var className = codeAnalyser.extractClassName();
     var packageName = codeAnalyser.extractPackageName();
 
-    Set<com.github.javaparser.Position> globalDefPositions = new HashSet<>();
-    Map<Integer, List<DefUseVariable>> defUseVariableMap = DefUseAnalysisProvider.getUniqueDefUseVariablesByLine(packageName, className, true);
-    getInlayHints(defUseVariableMap, inlayHints, params, codeAnalyser);
-    Map<Integer, List<DefUseVariable>> notCoveredMap = DefUseAnalysisProvider.getUniqueDefUseVariablesByLine(packageName, className, false);
+    Map<Integer,List<DefUse>> map = DefUseAnalysisProvider.getDefUseByLine(packageName, className, true);
+    getInlayHints(map, inlayHints, params, codeAnalyser);
+    Map<Integer,List<DefUse>> notCoveredMap = DefUseAnalysisProvider.getDefUseByLine(packageName, className, false);
     getInlayHints(notCoveredMap, inlayHints, params, codeAnalyser);
 
 
-    //logger.info("hints {}", inlayHints);
+    logger.info("hints {}", inlayHints);
 
     return CompletableFuture.completedFuture(inlayHints);
   }
@@ -141,7 +122,6 @@ public class DaciteTextDocumentService
         color = defUseVars.get(params.getPosition()).getColor();
       }
     }
-
     return CompletableFuture.completedFuture(new InlayHintDecoration(color, Font.SERIF));
   }
 
@@ -194,12 +174,12 @@ public class DaciteTextDocumentService
             if (nodeUri.equals(cl.getName() + "." + m.getName() + " " + var.getName())) {
               return CompletableFuture.completedFuture(new TreeViewParentResult(cl.getName() + "." + m.getName()));
             }
-            for(DefUseDef def: var.getDefs()){
+            for(Def def: var.getDefs()){
               if(nodeUri.equals(cl.getName() + "." + m.getName() + " " + var.getName() + " " + def.getDefLocation())){
                 return CompletableFuture.completedFuture(new TreeViewParentResult(cl.getName() + "." + m.getName() + " " + var.getName()));
               }
-              for (DefUseData data : def.getData()) {
-                if (nodeUri.equals(cl.getName() + "." + m.getName() + " " + var.getName() + " " + data.getDefLocation() + " - "
+              for (Use data : def.getData()) {
+                if (nodeUri.equals(cl.getName() + "." + m.getName() + " " + var.getName() + " " + def.getDefLocation() + " - "
                         + data.getUseLocation())) {
                   return CompletableFuture.completedFuture(new TreeViewParentResult(cl.getName() + "." + m.getName() + " " + var.getName()+" " + def.getDefLocation()));
                 }
@@ -287,7 +267,7 @@ public class DaciteTextDocumentService
             } else {
               for (DefUseVar var : m.getVariables()) {
                 if (nodeUri.equals(cl.getName() + "." + m.getName() + " " + var.getName())) {
-                  for (DefUseDef def : var.getDefs()) {
+                  for (Def def : var.getDefs()) {
                     TreeViewNode node = new TreeViewNode(id,
                             cl.getName() + "." + m.getName() + " " + var.getName() + " " + def.getDefLocation(),
                             "Def: " + def.getDefLocation() +" "+ def.getNumberChains() + " chains");
@@ -308,11 +288,11 @@ public class DaciteTextDocumentService
                   }
                   break;
                 } else {
-                  for(DefUseDef def: var.getDefs()){
+                  for(Def def: var.getDefs()){
                     if(nodeUri.equals(cl.getName() + "." + m.getName() + " " + var.getName() + " " + def.getDefLocation()))
-                      for (DefUseData data : def.getData()) {
+                      for (Use data : def.getData()) {
                         TreeViewNode node = new TreeViewNode(id,
-                                cl.getName() + "." + m.getName() + " " + var.getName() + " " + data.getDefLocation() + " - "
+                                cl.getName() + "." + m.getName() + " " + var.getName() + " " + def.getDefLocation() + " - "
                                         + data.getUseLocation() + " " + data.getIndex() + " " + data.getUseInstruction(),
                                 "Use: "  + data.getUseLocation() + " " + data.getName());
 
@@ -320,8 +300,8 @@ public class DaciteTextDocumentService
                         commandArg.addProperty("packageClass", cl.getName());
                         commandArg.addProperty("method", m.getName());
                         commandArg.addProperty("variable", var.getName());
-                        commandArg.addProperty("defLocation", data.getDefLocation());
-                        commandArg.addProperty("defInstruction", data.getDefInstruction());
+                        commandArg.addProperty("defLocation", def.getDefLocation());
+                        commandArg.addProperty("defInstruction", def.getDefInstruction());
                         commandArg.addProperty("useLocation", data.getUseLocation());
                         commandArg.addProperty("index", data.getIndex());
                         commandArg.addProperty("useInstruction", data.getUseInstruction());
@@ -343,13 +323,13 @@ public class DaciteTextDocumentService
     return nodes;
   }
 
-  private void getInlayHints(Map<Integer, List<DefUseVariable>> map, List<InlayHint> inlayHints, InlayHintParams params, CodeAnalyser codeAnalyser){
+  private void getInlayHints(Map<Integer, List<DefUse>> map, List<InlayHint> inlayHints, InlayHintParams params, CodeAnalyser codeAnalyser){
     Set<com.github.javaparser.Position> globalDefPositions = new HashSet<>();
     map.forEach((lineNumber, defUseVariables) -> {
+      //logger.info(DefUseAnalysisProvider.groupByVariableNamesAndSortDefUse(defUseVariables).toString());
       // ...then group by variable name and try to match with positions obtained from parsing
-      DefUseAnalysisProvider.groupByVariableNamesAndSort(defUseVariables)
+      DefUseAnalysisProvider.groupByVariableNamesAndSortDefUse(defUseVariables)
               .forEach((variableName, groupedDefUseVariables) -> {
-                //logger.info(variableName+" "+groupedDefUseVariables.size());
                 // TODO: move the following fix into DefUseVariable class?
                 if(variableName.contains("[")){
                   variableName = variableName.substring(0, variableName.indexOf("["));
@@ -357,14 +337,15 @@ public class DaciteTextDocumentService
                 /*if(variableName.contains(".")){
                   variableName = variableName.substring(variableName.indexOf(".")+1);
                 }*/
-                List<DefUseVariable> defs = new ArrayList<>();
-                List<DefUseVariable> uses = new ArrayList<>();
+                List<Def> defs = new ArrayList<>();
+                List<Use> uses = new ArrayList<>();
                 for(int i = 0; i< groupedDefUseVariables.size(); i++){
-                  DefUseVariable var = groupedDefUseVariables.get(i);
-                  if(var.getRole() == DefUseVariableRole.DEFINITION){
-                    defs.add(var);
+                  DefUse var = groupedDefUseVariables.get(i);
+                  if(var instanceof Def){
+                  //if(var.getRole() == DefUseVariableRole.DEFINITION){
+                    defs.add((Def)var);
                   } else {
-                    uses.add(var);
+                    uses.add((Use)var);
                   }
                 }
                 List<com.github.javaparser.Position> defPositions = new ArrayList<>();
@@ -377,7 +358,7 @@ public class DaciteTextDocumentService
                     if(defs.get(i).isEditorHighlight()) {
                       var defUseVariable = defs.get(i);
                       var parserPosition = defPositions.get(i);
-                      var label = defUseVariable.getRole() == DefUseVariableRole.DEFINITION ? "Def" : "Use";
+                      var label = "Def";
 
                       var lspPos = new Position(parserPosition.line - 1, parserPosition.column - 1);
                       var hint = new InlayHint(lspPos, Either.forLeft(label));
@@ -388,7 +369,7 @@ public class DaciteTextDocumentService
                       if (highlightedDefUseVariables.containsKey(params.getTextDocument())) {
                         highlightedDefUseVariables.get(params.getTextDocument()).put(lspPos, defUseVariable);
                       } else {
-                        HashMap<Position, DefUseVariable> newMap = new HashMap<>();
+                        HashMap<Position, DefUse> newMap = new HashMap<>();
                         newMap.put(lspPos, defUseVariable);
                         highlightedDefUseVariables.put(params.getTextDocument(), newMap);
                       }
@@ -407,12 +388,15 @@ public class DaciteTextDocumentService
                       usePositions.add(p);
                     }
                   }
+                  logger.info("final "+usePositions);
                   int i = 0;
                   while (i < uses.size() && i < usePositions.size()) {
+                    logger.info(uses.toString());
                     if(uses.get(i).isEditorHighlight()) {
+                      logger.info("is highlighted");
                       var defUseVariable = uses.get(i);
                       var parserPosition = usePositions.get(i);
-                      var label = defUseVariable.getRole() == DefUseVariableRole.DEFINITION ? "Def" : "Use";
+                      var label = "Use";
 
                       var lspPos = new Position(parserPosition.line - 1, parserPosition.column - 1);
                       var hint = new InlayHint(lspPos, Either.forLeft(label));
@@ -423,7 +407,7 @@ public class DaciteTextDocumentService
                       if (highlightedDefUseVariables.containsKey(params.getTextDocument())) {
                         highlightedDefUseVariables.get(params.getTextDocument()).put(lspPos, defUseVariable);
                       } else {
-                        HashMap<Position, DefUseVariable> newMap = new HashMap<>();
+                        HashMap<Position, DefUse> newMap = new HashMap<>();
                         newMap.put(lspPos, defUseVariable);
                         highlightedDefUseVariables.put(params.getTextDocument(), newMap);
                       }

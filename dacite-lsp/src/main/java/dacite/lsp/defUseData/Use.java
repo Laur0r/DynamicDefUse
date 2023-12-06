@@ -1,26 +1,18 @@
 package dacite.lsp.defUseData;
 
-public class DefUseData {
-    private String name;
-    private String defLocation;
+public class Use extends DefUse{
     private String useLocation;
     private int index;
     private int useInstruction;
-    private int defInstruction;
     private boolean checked;
 
-    public DefUseData(String name, String defLocation, String useLocation){
+    private int linenumber;
+    private boolean editorHighlight;
+
+    public Use(String name, String useLocation, int linenumber){
         this.name = name;
-        this.defLocation = defLocation;
         this.useLocation = useLocation;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
+        this.linenumber = linenumber;
     }
 
     public int getIndex() {
@@ -39,22 +31,6 @@ public class DefUseData {
         this.useInstruction = instruction;
     }
 
-    public int getDefInstruction() {
-        return defInstruction;
-    }
-
-    public void setDefInstruction(int instruction) {
-        this.defInstruction = instruction;
-    }
-
-    public String getDefLocation() {
-        return defLocation;
-    }
-
-    public void setDefLocation(String defLocation) {
-        this.defLocation = defLocation;
-    }
-
     public String getUseLocation() {
         return useLocation;
     }
@@ -71,8 +47,19 @@ public class DefUseData {
         this.checked = checked;
     }
 
+    public int getLinenumber(){return linenumber;}
+    public int getInstruction(){return useInstruction;}
+
+    public boolean isEditorHighlight() {
+        return editorHighlight;
+    }
+
+    public void setEditorHighlight(boolean editorHighlight) {
+        this.editorHighlight = editorHighlight;
+    }
+
     public String toString(){
-        String output = "\n"+name + ", " + defLocation + ", " + useLocation+" "+index+"; ";
+        String output = "\n"+name + ", " + useLocation+" "+useInstruction+" "+color+" "+editorHighlight;
         return output;
     }
 
@@ -84,9 +71,9 @@ public class DefUseData {
         if (obj.getClass() != this.getClass()) {
             return false;
         } else {
-            DefUseData data = (DefUseData) obj;
-            return data.name.equals(this.name) && data.defLocation.equals(this.defLocation) &&
-                    data.useLocation.equals(this.useLocation);
+            Use data = (Use) obj;
+            return data.name.equals(this.name) &&
+                    data.useLocation.equals(this.useLocation) && data.useInstruction == this.useInstruction;
         }
     }
 }
