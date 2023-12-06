@@ -1,17 +1,11 @@
 package dacite.lsp.defUseData;
 
-public class Use extends DefUse{
-    private String useLocation;
+public class Use extends DefUseElement {
     private int index;
-    private int useInstruction;
-    private boolean checked;
-
-    private int linenumber;
-    private boolean editorHighlight;
 
     public Use(String name, String useLocation, int linenumber){
         this.name = name;
-        this.useLocation = useLocation;
+        this.location = useLocation;
         this.linenumber = linenumber;
     }
 
@@ -23,43 +17,8 @@ public class Use extends DefUse{
         this.index = index;
     }
 
-    public int getUseInstruction() {
-        return useInstruction;
-    }
-
-    public void setUseInstruction(int instruction) {
-        this.useInstruction = instruction;
-    }
-
-    public String getUseLocation() {
-        return useLocation;
-    }
-
-    public void setUseLocation(String useLocation) {
-        this.useLocation = useLocation;
-    }
-
-    public boolean isChecked() {
-        return checked;
-    }
-
-    public void setChecked(boolean checked) {
-        this.checked = checked;
-    }
-
-    public int getLinenumber(){return linenumber;}
-    public int getInstruction(){return useInstruction;}
-
-    public boolean isEditorHighlight() {
-        return editorHighlight;
-    }
-
-    public void setEditorHighlight(boolean editorHighlight) {
-        this.editorHighlight = editorHighlight;
-    }
-
     public String toString(){
-        String output = "\n"+name + ", " + useLocation+" "+useInstruction+" "+color+" "+editorHighlight;
+        String output = "\n"+name + ", " + location+" "+instruction+" "+color+" "+editorHighlight;
         return output;
     }
 
@@ -73,7 +32,7 @@ public class Use extends DefUse{
         } else {
             Use data = (Use) obj;
             return data.name.equals(this.name) &&
-                    data.useLocation.equals(this.useLocation) && data.useInstruction == this.useInstruction;
+                    data.location.equals(this.location) && data.instruction == this.instruction;
         }
     }
 }

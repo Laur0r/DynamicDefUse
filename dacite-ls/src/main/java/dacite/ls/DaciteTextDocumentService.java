@@ -5,8 +5,6 @@ import com.google.gson.JsonObject;
 
 import dacite.lsp.InlayHintDecorationParams;
 import dacite.lsp.defUseData.*;
-import dacite.lsp.defUseData.transformation.DefUseVariable;
-import dacite.lsp.defUseData.transformation.DefUseVariableRole;
 import dacite.lsp.tvp.*;
 
 import org.eclipse.lsp4j.CodeLens;
@@ -38,7 +36,7 @@ public class DaciteTextDocumentService
 
   private static final Logger logger = LoggerFactory.getLogger(DaciteTextDocumentService.class);
 
-  private HashMap<TextDocumentIdentifier, HashMap<Position, DefUse>> highlightedDefUseVariables = new HashMap<>();
+  private HashMap<TextDocumentIdentifier, HashMap<Position, DefUseElement>> highlightedDefUseVariables = new HashMap<>();
 
   @Override
   public void didOpen(DidOpenTextDocumentParams params) {
@@ -98,13 +96,13 @@ public class DaciteTextDocumentService
     var className = codeAnalyser.extractClassName();
     var packageName = codeAnalyser.extractPackageName();
 
-    Map<Integer,List<DefUse>> map = DefUseAnalysisProvider.getDefUseByLine(packageName, className, true);
+    Map<Integer,List<DefUseElement>> map = DefUseAnalysisProvider.getDefUseByLine(packageName, className, true);
     getInlayHints(map, inlayHints, params, codeAnalyser);
-    Map<Integer,List<DefUse>> notCoveredMap = DefUseAnalysisProvider.getDefUseByLine(packageName, className, false);
+    Map<Integer,List<DefUseElement>> notCoveredMap = DefUseAnalysisProvider.getDefUseByLine(packageName, className, false);
     getInlayHints(notCoveredMap, inlayHints, params, codeAnalyser);
 
 
-    logger.info("hints {}", inlayHints);
+    //logger.info("hints {}", inlayHints);
 
     return CompletableFuture.completedFuture(inlayHints);
   }
@@ -175,13 +173,13 @@ public class DaciteTextDocumentService
               return CompletableFuture.completedFuture(new TreeViewParentResult(cl.getName() + "." + m.getName()));
             }
             for(Def def: var.getDefs()){
-              if(nodeUri.equals(cl.getName() + "." + m.getName() + " " + var.getName() + " " + def.getDefLocation())){
+              if(nodeUri.equals(cl.getName() + "." + m.getName() + " " + var.getName() + " " + def.getLocation())){
                 return CompletableFuture.completedFuture(new TreeViewParentResult(cl.getName() + "." + m.getName() + " " + var.getName()));
               }
               for (Use data : def.getData()) {
-                if (nodeUri.equals(cl.getName() + "." + m.getName() + " " + var.getName() + " " + def.getDefLocation() + " - "
-                        + data.getUseLocation())) {
-                  return CompletableFuture.completedFuture(new TreeViewParentResult(cl.getName() + "." + m.getName() + " " + var.getName()+" " + def.getDefLocation()));
+                if (nodeUri.equals(cl.getName() + "." + m.getName() + " " + var.getName() + " " + def.getLocation() + " - "
+                        + data.getLocation())) {
+                  return CompletableFuture.completedFuture(new TreeViewParentResult(cl.getName() + "." + m.getName() + " " + var.getName()+" " + def.getLocation()));
                 }
               }
             }
@@ -269,15 +267,15 @@ public class DaciteTextDocumentService
                 if (nodeUri.equals(cl.getName() + "." + m.getName() + " " + var.getName())) {
                   for (Def def : var.getDefs()) {
                     TreeViewNode node = new TreeViewNode(id,
-                            cl.getName() + "." + m.getName() + " " + var.getName() + " " + def.getDefLocation(),
-                            "Def: " + def.getDefLocation() +" "+ def.getNumberChains() + " chains");
+                            cl.getName() + "." + m.getName() + " " + var.getName() + " " + def.getLocation(),
+                            "Def: " + def.getLocation() +" "+ def.getNumberChains() + " chains");
 
                     var commandArg = new JsonObject();
                     commandArg.addProperty("packageClass", cl.getName());
                     commandArg.addProperty("method", m.getName());
                     commandArg.addProperty("variable", var.getName());
-                    commandArg.addProperty("defLocation", def.getDefLocation());
-                    commandArg.addProperty("defInstruction", def.getDefInstruction());
+                    commandArg.addProperty("defLocation", def.getLocation());
+                    commandArg.addProperty("defInstruction", def.getInstruction());
                     if (id.equals("notCoveredDUC")) {
                       commandArg.addProperty("notCovered", true);
                     }
@@ -289,22 +287,22 @@ public class DaciteTextDocumentService
                   break;
                 } else {
                   for(Def def: var.getDefs()){
-                    if(nodeUri.equals(cl.getName() + "." + m.getName() + " " + var.getName() + " " + def.getDefLocation()))
+                    if(nodeUri.equals(cl.getName() + "." + m.getName() + " " + var.getName() + " " + def.getLocation()))
                       for (Use data : def.getData()) {
                         TreeViewNode node = new TreeViewNode(id,
-                                cl.getName() + "." + m.getName() + " " + var.getName() + " " + def.getDefLocation() + " - "
-                                        + data.getUseLocation() + " " + data.getIndex() + " " + data.getUseInstruction(),
-                                "Use: "  + data.getUseLocation() + " " + data.getName());
+                                cl.getName() + "." + m.getName() + " " + var.getName() + " " + def.getLocation() + " - "
+                                        + data.getLocation() + " " + data.getIndex() + " " + data.getInstruction(),
+                                "Use: "  + data.getLocation() + " " + data.getName());
 
                         var commandArg = new JsonObject();
                         commandArg.addProperty("packageClass", cl.getName());
                         commandArg.addProperty("method", m.getName());
                         commandArg.addProperty("variable", var.getName());
-                        commandArg.addProperty("defLocation", def.getDefLocation());
-                        commandArg.addProperty("defInstruction", def.getDefInstruction());
-                        commandArg.addProperty("useLocation", data.getUseLocation());
+                        commandArg.addProperty("defLocation", def.getLocation());
+                        commandArg.addProperty("defInstruction", def.getInstruction());
+                        commandArg.addProperty("useLocation", data.getLocation());
                         commandArg.addProperty("index", data.getIndex());
-                        commandArg.addProperty("useInstruction", data.getUseInstruction());
+                        commandArg.addProperty("useInstruction", data.getInstruction());
                         if (id.equals("notCoveredDUC")) {
                           commandArg.addProperty("notCovered", true);
                         }
@@ -323,7 +321,7 @@ public class DaciteTextDocumentService
     return nodes;
   }
 
-  private void getInlayHints(Map<Integer, List<DefUse>> map, List<InlayHint> inlayHints, InlayHintParams params, CodeAnalyser codeAnalyser){
+  private void getInlayHints(Map<Integer, List<DefUseElement>> map, List<InlayHint> inlayHints, InlayHintParams params, CodeAnalyser codeAnalyser){
     Set<com.github.javaparser.Position> globalDefPositions = new HashSet<>();
     map.forEach((lineNumber, defUseVariables) -> {
       //logger.info(DefUseAnalysisProvider.groupByVariableNamesAndSortDefUse(defUseVariables).toString());
@@ -340,7 +338,7 @@ public class DaciteTextDocumentService
                 List<Def> defs = new ArrayList<>();
                 List<Use> uses = new ArrayList<>();
                 for(int i = 0; i< groupedDefUseVariables.size(); i++){
-                  DefUse var = groupedDefUseVariables.get(i);
+                  DefUseElement var = groupedDefUseVariables.get(i);
                   if(var instanceof Def){
                   //if(var.getRole() == DefUseVariableRole.DEFINITION){
                     defs.add((Def)var);
@@ -369,7 +367,7 @@ public class DaciteTextDocumentService
                       if (highlightedDefUseVariables.containsKey(params.getTextDocument())) {
                         highlightedDefUseVariables.get(params.getTextDocument()).put(lspPos, defUseVariable);
                       } else {
-                        HashMap<Position, DefUse> newMap = new HashMap<>();
+                        HashMap<Position, DefUseElement> newMap = new HashMap<>();
                         newMap.put(lspPos, defUseVariable);
                         highlightedDefUseVariables.put(params.getTextDocument(), newMap);
                       }
@@ -388,12 +386,9 @@ public class DaciteTextDocumentService
                       usePositions.add(p);
                     }
                   }
-                  logger.info("final "+usePositions);
                   int i = 0;
                   while (i < uses.size() && i < usePositions.size()) {
-                    logger.info(uses.toString());
                     if(uses.get(i).isEditorHighlight()) {
-                      logger.info("is highlighted");
                       var defUseVariable = uses.get(i);
                       var parserPosition = usePositions.get(i);
                       var label = "Use";
@@ -407,7 +402,7 @@ public class DaciteTextDocumentService
                       if (highlightedDefUseVariables.containsKey(params.getTextDocument())) {
                         highlightedDefUseVariables.get(params.getTextDocument()).put(lspPos, defUseVariable);
                       } else {
-                        HashMap<Position, DefUse> newMap = new HashMap<>();
+                        HashMap<Position, DefUseElement> newMap = new HashMap<>();
                         newMap.put(lspPos, defUseVariable);
                         highlightedDefUseVariables.put(params.getTextDocument(), newMap);
                       }

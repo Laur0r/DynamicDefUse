@@ -100,7 +100,6 @@ public class DefUseAnalysisProvider {
         }
       }
     }
-    logger.info(defUseClasses.toString());
   }
 
   public static void processXmlFileSymbolic(String path, File project) {
@@ -111,7 +110,6 @@ public class DefUseAnalysisProvider {
       classes.add(XMLSolution.class);
       classes.add(XMLSolutionMapping.class);
       classes.add(XMLSolutions.class);
-      logger.info(classes.toString());
       JAXBContext jaxbContext = JAXBContext.newInstance(classes.toArray(new Class[]{}));
       Unmarshaller jaxbUnmarshaller = jaxbContext.createUnmarshaller();
       String chainFile = Files.readString(Paths.get(path));
@@ -230,7 +228,6 @@ public class DefUseAnalysisProvider {
 
   public static void changeDefUseEditorHighlighting(JsonObject nodeProperties, Boolean newIsEditorHighlight) {
     if (nodeProperties.has("notCovered")) {
-      logger.info("not Covered");
       changeDefUseEditorHighlightingClasses(notCoveredClasses, nodeProperties, newIsEditorHighlight);
     } else {
       changeDefUseEditorHighlightingClasses(defUseClasses, nodeProperties, newIsEditorHighlight);
@@ -269,9 +266,8 @@ public class DefUseAnalysisProvider {
               if (nodeProperties.has("useLocation") && nodeProperties.has("index")) {
                 int instruction = nodeProperties.get("useInstruction").getAsInt();
                 String useLocation = nodeProperties.get("useLocation").getAsString();
-                affected = affectedDef && use.getUseLocation().equals(useLocation) && use.getInstruction() == instruction;
+                affected = affectedDef && use.getLocation().equals(useLocation) && use.getInstruction() == instruction;
                 if (affected) {
-                  logger.info("set highlighting uses");
                   def.setEditorHighlight(
                           // Standard implementations of the Tree View Protocol do not provide the additional parameter
                           // for newIsEditorHighlight. If it is null, we just toggle the boolean value of affected nodes
@@ -280,11 +276,9 @@ public class DefUseAnalysisProvider {
                           // Standard implementations of the Tree View Protocol do not provide the additional parameter
                           // for newIsEditorHighlight. If it is null, we just toggle the boolean value of affected nodes
                           newIsEditorHighlight == null ? !use.isEditorHighlight() : newIsEditorHighlight);
-                  logger.info(use.toString());
                 }
               } else {
                 if (affected) {
-                  logger.info("set highlighting");
                   def.setEditorHighlight(
                           // Standard implementations of the Tree View Protocol do not provide the additional parameter
                           // for newIsEditorHighlight. If it is null, we just toggle the boolean value of affected nodes
@@ -293,7 +287,6 @@ public class DefUseAnalysisProvider {
                           // Standard implementations of the Tree View Protocol do not provide the additional parameter
                           // for newIsEditorHighlight. If it is null, we just toggle the boolean value of affected nodes
                           newIsEditorHighlight == null ? !use.isEditorHighlight() : newIsEditorHighlight);
-                  logger.info(use.toString());
                 }
               }
             }
@@ -333,9 +326,9 @@ public class DefUseAnalysisProvider {
     return defUseMapping;
   }
 
-  public static HashMap<Integer, List<DefUse>> getDefUseByLine(String packageName,
-                                                               String className, boolean covered){
-    HashMap<Integer, List<DefUse>> uniqueDefUseVariablesByLine = new HashMap<>();
+  public static HashMap<Integer, List<DefUseElement>> getDefUseByLine(String packageName,
+                                                                      String className, boolean covered){
+    HashMap<Integer, List<DefUseElement>> uniqueDefUseVariablesByLine = new HashMap<>();
     DefUseClass cl = getClass(packageName,className,covered);
     if(cl != null){
       for(DefUseMethod m:cl.getMethods()){
@@ -369,8 +362,8 @@ public class DefUseAnalysisProvider {
     return null;
   }
 
-  private static void addDefUseVariable(HashMap<Integer, List<DefUse>> defUseVariableMap,
-                                        DefUse defUseVariable) {
+  private static void addDefUseVariable(HashMap<Integer, List<DefUseElement>> defUseVariableMap,
+                                        DefUseElement defUseVariable) {
     if (defUseVariableMap.containsKey(defUseVariable.getLinenumber())) {
       // Check for uniqueness
       var existingDefUseVariables = defUseVariableMap.get(defUseVariable.getLinenumber());
@@ -378,15 +371,15 @@ public class DefUseAnalysisProvider {
         existingDefUseVariables.add(defUseVariable);
       }
     } else {
-      List<DefUse> defUseVariables = new ArrayList<>();
+      List<DefUseElement> defUseVariables = new ArrayList<>();
       defUseVariables.add(defUseVariable);
       defUseVariableMap.put(defUseVariable.getLinenumber(), defUseVariables);
     }
   }
 
-  public static HashMap<String, List<DefUse>> groupByVariableNamesAndSortDefUse(
-          List<DefUse> defUseVariables) {
-    HashMap<String, List<DefUse>> defUseVariableMap = new HashMap<>();
+  public static HashMap<String, List<DefUseElement>> groupByVariableNamesAndSortDefUse(
+          List<DefUseElement> defUseVariables) {
+    HashMap<String, List<DefUseElement>> defUseVariableMap = new HashMap<>();
 
     defUseVariables.forEach(defUseVariable -> {
       String name = defUseVariable.getName();
@@ -395,10 +388,10 @@ public class DefUseAnalysisProvider {
         var groupedDefUseVariables = defUseVariableMap.get(name);
         groupedDefUseVariables.add(defUseVariable);
 
-        Comparator<DefUse> byVariableIndex = Comparator.comparingInt(DefUse::getInstruction);
+        Comparator<DefUseElement> byVariableIndex = Comparator.comparingInt(DefUseElement::getInstruction);
         groupedDefUseVariables.sort(byVariableIndex);
       } else {
-        List<DefUse> groupedDefUseVariables = new ArrayList<>();
+        List<DefUseElement> groupedDefUseVariables = new ArrayList<>();
         groupedDefUseVariables.add(defUseVariable);
         defUseVariableMap.put(name, groupedDefUseVariables);
       }
@@ -450,7 +443,7 @@ public class DefUseAnalysisProvider {
       }
       Use data = new Use(varName, useLocation, use.getLinenumber());
       data.setIndex(use.getVariableIndex());
-      data.setUseInstruction(use.getInstruction());
+      data.setInstruction(use.getInstruction());
       // if output already contains class, add data to existing class instance
       if (output.contains(defUseClass)) {
         DefUseClass instance = output.get(output.indexOf(defUseClass));

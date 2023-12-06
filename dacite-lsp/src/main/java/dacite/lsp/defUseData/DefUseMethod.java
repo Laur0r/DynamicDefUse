@@ -2,7 +2,7 @@ package dacite.lsp.defUseData;
 
 import java.util.ArrayList;
 
-public class DefUseMethod extends DefUse{
+public class DefUseMethod extends DefUseStructure {
     private ArrayList<DefUseVar> variables;
 
     public DefUseMethod(String name){
@@ -19,8 +19,6 @@ public class DefUseMethod extends DefUse{
     public void addVariable(DefUseVar defuse){
         variables.add(defuse);
     }
-    public int getLinenumber(){return 0;}
-    public int getInstruction(){return 0;}
 
     @Override
     public boolean equals(Object obj){
