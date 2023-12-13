@@ -37,7 +37,7 @@ public class DefUseAnalysisProvider {
   private static XMLSolutions xmlSolutionsList;
 
   private static final String[] indexcolors = new String[]{
-          "#434343", "#F6BE00", "#18c1d6", "#FF34FF", "#FF4A46", "#008941", "#006FA6", "#A30059",
+          "#FF34FF", "#F6BE00", "#18c1d6", "#434343", "#FF4A46", "#008941", "#006FA6", "#A30059",
           "#C2A7AF", "#7A4900", "#0000A6", "#63FFAC", "#B79762", "#004D43", "#8FB0FF", "#997D87",
           "#5A0007", "#809693", "#FEFFE6", "#1B4400", "#4FC601", "#3B5DFF", "#4A3B53", "#FF2F80",
           "#61615A", "#BA0900", "#6B7900", "#00C2A0", "#FFAA92", "#FF90C9", "#B903AA", "#D16100",
