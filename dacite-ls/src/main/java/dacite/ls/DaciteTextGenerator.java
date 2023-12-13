@@ -238,12 +238,13 @@ public class DaciteTextGenerator {
                                             new SimpleForwardsTestSetReducer(),
                                             new SimpleBackwardsTestSetReducer()),
                                     new SimpleGreedyTestSetReducer()
-                            )).build();
+                            )).
+                    setAssumeGetters(false).setAssumeSetters(false).setAssumeEqualsMethods(false).build();
             TestCasesStringGenerator tcg = new TestCasesStringGenerator(testCases, config);
             String test = tcg.generateTestClassStringRepresentation();
             createTextEditAndIncrementLine(testEdits, 0, test);
 
-            uri += "/Test"+testingClassName + "Dacite"+counter+".java";
+            uri += "/Test"+testingClassName + "Dacite.java";
             CreateFile createFile = new CreateFile(uri, new CreateFileOptions(true,false));
 
             TextDocumentEdit documentEdit = new TextDocumentEdit(new VersionedTextDocumentIdentifier(uri,1), testEdits);
