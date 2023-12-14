@@ -270,6 +270,7 @@ public class DaciteTextDocumentService
                             cl.getName() + "." + m.getName() + " " + var.getName() + " " + def.getLocation(),
                             "Def: " + def.getLocation() +" "+ def.getNumberChains() + " chains");
 
+                    node.setCollapseState("collapsed");
                     var commandArg = new JsonObject();
                     commandArg.addProperty("packageClass", cl.getName());
                     commandArg.addProperty("method", m.getName());

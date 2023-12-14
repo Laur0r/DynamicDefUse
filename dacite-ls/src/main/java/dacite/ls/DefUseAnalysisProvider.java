@@ -353,9 +353,11 @@ public class DefUseAnalysisProvider {
         }
       }
     } else {
-      for (DefUseClass cl: notCoveredClasses) {
-        if (cl.getName().equals(packageName + "/" + className)){
-          return cl;
+      if(notCoveredClasses != null) {
+        for (DefUseClass cl : notCoveredClasses) {
+          if (cl.getName().equals(packageName + "/" + className)) {
+            return cl;
+          }
         }
       }
     }

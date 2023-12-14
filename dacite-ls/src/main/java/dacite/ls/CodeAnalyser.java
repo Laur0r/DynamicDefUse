@@ -181,7 +181,7 @@ public class CodeAnalyser {
             .forEach(coid -> coid.getName().getRange().ifPresent(range -> {
               codeLenses.add(new CodeLens(new Range(new org.eclipse.lsp4j.Position(range.begin.line - 1, range.begin.column - 1),
                       new org.eclipse.lsp4j.Position(range.end.line - 1, range.end.column)),
-                      new Command("Run Analysis", "dacite.analyze", List.of(uri)), null));
+                      new Command("Run Dacite Analysis", "dacite.analyze", List.of(uri)), null));
             }));
 
     compilationUnit.findAll(ClassOrInterfaceDeclaration.class).stream().filter(coid ->String.valueOf(coid.getName()).contains("DaciteSymbolicDriver"))

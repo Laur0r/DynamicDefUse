@@ -1,6 +1,7 @@
 package dacite.intellij.visualisation;
 
 import com.intellij.icons.AllIcons;
+import com.intellij.openapi.util.IconLoader;
 import com.intellij.ui.JBColor;
 import com.intellij.ui.components.JBCheckBox;
 import dacite.lsp.tvp.TreeViewNode;
@@ -43,6 +44,7 @@ public class TreeViewCellRenderer extends DefaultTreeCellRenderer {
                     case "class": this.name.setIcon(AllIcons.Nodes.Class); defuse = false; break;
                     case "method": this.name.setIcon(AllIcons.Nodes.Method); defuse = false; break;
                     case "variable": this.name.setIcon(AllIcons.Nodes.Variable); defuse = false; break;
+                    case "definition": this.defLabel.setIcon(IconLoader.getIcon("/icons/definition.png", TreeViewCellRenderer.class));
                     default:
                         defuse = true;
                 }
