@@ -1,16 +1,12 @@
 package dacite.intellij.actions;
 
-import com.intellij.icons.AllIcons;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.actionSystem.PlatformCoreDataKeys;
 import com.intellij.openapi.project.Project;
-import com.intellij.openapi.wm.RegisterToolWindowTask;
 import com.intellij.openapi.wm.ToolWindow;
-import com.intellij.openapi.wm.ToolWindowAnchor;
 import com.intellij.openapi.wm.ToolWindowManager;
 import com.intellij.psi.PsiFile;
-import dacite.intellij.visualisation.DaciteAnalysisToolWindow;
 import dacite.intellij.visualisation.DaciteToolWindowFactory;
 import org.eclipse.lsp4j.ExecuteCommandParams;
 import org.jetbrains.annotations.NotNull;
@@ -23,7 +19,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
-public class DaciteSymbolicAnalysisAction extends AnAction {
+public class DaciteSymbolicAnalyzeAction extends AnAction {
 
   @Override
   public void update(AnActionEvent e) {

@@ -92,7 +92,7 @@ public class CommandRegistry {
                   "-classpath", fullClassPath,
                   // Main class in dacite-core
                   "dacite.core.DaciteLauncher",
-                  "dacite",
+                  "dynamic",
                       // Projectpath
                       projectDir + "src/",
                       // Packagename

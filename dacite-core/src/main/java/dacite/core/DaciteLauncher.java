@@ -10,7 +10,7 @@ public class DaciteLauncher {
             String classname = args[3];
 
             // forward method invocation depending on given argument
-            if (option.equals("dacite")) {
+            if (option.equals("dynamic")) {
                 DaciteDynamicExecutor.exec(projectdir, packagename, classname);
             }
             else if (option.equals("symbolic")) {
