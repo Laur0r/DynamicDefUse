@@ -93,8 +93,8 @@ public class DaciteTextDocumentService
       text = TextDocumentItemProvider.get(params.getTextDocument()).getText();
     }
     var codeAnalyser = new CodeAnalyser(text);
-    var className = codeAnalyser.extractClassName();
-    var packageName = codeAnalyser.extractPackageName();
+    String className = codeAnalyser.extractClassName();
+    String packageName = codeAnalyser.extractPackageName().replace(".","/");
 
     Map<Integer,List<DefUseElement>> map = DefUseAnalysisProvider.getDefUseByLine(packageName, className, true);
     getInlayHints(map, inlayHints, params, codeAnalyser);

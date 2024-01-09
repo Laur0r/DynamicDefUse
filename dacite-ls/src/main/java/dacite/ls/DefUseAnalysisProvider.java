@@ -329,14 +329,18 @@ public class DefUseAnalysisProvider {
   public static HashMap<Integer, List<DefUseElement>> getDefUseByLine(String packageName,
                                                                       String className, boolean covered){
     HashMap<Integer, List<DefUseElement>> uniqueDefUseVariablesByLine = new HashMap<>();
-    DefUseClass cl = getClass(packageName,className,covered);
-    if(cl != null){
-      for(DefUseMethod m:cl.getMethods()){
-        for(DefUseVar var:m.getVariables()){
-          for(Def def: var.getDefs()){
-            addDefUseVariable(uniqueDefUseVariablesByLine, def);
+    List<DefUseClass> classes = getClasses(covered);
+    for(DefUseClass cl : classes){
+      for(DefUseMethod m:cl.getMethods()) {
+        for (DefUseVar var : m.getVariables()) {
+          for (Def def : var.getDefs()) {
+            if (cl.getName().equals(packageName + "/" + className)){
+              addDefUseVariable(uniqueDefUseVariablesByLine, def);
+            }
             for(Use use: def.getData()){
-              addDefUseVariable(uniqueDefUseVariablesByLine, use);
+              if (cl.getName().equals(packageName + "/" + className) || use.getLocation().contains(packageName + "/" + className)){
+                addDefUseVariable(uniqueDefUseVariablesByLine, use);
+              }
             }
           }
         }
@@ -345,23 +349,12 @@ public class DefUseAnalysisProvider {
     return uniqueDefUseVariablesByLine;
   }
 
-  private static DefUseClass getClass(String packageName, String className, boolean covered){
+  private static List<DefUseClass> getClasses(boolean covered){
     if(covered){
-      for (DefUseClass cl: defUseClasses) {
-        if (cl.getName().equals(packageName + "/" + className)){
-          return cl;
-        }
-      }
+      return defUseClasses;
     } else {
-      if(notCoveredClasses != null) {
-        for (DefUseClass cl : notCoveredClasses) {
-          if (cl.getName().equals(packageName + "/" + className)) {
-            return cl;
-          }
-        }
-      }
+      return notCoveredClasses;
     }
-    return null;
   }
 
   private static void addDefUseVariable(HashMap<Integer, List<DefUseElement>> defUseVariableMap,
@@ -442,6 +435,13 @@ public class DefUseAnalysisProvider {
       DefUseVar var = new DefUseVar(varName);
       if (!use.getVariableName().equals(varName)) {
         varName = use.getVariableName();
+        if(use.getObjectName() != null ){
+          if(!varName.contains("[")) {
+            varName = use.getObjectName() + "." + varName.substring(varName.indexOf(".") + 1);
+          } else {
+            varName = varName + use.getVariableIndex()+"]";
+          }
+        }
       }
       Use data = new Use(varName, useLocation, use.getLinenumber());
       data.setIndex(use.getVariableIndex());
