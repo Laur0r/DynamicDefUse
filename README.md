@@ -7,13 +7,22 @@
 * `dacite-ls`: language server implementation
 * `dacite-intellij`: plugin integrating Dacite into the IntelliJ IDE
 * `dacite-vscode`: plugin integrating Dacite into Visual Studio Code
+* `mulib`: integrated plugin for symbolic execution (see own [Github repository](https://github.com/NoItAll/mulib)
+
+## Setup for Mulib to be able to start Dacite
+
+A binary of Z3 is needed: https://github.com/Z3Prover/z3/releases
+
+For Ubuntu: https://github.com/Z3Prover/z3/releases/download/z3-4.8.8/z3-4.8.8-x64-ubuntu-16.04.zip
+
+Add the path to `LD_LIBRARY_PATH` so that the Z3 binary can be found. In Ubuntu, e.g.: 
+`export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/usr/lib/z3-4.8.8-x64-ubuntu-16.04/bin/"`
+
+In `build.gradle` the path `implementation files('lib/z3-4.8.8-x64-ubuntu-16.04/bin/com.microsoft.z3.jar')` 
+is assumed to hold the .jar suitable for your operating system. If this is not the case, it too must be changed.
 
 ## Important Gradle Tasks
 
-* Running the benchmarking examples:
-  ```sh
-  $ ./gradlew dacite-examples:run
-  ```
 * Running the IntelliJ plugin:
   ```sh
   $ ./gradlew dacite-intellij:runIde
