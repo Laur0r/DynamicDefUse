@@ -8,6 +8,7 @@ import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.expr.BinaryExpr;
 import com.github.javaparser.ast.expr.IntegerLiteralExpr;
 import com.github.javaparser.ast.expr.MethodCallExpr;
+import dacite.core.tests.Alias;
 import de.wwu.mulib.substitutions.PartnerClass;
 import de.wwu.mulib.substitutions.Substituted;
 import de.wwu.mulib.substitutions.primitives.ConcSnumber;
@@ -488,7 +489,6 @@ public class DaciteAnalyzer {
      */
     protected static void registerDef(DefUseVariable def){
         // check if there already exists a registered alias for this variable value
-        // TODO remove alias if there is a new definition
         AliasAlloc alloc = aliases.get(def.getValue());
         if(alloc == null) {
             DefUseVariable alias = null;
@@ -503,6 +503,21 @@ public class DaciteAnalyzer {
                 aliases.put(def.getValue(), alloc);
                 def.setAlias(true);
                 alias.setAlias(true);
+            } else {
+                for(Map.Entry<Object, AliasAlloc> entries: aliases.entrySet()){
+                    Object value = entries.getKey();
+                    AliasAlloc aliasAlloc = entries.getValue();
+                    for(int i=0; i<aliasAlloc.varIndexes.size();i++){
+                        if(aliasAlloc.varIndexes.get(i) == def.variableIndex && aliasAlloc.varNames.get(i).equals(def.variableName)){
+                            aliasAlloc.varNames.remove(i);
+                            aliasAlloc.varIndexes.remove(i);
+                            if(aliasAlloc.varIndexes.size()<2){
+                                aliases.remove(value);
+                            }
+                            break;
+                        }
+                    }
+                }
             }
         } else {
             alloc.addAlias(def.getVariableName(), def.getVariableIndex());
