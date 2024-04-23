@@ -3,12 +3,13 @@ package dacite.core;
 import dacite.core.analysis.*;
 import dacite.core.instrumentation.DaciteAgent;
 import org.junit.runner.JUnitCore;
+import org.yaml.snakeyaml.Yaml;
 
 import java.io.*;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.net.URLClassLoader;
+import java.nio.file.Paths;
+import java.util.*;
 import java.util.logging.Logger;
 
 import javax.tools.JavaCompiler;
@@ -28,6 +29,18 @@ public class DaciteDynamicExecutor {
 		JUnitCore junitCore = new JUnitCore();
 		packagename = packagename.replace(".","/");
 		File file = new File(projectdir+packagename+classname+".java");
+		Map<String, Object> config = getDaciteConfig();
+		if(config != null) {
+			LinkedHashMap<String, String> daciteConfig = config.get("dacite_config") == null ? null : (LinkedHashMap<String, String>) config.get("dacite_config");
+			if (daciteConfig != null) {
+				if (daciteConfig.containsKey("package")) {
+					packagename = daciteConfig.get("package").replace(".", "/") + "/";
+					logger.info(packagename);
+				}
+			} else {
+				logger.info("no dacite_config");
+			}
+		}
 
 		// compile files in path to have all local changes for the execution
 		URL url = ClassLoader.getSystemResource(packagename+classname+".class");
@@ -140,5 +153,20 @@ public class DaciteDynamicExecutor {
 		String output = input.replace("<", "&lt;");
 		output = output.replace(">", "&gt;");
 		return output;
+	}
+
+	public static Map<String, Object> getDaciteConfig(){
+		try{
+			Yaml yaml = new Yaml();
+			URL root = Paths.get(".").normalize().toAbsolutePath().toUri().toURL();
+			URLClassLoader classLoader2 = new URLClassLoader(new URL[]{root});
+			InputStream inputStream = classLoader2.getResourceAsStream("Dacite_config.yaml");
+			Map<String, Object> config = yaml.load(inputStream);
+			LinkedHashMap<String, String> daciteConfig = config.get("dacite_config") == null? null : (LinkedHashMap<String, String>) config.get("dacite_config");
+			return config;
+		} catch (Exception e){
+			logger.info("no dacite config found");
+			return null;
+		}
 	}
 }

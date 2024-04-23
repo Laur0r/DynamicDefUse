@@ -35,26 +35,19 @@ public class DaciteSymbolicExecutor extends DaciteDynamicExecutor {
     public static void exec(String projectpath, String packagename, String classname) throws Exception {
         Yaml yaml = new Yaml();
         File packagedir = new File(projectpath+packagename);
-        URL urlPackage = packagedir.toURI().toURL();
-        URLClassLoader classLoader = new URLClassLoader(new URL[]{urlPackage});
-        Map<String, Object> config = null;
-        try{
-            InputStream inputStream = classLoader.getResourceAsStream("Dacite_config.yaml");
-            config = yaml.load(inputStream);
-            LinkedHashMap<String, String> daciteConfig = config.get("dacite_config") == null? null : (LinkedHashMap<String, String>) config.get("dacite_config");
-            if(daciteConfig != null){
+        Map<String, Object> config = getDaciteConfig();
+        if(config != null) {
+            LinkedHashMap<String, String> daciteConfig = config.get("dacite_config") == null ? null : (LinkedHashMap<String, String>) config.get("dacite_config");
+            if (daciteConfig != null) {
                 logger.info(daciteConfig.toString());
-                if(daciteConfig.containsKey("package")){
-                    packagedir = new File(projectpath+daciteConfig.get("package").replace(".","/"));
-                    packagename = daciteConfig.get("package").replace(".","/")+"/";
+                if (daciteConfig.containsKey("package")) {
+                    packagedir = new File(projectpath + daciteConfig.get("package").replace(".", "/"));
+                    packagename = daciteConfig.get("package").replace(".", "/") + "/";
                 }
             } else {
                 logger.info("no dacite_config");
             }
-        } catch (Exception e){
-            logger.info("no dacite config found");
         }
-
 
         File file = new File(projectpath+packagename+classname);
         logger.info("file1 "+file.getPath()+" "+file.exists());
@@ -108,20 +101,20 @@ public class DaciteSymbolicExecutor extends DaciteDynamicExecutor {
         if (config != null) {
             LinkedHashMap<String, Object> mulibConfig = config.get("mulib_config") == null? null : (LinkedHashMap<String, Object>) config.get("mulib_config");
             if (mulibConfig != null){
-                if (mulibConfig.containsKey("BUDGET_INCR_ACTUAL_CP")) {
-                    BUDGET_INCR_ACTUAL_CP = (Integer) mulibConfig.get("BUDGET_INCR_ACTUAL_CP");
+                if (mulibConfig.containsKey("budget_incr_actual_cp")) {
+                    BUDGET_INCR_ACTUAL_CP = (Integer) mulibConfig.get("budget_incr_actual_cp");
                 }
-                if (mulibConfig.containsKey("BUDGET_FIXED_ACTUAL_CP")) {
-                    BUDGET_FIXED_ACTUAL_CP = (Integer) mulibConfig.get("BUDGET_FIXED_ACTUAL_CP");
+                if (mulibConfig.containsKey("budget_fixed_actual_cp")) {
+                    BUDGET_FIXED_ACTUAL_CP = (Integer) mulibConfig.get("budget_fixed_actual_cp");
                 }
-                if (mulibConfig.containsKey("BUDGET_GLOBAL_TIME_IN_SECONDS")) {
-                    BUDGET_GLOBAL_TIME_IN_SECONDS = (Integer) mulibConfig.get("BUDGET_GLOBAL_TIME_IN_SECONDS");
+                if (mulibConfig.containsKey("budget_global_time_in_seconds")) {
+                    BUDGET_GLOBAL_TIME_IN_SECONDS = (Integer) mulibConfig.get("budget_global_time_in_seconds");
                 }
-                if (mulibConfig.containsKey("SEARCH_CONCOLIC")) {
-                    CONCOLIC = (Boolean) mulibConfig.get("SEARCH_CONCOLIC");
+                if (mulibConfig.containsKey("search_concolic")) {
+                    CONCOLIC = (Boolean) mulibConfig.get("search_concolic");
                 }
-                if (mulibConfig.containsKey("SEARCH_STRATEGY")) {
-                    SEARCH_STRATEGY = (String) mulibConfig.get("SEARCH_STRATEGY");
+                if (mulibConfig.containsKey("search_strategy")) {
+                    SEARCH_STRATEGY = (String) mulibConfig.get("search_strategy");
                 }
             }
         }

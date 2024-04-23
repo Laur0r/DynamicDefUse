@@ -14,6 +14,7 @@ import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.yaml.snakeyaml.Yaml;
 
 import java.io.File;
 import java.io.InputStream;
@@ -194,7 +195,92 @@ public class DaciteTextGenerator {
         List<Either<TextDocumentEdit, ResourceOperation>> changes = new ArrayList<>();
 
         Map<String, List<String>> invokedMethods = analyseJUnitTest(project,packageName +"."+classname);
-        int counter = 0;
+        URLClassLoader classLoader;
+
+        TestSetReducer testSetReducer = new CompetingTestSetReducer(
+                new SequentialCombinedTestSetReducer(
+                        new SimpleForwardsTestSetReducer(),
+                        new SimpleBackwardsTestSetReducer()),
+                new SimpleGreedyTestSetReducer()
+        );
+        boolean assumeGetters = false;
+        boolean assumeSetters = false;
+        boolean assumeEquals = false;
+        try{
+            Map<String, Object> dacite_config = null;
+            Yaml yaml = new Yaml();
+            URL root = null;
+            if(project.getPath().contains("/out/")){
+                String projectpath = project.getAbsolutePath().substring(0,project.getAbsolutePath().lastIndexOf(
+                        "/out/"));
+                root = new File(projectpath).toURI().toURL();
+            } else if(project.getPath().contains("/build/")){
+                String projectpath = project.getAbsolutePath().substring(0,project.getAbsolutePath().lastIndexOf(
+                        "/build/"));
+                root = new File(projectpath).toURI().toURL();
+            } else if(project.getPath().contains("/target/")){
+                String projectpath = project.getAbsolutePath().substring(0,project.getAbsolutePath().lastIndexOf(
+                        "/target/"));
+                root = new File(projectpath).toURI().toURL();
+            }
+
+            URLClassLoader classLoader2 = new URLClassLoader(new URL[]{root});
+            InputStream inputStream = classLoader2.getResourceAsStream("Dacite_config.yaml");
+            dacite_config = yaml.load(inputStream);
+            LinkedHashMap<String, Object> testConfig = dacite_config.get("test_config") == null?
+                    null : (LinkedHashMap<String, Object>) dacite_config.get("test_config");
+            if(testConfig != null){
+                logger.info(testConfig.toString());
+                TestSetReducer[] reducer;
+                if(testConfig.containsKey("reducer_list") & testConfig.containsKey(
+                        "reducer_combine") ){
+                    String[] reducerList = ((String)testConfig.get("reducer_list")).split(",");
+                    reducer = new TestSetReducer[reducerList.length];
+                    int i = 0;
+                    for(String r:reducerList){
+                        if(r.equals("forward")){
+                            reducer[i] = new SimpleForwardsTestSetReducer();
+                        } else if(r.equals("backward")){
+                            reducer[i] = new SimpleBackwardsTestSetReducer();
+                        } else if (r.equals("greedy")) {
+                            reducer[i] = new SimpleGreedyTestSetReducer();
+                        }
+                        i++;
+                    }
+                    String reducerCombine =  (String)testConfig.get("reducer_combine");
+                    if(reducerCombine.equals("sequential")){
+                        testSetReducer = new SequentialCombinedTestSetReducer(reducer);
+                    } else if(reducerCombine.equals("competing")){
+                        testSetReducer = new CompetingTestSetReducer(reducer);
+                    }
+                } else if(testConfig.containsKey("reducer")){
+                    String r = (String)testConfig.get("reducer");
+                    if(r.equals("forward")){
+                        testSetReducer = new SimpleForwardsTestSetReducer();
+                    } else if(r.equals("backward")){
+                        testSetReducer = new SimpleBackwardsTestSetReducer();
+                    } else if (r.equals("greedy")) {
+                        testSetReducer = new SimpleGreedyTestSetReducer();
+                    }
+                }
+                if(testConfig.containsKey("assumeGetters")){
+                    assumeGetters = (Boolean)testConfig.get("assumeGetters");
+                }
+                if(testConfig.containsKey("assumeSetters")){
+                    assumeSetters = (Boolean)testConfig.get("assumeSetters");
+                }
+                if(testConfig.containsKey("assumeEquals")){
+                    assumeEquals = (Boolean)testConfig.get("assumeEquals");
+                }
+                logger.info(testSetReducer.toString());
+            } else {
+                logger.info("no test_config");
+            }
+        } catch (Exception e){
+            e.printStackTrace();
+            logger.info("no dacite config found");
+        }
+
         for (String methodString : invokedMethods.keySet()) {
             testingClassName = methodString.substring(0, methodString.lastIndexOf("."));
             String testingMethodName = methodString.substring(methodString.lastIndexOf(".") + 1);
@@ -218,9 +304,11 @@ public class DaciteTextGenerator {
             Class<?> myclass = null;
             try {
                 URL url = project.toURI().toURL();
-                URLClassLoader classLoader = new URLClassLoader(new URL[]{url});
+                classLoader = new URLClassLoader(new URL[]{url});
                 myclass = classLoader.loadClass(packageName + "." + testingClassName);
-            } catch (ClassNotFoundException | MalformedURLException e) {
+            } catch (ClassNotFoundException e) {
+                throw new RuntimeException(e);
+            } catch (MalformedURLException e) {
                 throw new RuntimeException(e);
             }
             Method[] methods = myclass.getDeclaredMethods();
@@ -232,14 +320,8 @@ public class DaciteTextGenerator {
             }
             TestCases testCases = new TestCases(testCaseList, methodUnderTest);
             TcgConfig config = TcgConfig.builder().setTestClassPostfix("Dacite").
-                    setTestSetReducer(
-                            new CompetingTestSetReducer(
-                                    new SequentialCombinedTestSetReducer(
-                                            new SimpleForwardsTestSetReducer(),
-                                            new SimpleBackwardsTestSetReducer()),
-                                    new SimpleGreedyTestSetReducer()
-                            )).
-                    setAssumeGetters(false).setAssumeSetters(false).setAssumeEqualsMethods(false).build();
+                    setTestSetReducer(testSetReducer).
+                    setAssumeGetters(assumeGetters).setAssumeSetters(assumeSetters).setAssumeEqualsMethods(assumeEquals).build();
             TestCasesStringGenerator tcg = new TestCasesStringGenerator(testCases, config);
             String test = tcg.generateTestClassStringRepresentation();
             createTextEditAndIncrementLine(testEdits, 0, test);
@@ -250,7 +332,6 @@ public class DaciteTextGenerator {
             TextDocumentEdit documentEdit = new TextDocumentEdit(new VersionedTextDocumentIdentifier(uri,1), testEdits);
             changes.add(Either.forRight(createFile));
             changes.add(Either.forLeft(documentEdit));
-            counter++;
         }
         return changes;
     }
